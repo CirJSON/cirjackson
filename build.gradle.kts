@@ -31,9 +31,20 @@ subprojects {
     }
 
     tasks.test {
+        outputs.upToDateWhen { false }
         useJUnitPlatform()
     }
     kotlin {
         jvmToolchain(17)
+    }
+}
+
+val allLibs = listOf(":cirjackson-core")
+
+task<Test>("checkAll") {
+    group = "verification"
+
+    allLibs.forEach {
+        dependsOn("$it:check")
     }
 }
