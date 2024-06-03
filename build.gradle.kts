@@ -1,3 +1,4 @@
+import org.jetbrains.dokka.gradle.DokkaTask
 import java.util.*
 
 val properties = File(rootDir, "gradle.properties").inputStream().use {
@@ -7,6 +8,7 @@ val cirJacksonVersion: String = properties.getProperty("cirjackson.version")
 
 plugins {
     kotlin("jvm")
+    id("org.jetbrains.dokka")
 }
 
 group = "org.cirjson.cirjackson"
@@ -25,6 +27,7 @@ subprojects {
     }
 
     apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.dokka")
 
     dependencies {
         testImplementation(kotlin("test"))
