@@ -1,4 +1,3 @@
-import org.jetbrains.dokka.gradle.DokkaTask
 import java.util.*
 
 val properties = File(rootDir, "gradle.properties").inputStream().use {
