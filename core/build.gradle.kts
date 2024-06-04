@@ -1,11 +1,15 @@
-import org.jetbrains.dokka.gradle.DokkaTask
+plugins {
+    kotlin("jvm")
+    id("org.jetbrains.dokka")
+}
 
-tasks.withType<DokkaTask>().configureEach {
-    outputs.upToDateWhen { false }
-    dokkaSourceSets {
-        outputs.upToDateWhen { false }
-        configureEach {
-            outputs.upToDateWhen { false }
-        }
+fun setupManifest(jar: Jar) {
+    jar.manifest {
+        attributes(mapOf("Can-Retransform-Classes" to "true"))
     }
+}
+
+// Workaround for https://github.com/Kotlin/dokka/issues/1833: make implicit dependency explicit
+tasks.named("dokkaHtmlPartial") {
+    dependsOn("jar")
 }
