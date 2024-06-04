@@ -30,14 +30,17 @@ private fun Project.configurePathsaver() {
 private fun Project.configureDokkaSetup() {
     tasks.withType<DokkaTask>().configureEach {
         outputs.upToDateWhen { false }
+        dokkaSourceSets.configureEach {
+            includes.from(rootDir.resolve("packages.md").path)
+        }
     }
 
-    tasks.withType(DokkaTaskPartial::class).configureEach {
+    tasks.withType(DokkaTaskPartial::class).named("dokkaHtmlPartial") {
         suppressInheritedMembers = true
         outputs.upToDateWhen { false }
 
         dokkaSourceSets.configureEach {
-            includes.from("packages.md")
+            includes.from(rootDir.resolve("packages.md").path)
         }
     }
 }
