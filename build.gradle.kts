@@ -1,5 +1,6 @@
 import org.jetbrains.dokka.gradle.AbstractDokkaTask
 import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
+import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
 import java.net.URL
 import java.util.*
@@ -116,6 +117,29 @@ private fun Project.configurePathsaver() {
 }
 
 private fun Project.configureDokkaSetup() {
+    tasks.withType(DokkaTask::class).configureEach {
+        suppressInheritedMembers = true
+        setupDokkaTemplatesDir(this)
+        outputs.upToDateWhen { false }
+
+        dokkaSourceSets.configureEach {
+            jdkVersion = 17
+
+            // Something suspicious to figure out, probably legacy of earlier days
+            dependsOn(project.configurations["compileClasspath"])
+            includes.from("packages.md")
+        }
+
+        // Source links
+        dokkaSourceSets.configureEach {
+            sourceLink {
+                localDirectory = rootDir
+                remoteUrl = URL("https://github.com/cirjson/cirjackson/tree/master")
+                remoteLineSuffix = "#L"
+            }
+        }
+    }
+
     tasks.withType(DokkaTaskPartial::class).configureEach {
         suppressInheritedMembers = true
         setupDokkaTemplatesDir(this)
