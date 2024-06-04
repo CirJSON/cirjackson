@@ -1,3 +1,7 @@
+# Module cirjackson-core
+
+Jackson but for CirJSON
+
 # Package org.cirjson.cirjackson.core
 
 Main public API classes of the core streaming CirJSON  processor: most importantly
@@ -13,3 +17,7 @@ for following base interfaces that are defined here:
 * [org.cirjson.cirjackson.ObjectCodec] is included so that reference to the object capable of serializing/deserializing
 Objects to/from CirJSON (usually, `org.cirjson.cirjackson.databind.ObjectMapper`) can be exposed, without adding direct
 dependency to implementation.
+
+# Package org.cirjson.cirjackson.core.util
+
+Info

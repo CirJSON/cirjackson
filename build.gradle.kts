@@ -39,6 +39,38 @@ subprojects {
     kotlin {
         jvmToolchain(17)
     }
+
+    @Suppress("ObjectLiteralToLambda")
+    val createVersionTask = task<Copy>("createVersion") {
+        outputs.upToDateWhen { false }
+
+        from("src/main/template", object : Action<CopySpec> {
+            override fun execute(spec: CopySpec) {
+                spec.eachFile(object : Action<FileCopyDetails> {
+                    override fun execute(details: FileCopyDetails) {
+                        details.name = details.name.removeSuffix(".in")
+                        val fileContent =
+                                details.file.readText().replace("@projectVersion@", project.version.toString())
+                                        .replace("@projectGroupId@", project.group.toString())
+                                        .replace("@projectArtifactId@", project.name)
+
+                        details.file.writeText(fileContent)
+                    }
+                })
+            }
+        })
+        into("gen")
+    }
+
+    sourceSets {
+        main {
+            kotlin.srcDirs("src/main/kotlin", "gen")
+        }
+    }
+
+    tasks.compileKotlin {
+        dependsOn(createVersionTask)
+    }
 }
 
 val allLibs = listOf(":cirjackson-core")
@@ -50,3 +82,5 @@ task<Test>("checkAll") {
         dependsOn("$it:check")
     }
 }
+
+apply(plugin = "dokka-conventions")
