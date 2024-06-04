@@ -20,4 +20,4 @@ dependency to implementation.
 
 # Package org.cirjson.cirjackson.core.util
 
-Info
+Utility classes used by CirJackson Core functionality.
