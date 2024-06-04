@@ -1,4 +1,3 @@
 package org.cirjson.cirjackson.core
 
-interface FormatFeature {
-}
+interface FormatFeature : CirJacksonFeature

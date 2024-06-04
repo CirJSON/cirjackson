@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
 import org.cirjson.cirjackson.core.io.DataOutputAsStream
 import java.io.*
 import java.net.URL
@@ -121,7 +122,7 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Whether it's enabled or not.
      */
-    abstract fun isEnabled(feature: CirJsonParser.Feature): Boolean
+    abstract fun isEnabled(feature: CirJsonReadFeature): Boolean
 
     /**
      * Method that verifies if the feature is enabled fo this factory.
