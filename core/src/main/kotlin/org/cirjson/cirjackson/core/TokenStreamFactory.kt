@@ -1,19 +1,25 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.DataOutputAsStream
-import org.cirjson.cirjackson.core.util.BufferRecycler
-import org.cirjson.cirjackson.core.util.CirJsonRecyclerPools
-import org.cirjson.cirjackson.core.util.RecyclerPool
+import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
+import org.cirjson.cirjackson.core.symbols.SimpleNameMatcher
+import org.cirjson.cirjackson.core.util.*
 import java.io.*
 import java.net.URL
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 
 /**
  * Intermediate base class for actual format-specific factories for constructing parsers (reading) and generators
  * (writing).
  */
-abstract class TokenStreamFactory : Versioned {
+abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>, Serializable {
 
     /*
      *******************************************************************************************************************
@@ -109,11 +115,10 @@ abstract class TokenStreamFactory : Versioned {
     }
 
     /**
-     * Constructors used by {@link TSFBuilder} for instantiation. Base builder is
-     * passed as-is to try to make interface between base types and implementations
-     * less likely to change (given that sub-classing is a fragile way to do it):
-     * if and when new general-purpose properties are added, implementation classes
-     * do not have to use different constructors.
+     * Constructors used by [TSFBuilder] for instantiation. Base builder is passed as-is to try to make interface
+     * between base types and implementations less likely to change (given that sub-classing is a fragile way to do it):
+     * if and when new general-purpose properties are added, implementation classes do not have to use different
+     * constructors.
      *
      * @param baseBuilder Builder with configuration to use
      */
@@ -132,8 +137,7 @@ abstract class TokenStreamFactory : Versioned {
     }
 
     /**
-     * Constructor used if a snapshot is created, or possibly for subclassing or
-     * wrapping (delegating)
+     * Constructor used if a snapshot is created, or possibly for subclassing or wrapping (delegating)
      *
      * @param src Source factory with configuration to copy
      */
@@ -150,9 +154,8 @@ abstract class TokenStreamFactory : Versioned {
     }
 
     /**
-     * Method similar to {@link snapshot}, but one that forces creation of actual
-     * new copy that does NOT share any state, even non-visible to calling code,
-     * such as symbol table reuse.
+     * Method similar to [snapshot], but one that forces creation of actual new copy that does NOT share any state, even
+     * non-visible to calling code, such as symbol table reuse.
      *
      * Implementation should be functionally equivalent to:
      * ```
@@ -162,6 +165,14 @@ abstract class TokenStreamFactory : Versioned {
      * @return Newly constructed stream factory instance of same type as this one, with identical configuration settings
      */
     abstract fun copy(): TokenStreamFactory
+
+    /**
+     * Method that can be used to create differently configured stream factories: it will create and return a Builder
+     * instance with exact settings of this stream factory.
+     *
+     * @return Builder instance initialized with configuration this stream factory has
+     */
+    abstract override fun snapshot(): TokenStreamFactory
 
     /*
      *******************************************************************************************************************
@@ -245,7 +256,9 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Whether it's enabled or not.
      */
-    abstract fun isEnabled(feature: Feature): Boolean
+    fun isEnabled(feature: Feature): Boolean {
+        return (factoryFeatures and feature.mask) != 0
+    }
 
     /**
      * Method that verifies if the feature is enabled fo this factory.
@@ -254,7 +267,9 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Whether it's enabled or not.
      */
-    abstract fun isEnabled(feature: StreamReadFeature): Boolean
+    fun isEnabled(feature: StreamReadFeature): Boolean {
+        return (streamReadFeatures and feature.mask) != 0
+    }
 
     /**
      * Method that verifies if the feature is enabled fo this factory.
@@ -263,7 +278,33 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Whether it's enabled or not.
      */
-    abstract fun isEnabled(feature: StreamWriteFeature): Boolean
+    fun isEnabled(feature: StreamWriteFeature): Boolean {
+        return (streamWriteFeatures and feature.mask) != 0
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Factory methods for helper objects
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method for constructing case-sensitive [PropertyNameMatcher] for given names. It will call
+     * [String.intern] on names unless specified that this has already been done by caller.
+     *
+     * @param matches Names to match, including both primary names and possible aliases
+     * @param alreadyInterned Whether name Strings are already `String.intern()ed` or not
+     *
+     * @return Case-sensitive [PropertyNameMatcher] instance to use
+     */
+    open fun constructNameMatcher(matches: List<Named>, alreadyInterned: Boolean): PropertyNameMatcher {
+        return SimpleNameMatcher.constructFrom(null, matches, alreadyInterned)
+    }
+
+    open fun constructCaseInsensitiveNameMatcher(matches: List<Named>, alreadyInterned: Boolean,
+            locale: Locale): PropertyNameMatcher {
+        return SimpleNameMatcher.constructCaseInsensitive(locale, matches, alreadyInterned)
+    }
 
     /*
      *******************************************************************************************************************
@@ -276,9 +317,13 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @param readContext Object read context to use
      * @param data Buffer that contains data to parse
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray): CirJsonParser
+    @Throws(CirJacksonException::class)
+    fun createParser(readContext: ObjectReadContext, data: ByteArray): CirJsonParser {
+        return createParser(readContext, data, 0, data.size)
+    }
 
     /**
      * Method for constructing parser for parsing the contents of given byte array.
@@ -289,8 +334,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param len Length of contents to parse within buffer
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, len: Int): CirJsonParser
 
     /**
@@ -300,9 +347,13 @@ abstract class TokenStreamFactory : Versioned {
      * @param content Array that contains data to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createParser(readContext: ObjectReadContext, content: CharArray): CirJsonParser
+    @Throws(CirJacksonException::class)
+    fun createParser(readContext: ObjectReadContext, content: CharArray): CirJsonParser {
+        return createParser(readContext, content, 0, content.size)
+    }
 
     /**
      * Method for constructing parser for parsing contents of given char array.
@@ -313,8 +364,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param len Length of contents to parse within buffer
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int, len: Int): CirJsonParser
 
     /**
@@ -326,8 +379,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param input The data to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, input: DataInput): CirJsonParser
 
     /**
@@ -344,8 +399,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param file File that contains CirJSON content to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, file: File): CirJsonParser
 
     /**
@@ -362,8 +419,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param input InputStream to use for reading CirJSON content to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, input: InputStream): CirJsonParser
 
     /**
@@ -376,8 +435,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param reader Reader to use for reading CirJSON content to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, reader: Reader): CirJsonParser
 
     /**
@@ -387,8 +448,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param content The content to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, content: String): CirJsonParser
 
     /**
@@ -405,8 +468,10 @@ abstract class TokenStreamFactory : Versioned {
      * @param url URL pointing to resource that contains CirJSON content to parse
      *
      * @return Constructed parser
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun createParser(readContext: ObjectReadContext, url: URL): CirJsonParser
 
     /**
@@ -425,9 +490,9 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Constructed parser
      *
-     * @throws IOException If there are problems constructing parser
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteArrayParser(
             readContext: ObjectReadContext): P
 
@@ -447,9 +512,9 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Constructed parser
      *
-     * @throws IOException If there are problems constructing parser
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
+    @Throws(CirJacksonException::class)
     abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteBufferParser(
             readContext: ObjectReadContext): P
 
@@ -462,12 +527,15 @@ abstract class TokenStreamFactory : Versioned {
     /**
      * Method for constructing generator for writing content using specified [DataOutput] instance.
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param output DataOutput to use for writing CirJSON content
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(output: DataOutput): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput): CirJsonGenerator
 
     /**
      * Convenience method for constructing generator that uses default encoding of the format (UTF-8 for CirJSON and
@@ -475,13 +543,17 @@ abstract class TokenStreamFactory : Versioned {
      *
      * Note: there are formats that use fixed encoding (like most binary data formats).
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param output DataOutput to use for writing CirJSON content
      * @param encoding Character encoding to use
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(output: DataOutput, encoding: CirJsonEncoding): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput,
+            encoding: CirJsonEncoding): CirJsonGenerator
 
     /**
      * Method for constructing JSON generator for writing CirJSON content to specified file, overwriting contents it
@@ -491,13 +563,17 @@ abstract class TokenStreamFactory : Versioned {
      * Underlying stream **is owned** by the generator constructed, i.e. generator will handle closing of file when
      * [CirJsonGenerator.close] is called.
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param file File to write contents to
      * @param encoding Character encoding to use
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(file: File, encoding: CirJsonEncoding): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, file: File,
+            encoding: CirJsonEncoding): CirJsonGenerator
 
     /**
      * Convenience method for constructing generator that uses default encoding of the format (UTF-8 for CirJSON and
@@ -505,12 +581,15 @@ abstract class TokenStreamFactory : Versioned {
      *
      * Note: there are formats that use fixed encoding (like most binary data formats).
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param output OutputStream to use for writing CirJSON content
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(output: OutputStream): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream): CirJsonGenerator
 
     /**
      * Method for constructing JSON generator for writing CirJSON content using specified output stream. Encoding to use
@@ -518,39 +597,115 @@ abstract class TokenStreamFactory : Versioned {
      *
      * Underlying stream **is NOT owned** by the generator constructed, so that generator will NOT close the output
      * stream when [CirJsonGenerator.close] is called (unless auto-closing feature,
-     * [CirJsonGenerator.Feature.AUTO_CLOSE_TARGET] is enabled). Using application needs to close it explicitly if this
-     * is the case.
+     * [StreamWriteFeature.AUTO_CLOSE_TARGET] is enabled). Using application needs to close it explicitly if this is the
+     * case.
      *
      * Note: there are formats that use fixed encoding (like most binary data formats) and that ignore passed in
      * encoding.
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param output OutputStream to use for writing CirJSON content
      * @param encoding Character encoding to use
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(output: OutputStream, encoding: CirJsonEncoding): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream,
+            encoding: CirJsonEncoding): CirJsonGenerator
 
     /**
      * Method for constructing CirJSON generator for writing CirJSON content using specified Writer.
      *
      * Underlying stream **is NOT owned** by the generator constructed, so that generator will NOT close the Reader when
-     * [CirJsonGenerator.close] is called (unless auto-closing feature, [CirJsonGenerator.Feature.AUTO_CLOSE_TARGET] is
+     * [CirJsonGenerator.close] is called (unless auto-closing feature, [StreamWriteFeature.AUTO_CLOSE_TARGET] is
      * enabled). Using application needs to close it explicitly.
      *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
      * @param writer Writer to use for writing CirJSON content
      *
      * @return Constructed generator
+     *
+     * @throws CirJacksonException If there are problems constructing parser
      */
-    @Throws(IOException::class)
-    abstract fun createGenerator(writer: Writer): CirJsonGenerator
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, writer: Writer): CirJsonGenerator
 
     /*
      *******************************************************************************************************************
      * Internal factory methods, other
      *******************************************************************************************************************
      */
+
+    /**
+     * Value used by factory to create buffer recycler instances to use for parsers and generators.
+     *
+     * Note: only public to give access for `ObjectMapper`
+     */
+    val bufferRecycler
+        get() = recyclerPool.acquireAndLinkPooled()
+
+    /**
+     * Overridable factory method that actually instantiates desired
+     * context object.
+     *
+     * @param contentReference Source reference to use (relevant to `CirJsonLocation` construction)
+     * @param isResourceManaged Whether input/output buffers used are managed by this factory
+     *
+     * @return Context constructed
+     */
+    protected fun createContext(contentReference: ContentReference, isResourceManaged: Boolean): IOContext {
+        return createContext(contentReference, isResourceManaged, null)
+    }
+
+    /**
+     * Overridable factory method that actually instantiates desired context object.
+     *
+     * @param contentReference Source reference to use (relevant to `CirJsonLocation` construction)
+     * @param isResourceManaged Whether input/output buffers used are managed by this factory
+     * @param encoding Character encoding defined to be used/expected
+     *
+     * @return Context constructed
+     */
+    protected fun createContext(contentReference: ContentReference?, isResourceManaged: Boolean,
+            encoding: CirJsonEncoding?): IOContext {
+        val content = contentReference?.rawContent
+
+        var recyclerExternal = false
+        val bufferRecycler = (content as? BufferRecycler.Gettable)?.bufferRecycler()?.also { recyclerExternal = true }
+                ?: bufferRecycler
+        val context = IOContext(streamReadConstraints, streamWriteConstraints, errorReportConfiguration, bufferRecycler,
+                contentReference, isResourceManaged, encoding)
+
+        if (recyclerExternal) {
+            context.markBufferRecyclerReleased()
+        }
+
+        return context
+    }
+
+    /**
+     * Overridable factory method for constructing [ContentReference] to pass to parser or generator being created; used
+     * in cases where no offset or length is applicable (either irrelevant, or full contents assumed).
+     *
+     * @param contentReference Underlying input source (parser) or target (generator)
+     *
+     * @return InputSourceReference instance to use
+     */
+    protected abstract fun createContentReference(contentReference: Any): ContentReference
+
+    /**
+     * Overridable factory method for constructing [ContentReference] to pass to parser or generator being created; used
+     * in cases where input comes in a static buffer with relevant offset and length.
+     *
+     * @param contentReference Underlying input source (parser) or target (generator)
+     * @param offset Offset of content in buffer (`rawSource`)
+     * @param length Length of content in buffer (`rawSource`)
+     *
+     * @return InputSourceReference instance to use
+     */
+    protected abstract fun createContentReference(contentReference: Any, offset: Int, length: Int): ContentReference
 
     /**
      * Method that creates an OutputStream from a DataOutput, so that all writing operations use the DataOutput
@@ -572,7 +727,7 @@ abstract class TokenStreamFactory : Versioned {
      * @throws IOException If there is a problem accessing content from specified [URL]
      */
     @Throws(IOException::class)
-    protected fun optimizedStreamFromURL(url: URL): InputStream {
+    protected open fun optimizedStreamFromURL(url: URL): InputStream {
         if (url.protocol == "file") {
             val host = url.host
 
@@ -580,12 +735,20 @@ abstract class TokenStreamFactory : Versioned {
                 val path = url.path
 
                 if (path.indexOf('%') < 0) {
-                    return Files.newInputStream(Paths.get(url.path))
+                    try {
+                        return Files.newInputStream(Paths.get(url.path))
+                    } catch (e: IOException) {
+                        throw wrapIOFailure(e)
+                    }
                 }
             }
         }
 
-        return url.openStream()
+        try {
+            return url.openStream()
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     /**
@@ -596,11 +759,24 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return [InputStream] constructed
      *
-     * @throws IOException If there is a problem opening the stream
+     * @throws CirJacksonException If there is a problem opening the stream
      */
-    @Throws(IOException::class)
-    protected fun fileInputStream(file: File): InputStream {
-        return Files.newInputStream(file.toPath())
+    @Throws(CirJacksonException::class)
+    protected open fun fileInputStream(file: File): InputStream {
+        try {
+            return Files.newInputStream(file.toPath())
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected open fun pathInputStream(path: Path): InputStream {
+        try {
+            return Files.newInputStream(path)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     /**
@@ -611,11 +787,24 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return [OutputStream] constructed
      *
-     * @throws IOException If there is a problem opening the stream
+     * @throws CirJacksonException If there is a problem opening the stream
      */
-    @Throws(IOException::class)
-    protected fun fileOutputStream(file: File): OutputStream {
-        return Files.newOutputStream(file.toPath())
+    @Throws(CirJacksonException::class)
+    protected open fun fileOutputStream(file: File): OutputStream {
+        try {
+            return Files.newOutputStream(file.toPath())
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected open fun pathOutputStream(path: Path): OutputStream {
+        try {
+            return Files.newOutputStream(path)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     /*
@@ -624,13 +813,13 @@ abstract class TokenStreamFactory : Versioned {
      *******************************************************************************************************************
      */
 
-    @Throws(IllegalArgumentException::class)
+    @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForByteArray(data: ByteArray?, offset: Int, len: Int) {
         data ?: reportRangeError("Invalid `data` argument: `null`")
         checkRange(data!!.size, offset, len)
     }
 
-    @Throws(IllegalArgumentException::class)
+    @Throws(CirJacksonException::class)
     private fun checkRange(dataLen: Int, offset: Int, len: Int) {
         val end = offset + len
 
@@ -645,26 +834,47 @@ abstract class TokenStreamFactory : Versioned {
         val anyNegs = offset or len or end or (dataLen - end)
 
         if (anyNegs < 0) {
-            reportRangeError("Invalid 'offset' ($offset) and/or 'len' ($len) arguments for `data` of length $dataLen")
+            reportRangeError<Nothing>(
+                    "Invalid 'offset' ($offset) and/or 'len' ($len) arguments for `data` of length $dataLen")
         }
     }
 
-    @Throws(IllegalArgumentException::class)
+    @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForCharArray(data: CharArray?, offset: Int, len: Int) {
         data ?: reportRangeError("Invalid `data` argument: `null`")
         checkRange(data!!.size, offset, len)
     }
 
     /**
-     * Method that throws an [IllegalArgumentException] with the given [message]
+     * Method that throws a [StreamReadException] with the given [message]
      *
      * @param message The message of the exception
      *
-     * @throws IllegalArgumentException The exception thrown
+     * @throws StreamReadException The exception thrown
      */
-    @Throws(IllegalArgumentException::class)
-    protected fun reportRangeError(message: String) {
-        throw IllegalArgumentException(message)
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportRangeError(message: String): T {
+        throw StreamReadException(null, message)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Error reporting methods
+     *******************************************************************************************************************
+     */
+
+    protected fun wrapIOFailure(e: IOException): CirJacksonException {
+        return CirJacksonIOException.construct(e, this)
+    }
+
+    @Throws(UnsupportedOperationException::class)
+    protected fun <T> unsupported(): T {
+        return unsupported("Operation not supported for this format ($formatName)")
+    }
+
+    @Throws(UnsupportedOperationException::class)
+    protected fun <T> unsupported(message: String): T {
+        throw UnsupportedOperationException(message)
     }
 
     enum class Feature(override val isEnabledByDefault: Boolean) : CirJacksonFeature {
