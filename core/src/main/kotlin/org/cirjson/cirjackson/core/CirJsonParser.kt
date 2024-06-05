@@ -1,4 +1,4 @@
 package org.cirjson.cirjackson.core
 
-class CirJsonParser {
+open class CirJsonParser {
 }

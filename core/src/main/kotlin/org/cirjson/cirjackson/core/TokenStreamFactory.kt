@@ -1,7 +1,9 @@
 package org.cirjson.cirjackson.core
 
-import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
 import org.cirjson.cirjackson.core.io.DataOutputAsStream
+import org.cirjson.cirjackson.core.util.BufferRecycler
+import org.cirjson.cirjackson.core.util.CirJsonRecyclerPools
+import org.cirjson.cirjackson.core.util.RecyclerPool
 import java.io.*
 import java.net.URL
 import java.nio.file.Files
@@ -12,6 +14,154 @@ import java.nio.file.Paths
  * (writing).
  */
 abstract class TokenStreamFactory : Versioned {
+
+    /*
+     *******************************************************************************************************************
+     * Configuration, simple features
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Value for getting bit set of all [Feature]s enabled.
+     */
+    val factoryFeatures: Int
+
+    /**
+     * Value for getting bit set of all [StreamReadFeature]s enabled.
+     */
+    val streamReadFeatures: Int
+
+    /**
+     * Value for getting bit set of all [StreamWriteFeature]s enabled.
+     */
+    val streamWriteFeatures: Int
+
+    /**
+     * Value for getting bit set of all format-specific parser features enabled.
+     */
+    val formatReadFeatures: Int
+
+    /**
+     * Value for getting bit set of all format-specific generator features enabled.
+     */
+    val formatWriteFeatures: Int
+
+    /*
+     *******************************************************************************************************************
+     * Configuration, providers
+     *******************************************************************************************************************
+     */
+
+    val recyclerPool: RecyclerPool<BufferRecycler>
+
+    /*
+     *******************************************************************************************************************
+     * Configuration, constraints
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Active StreamReadConstraints to use.
+     */
+    protected val streamReadConstraints: StreamReadConstraints
+
+    /**
+     * Active StreamWriteConstraints to use.
+     */
+    protected val streamWriteConstraints: StreamWriteConstraints
+
+    /**
+     * Active ErrorReportConfiguration to use.
+     */
+    protected val errorReportConfiguration: ErrorReportConfiguration
+
+    /*
+     *******************************************************************************************************************
+     * Construction
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Default constructor used to create factory instances.
+     *
+     * Creation of a factory instance is a light-weight operation, but it is still a good idea to reuse limited number
+     * of factory instances (and quite often just a single instance): factories are used as context for storing some
+     * reused processing objects (such as symbol tables parsers use) and this reuse only works within context of a
+     * single factory instance.
+     *
+     * @param src StreamReadConstraints to use with parsers factory creates
+     * @param swc StreamWriteConstraints to use with generators factory creates
+     * @param erc ErrorReportConfiguration to use with parsers factory creates
+     * @param formatReadFeatures Bitmask of format-specific read features enabled
+     * @param formatWriteFeatures Bitmask of format-specific write features enabled
+     */
+    protected constructor(src: StreamReadConstraints, swc: StreamWriteConstraints, erc: ErrorReportConfiguration,
+            formatReadFeatures: Int, formatWriteFeatures: Int) {
+        streamReadConstraints = src
+        streamWriteConstraints = swc
+        errorReportConfiguration = erc
+        recyclerPool = CirJsonRecyclerPools.newConcurrentDequePool()
+        factoryFeatures = DEFAULT_FACTORY_FEATURE_FLAGS
+        streamReadFeatures = DEFAULT_STREAM_READ_FEATURE_FLAGS
+        streamWriteFeatures = DEFAULT_STREAM_WRITE_FEATURE_FLAGS
+        this.formatReadFeatures = formatReadFeatures
+        this.formatWriteFeatures = formatWriteFeatures
+    }
+
+    /**
+     * Constructors used by {@link TSFBuilder} for instantiation. Base builder is
+     * passed as-is to try to make interface between base types and implementations
+     * less likely to change (given that sub-classing is a fragile way to do it):
+     * if and when new general-purpose properties are added, implementation classes
+     * do not have to use different constructors.
+     *
+     * @param baseBuilder Builder with configuration to use
+     */
+    protected constructor(baseBuilder: TSFBuilder<*, *>) {
+        streamReadConstraints = baseBuilder.streamReadConstraints
+        streamWriteConstraints = baseBuilder.streamWriteConstraints
+        errorReportConfiguration = baseBuilder.errorReportConfiguration
+
+        recyclerPool = baseBuilder.recyclerPool ?: CirJsonRecyclerPools.newConcurrentDequePool()
+
+        factoryFeatures = baseBuilder.factoryFeatures
+        streamReadFeatures = baseBuilder.streamReadFeatures
+        streamWriteFeatures = baseBuilder.streamWriteFeatures
+        formatReadFeatures = baseBuilder.formatReadFeatures
+        formatWriteFeatures = baseBuilder.formatWriteFeatures
+    }
+
+    /**
+     * Constructor used if a snapshot is created, or possibly for subclassing or
+     * wrapping (delegating)
+     *
+     * @param src Source factory with configuration to copy
+     */
+    protected constructor(src: TokenStreamFactory) {
+        streamReadConstraints = src.streamReadConstraints
+        streamWriteConstraints = src.streamWriteConstraints
+        errorReportConfiguration = src.errorReportConfiguration
+        recyclerPool = src.recyclerPool
+        factoryFeatures = src.factoryFeatures
+        streamReadFeatures = src.streamReadFeatures
+        streamWriteFeatures = src.streamWriteFeatures
+        formatReadFeatures = src.formatReadFeatures
+        formatWriteFeatures = src.formatWriteFeatures
+    }
+
+    /**
+     * Method similar to {@link snapshot}, but one that forces creation of actual
+     * new copy that does NOT share any state, even non-visible to calling code,
+     * such as symbol table reuse.
+     *
+     * Implementation should be functionally equivalent to:
+     * ```
+     * factoryInstance.rebuild().build();
+     * ```
+     *
+     * @return Newly constructed stream factory instance of same type as this one, with identical configuration settings
+     */
+    abstract fun copy(): TokenStreamFactory
 
     /*
      *******************************************************************************************************************
@@ -51,13 +201,13 @@ abstract class TokenStreamFactory : Versioned {
      * Value for accessing kind of [FormatFeature] that a parser [CirJsonParser] produced by this factory would accept,
      * if any; `null` returned if none.
      */
-    abstract val formatReadFeatureType: Class<out FormatFeature>
+    open val formatReadFeatureType: Class<out FormatFeature>? = null
 
     /**
      * Value for accessing kind of [FormatFeature] that a parser [CirJsonGenerator] produced by this factory would
      * accept, if any; `null` returned if none.
      */
-    abstract val formatWriteFeatureType: Class<out FormatFeature>
+    open val formatWriteFeatureType: Class<out FormatFeature>? = null
 
     /*
      *******************************************************************************************************************
@@ -95,7 +245,7 @@ abstract class TokenStreamFactory : Versioned {
      *
      * @return Whether it's enabled or not.
      */
-    abstract fun isEnabled(feature: CirJsonFactory.Feature): Boolean
+    abstract fun isEnabled(feature: Feature): Boolean
 
     /**
      * Method that verifies if the feature is enabled fo this factory.
@@ -115,67 +265,6 @@ abstract class TokenStreamFactory : Versioned {
      */
     abstract fun isEnabled(feature: StreamWriteFeature): Boolean
 
-    /**
-     * Method that verifies if the feature is enabled fo this factory.
-     *
-     * @param feature The feature to check.
-     *
-     * @return Whether it's enabled or not.
-     */
-    abstract fun isEnabled(feature: CirJsonReadFeature): Boolean
-
-    /**
-     * Method that verifies if the feature is enabled fo this factory.
-     *
-     * @param feature The feature to check.
-     *
-     * @return Whether it's enabled or not.
-     */
-    abstract fun isEnabled(feature: CirJsonGenerator.Feature): Boolean
-
-    /**
-     * Value for getting bit set of all [CirJsonFactory.Feature]s enabled.
-     */
-    abstract val factoryFeatures: Int
-
-    /**
-     * Value for getting bit set of all [CirJsonParser.Feature]s enabled.
-     */
-    abstract val parserFeatures: Int
-
-    /**
-     * Value for getting bit set of all [CirJsonGenerator.Feature]s enabled.
-     */
-    abstract val generatorFeatures: Int
-
-    /**
-     * Value for getting bit set of all format-specific parser features enabled.
-     */
-    abstract val formatParserFeatures: Int
-
-    /**
-     * Value for getting bit set of all format-specific generator features enabled.
-     */
-    abstract val formatGeneratorFeatures: Int
-
-    /*
-     *******************************************************************************************************************
-     * Constraints violation checking
-     *******************************************************************************************************************
-     */
-
-    /**
-     * Get the constraints to apply when performing streaming reads done by [CirJsonParser]s constructed by this
-     * factory.
-     */
-    abstract val streamReadConstraints: StreamReadConstraints
-
-    /**
-     * Get the constraints to apply when performing streaming writes done by [CirJsonGenerator]s constructed by this
-     * factory.
-     */
-    abstract val streamWriteConstraints: StreamWriteConstraints
-
     /*
      *******************************************************************************************************************
      * Factory methods, parsers
@@ -185,14 +274,16 @@ abstract class TokenStreamFactory : Versioned {
     /**
      * Method for constructing parser for parsing the contents of given byte array.
      *
+     * @param readContext Object read context to use
      * @param data Buffer that contains data to parse
      */
     @Throws(IOException::class)
-    abstract fun createParser(data: ByteArray): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray): CirJsonParser
 
     /**
      * Method for constructing parser for parsing the contents of given byte array.
      *
+     * @param readContext Object read context to use
      * @param data Buffer that contains data to parse
      * @param offset Offset of the first data byte within buffer
      * @param len Length of contents to parse within buffer
@@ -200,21 +291,23 @@ abstract class TokenStreamFactory : Versioned {
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(data: ByteArray, offset: Int, len: Int): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, len: Int): CirJsonParser
 
     /**
      * Method for constructing parser for parsing contents of given char array.
      *
+     * @param readContext Object read context to use
      * @param content Array that contains data to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(content: CharArray): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, content: CharArray): CirJsonParser
 
     /**
      * Method for constructing parser for parsing contents of given char array.
      *
+     * @param readContext Object read context to use
      * @param content Array that contains data to parse
      * @param offset Offset of the first data byte within buffer
      * @param len Length of contents to parse within buffer
@@ -222,19 +315,20 @@ abstract class TokenStreamFactory : Versioned {
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(content: CharArray, offset: Int, len: Int): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int, len: Int): CirJsonParser
 
     /**
      * Optional method for constructing parser for reading contents from specified [DataInput] instance.
      *
      * If this factory does not support [DataInput] as source, will throw [UnsupportedOperationException]
      *
+     * @param readContext Object read context to use
      * @param input The data to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(input: DataInput): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, input: DataInput): CirJsonParser
 
     /**
      * Method for constructing CirJSON parser instance to parse contents of specified file.
@@ -246,12 +340,13 @@ abstract class TokenStreamFactory : Versioned {
      * Underlying input stream (needed for reading contents) will be **owned** (and managed, i.e. closed as need be) by
      * the parser, since caller has no access to it.
      *
+     * @param readContext Object read context to use
      * @param file File that contains CirJSON content to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(file: File): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, file: File): CirJsonParser
 
     /**
      * Method for constructing CirJSON parser instance to parse the contents accessed via specified input stream.
@@ -263,12 +358,13 @@ abstract class TokenStreamFactory : Versioned {
      * specification supports only UTF-8, UTF-16 and UTF-32 as valid encodings, so auto-detection implemented only for
      * this charsets. For other charsets use the `createParser` that uses a [Reader].
      *
+     * @param readContext Object read context to use
      * @param input InputStream to use for reading CirJSON content to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(input: InputStream): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, input: InputStream): CirJsonParser
 
     /**
      * Method for constructing parser for parsing the contents accessed via specified Reader.
@@ -276,22 +372,24 @@ abstract class TokenStreamFactory : Versioned {
      * The read stream will **not be owned** by the parser, it will still be managed (i.e. closed if end-of-stream is
      * reached, or parser close method called) if (and only if) [StreamReadFeature.AUTO_CLOSE_SOURCE] is enabled.
      *
+     * @param readContext Object read context to use
      * @param reader Reader to use for reading CirJSON content to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(reader: Reader): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, reader: Reader): CirJsonParser
 
     /**
      * Method for constructing parser for parsing contents of given String.
      *
+     * @param readContext Object read context to use
      * @param content The content to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(content: String): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, content: String): CirJsonParser
 
     /**
      * Method for constructing CirJSON parser instance to parse contents of resource reference by given URL.
@@ -303,12 +401,13 @@ abstract class TokenStreamFactory : Versioned {
      * Underlying input stream (needed for reading contents) will be **owned** (and managed, i.e. closed as need be) by
      * the parser, since caller has no access to it.
      *
+     * @param readContext Object read context to use
      * @param url URL pointing to resource that contains CirJSON content to parse
      *
      * @return Constructed parser
      */
     @Throws(IOException::class)
-    abstract fun createParser(url: URL): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, url: URL): CirJsonParser
 
     /**
      * Optional method for constructing parser for non-blocking parsing via
@@ -321,12 +420,16 @@ abstract class TokenStreamFactory : Versioned {
      * Note that CirJSON-backed factory only supports parsing of UTF-8 encoded CirJSON content (and US-ASCII since it is
      * proper subset); other encodings are not supported at this point.
      *
+     * @param P Nominal type of parser constructed and returned
+     * @param readContext Object read context to use
+     *
      * @return Constructed parser
      *
      * @throws IOException If there are problems constructing parser
      */
     @Throws(IOException::class)
-    abstract fun createNonBlockingByteArrayParser(): CirJsonParser
+    abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteArrayParser(
+            readContext: ObjectReadContext): P
 
     /**
      * Optional method for constructing parser for non-blocking parsing via
@@ -339,12 +442,16 @@ abstract class TokenStreamFactory : Versioned {
      * Note that CirJSON-backed factory only supports parsing of UTF-8 encoded CirJSON content (and US-ASCII since it is
      * proper subset); other encodings are not supported at this point.
      *
+     * @param P Nominal type of parser constructed and returned
+     * @param readContext Object read context to use
+     *
      * @return Constructed parser
      *
      * @throws IOException If there are problems constructing parser
      */
     @Throws(IOException::class)
-    abstract fun createNonBlockingByteBufferParser(): CirJsonParser
+    abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteBufferParser(
+            readContext: ObjectReadContext): P
 
     /*
      *******************************************************************************************************************
@@ -558,6 +665,101 @@ abstract class TokenStreamFactory : Versioned {
     @Throws(IllegalArgumentException::class)
     protected fun reportRangeError(message: String) {
         throw IllegalArgumentException(message)
+    }
+
+    enum class Feature(override val isEnabledByDefault: Boolean) : CirJacksonFeature {
+
+        /**
+         * Feature that determines whether CirJSON object property names are to be canonicalized using [String.intern]
+         * or not.
+         *
+         * If enabled, all property names will be intern()ed (and caller can count on this being true for all such
+         * names). If disabled, no intern()ing is done. There may still be basic canonicalization (that is, same String
+         * will be used to represent all identical object property names for a single document).
+         *
+         * Note: this setting only has effect if [CANONICALIZE_PROPERTY_NAMES] is true -- otherwise no canonicalization
+         * of any sort is done.
+         *
+         * This setting is disabled by default since 3.0 (was enabled in 1.x and 2.x)
+         */
+        INTERN_PROPERTY_NAMES(false),
+
+        /**
+         * Feature that determines whether JSON object property names are to be canonicalized (details of how
+         * canonicalization is done then further specified by [INTERN_PROPERTY_NAMES]).
+         *
+         * This setting is enabled by default.
+         */
+        CANONICALIZE_PROPERTY_NAMES(true),
+
+        /**
+         * Feature that determines what happens if we encounter a case in symbol handling where number of hash
+         * collisions exceeds a safety threshold -- which almost certainly means a denial-of-service attack via
+         * generated duplicate hash codes.
+         *
+         * If feature is enabled, an [IllegalStateException] is thrown to indicate the suspected denial-of-service
+         * attack; if disabled, processing continues but canonicalization (and thereby `intern()`ing) is disabled as
+         * protective measure.
+         *
+         * This setting is enabled by default.
+         */
+        FAIL_ON_SYMBOL_HASH_OVERFLOW(true),
+
+        /**
+         * Feature to control charset detection for byte-based inputs (`byte[]`, [InputStream]...). When this feature is
+         * enabled (the default), the factory will allow UTF-16 and UTF-32 inputs and try to detect them, as specified
+         * by RFC 4627. When this feature is disabled the factory will assume UTF-8, as specified by RFC 8259.
+         *
+         * NOTE: only applies to some implementations: most notable for `JsonFactory`.
+         */
+        CHARSET_DETECTION(true);
+
+        override val mask: Int = 1 shl ordinal
+
+        override fun isEnabledIn(flags: Int): Boolean {
+            return (flags and mask) != 0
+        }
+
+        companion object {
+
+            /**
+             * Method that calculates bit set (flags) of all features that are enabled by default.
+             *
+             * @return Bit field of features enabled by default
+             */
+            fun collectDefaults(): Int {
+                var flags = 0
+
+                for (feature in entries) {
+                    if (feature.isEnabledByDefault) {
+                        flags = flags or feature.mask
+                    }
+                }
+
+                return flags
+            }
+
+        }
+
+    }
+
+    companion object {
+
+        /**
+         * Bitfield (set of flags) of all factory features that are enabled by default.
+         */
+        protected val DEFAULT_FACTORY_FEATURE_FLAGS = Feature.collectDefaults()
+
+        /**
+         * Bitfield (set of flags) of all factory features that are enabled by default.
+         */
+        protected val DEFAULT_STREAM_READ_FEATURE_FLAGS = StreamReadFeature.collectDefaults()
+
+        /**
+         * Bitfield (set of flags) of all factory features that are enabled by default.
+         */
+        protected val DEFAULT_STREAM_WRITE_FEATURE_FLAGS = StreamWriteFeature.collectDefaults()
+
     }
 
 }
