@@ -9,14 +9,17 @@ import org.cirjson.cirjackson.core.CirJsonParser
  */
 open class StreamReadException : CirJacksonException {
 
-    val processor: CirJsonParser?
+    private val myProcessor: CirJsonParser?
+
+    override val processor: CirJsonParser?
+        get() = myProcessor
 
     constructor(processor: CirJsonParser?, message: String) : super(message) {
-        this.processor = processor
+        myProcessor = processor
     }
 
     constructor(processor: CirJsonParser?, message: String, cause: Throwable) : super(message, cause) {
-        this.processor = processor
+        myProcessor = processor
     }
 
 }
