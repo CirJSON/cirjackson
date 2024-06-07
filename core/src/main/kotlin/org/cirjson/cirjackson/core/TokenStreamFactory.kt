@@ -95,17 +95,17 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * reused processing objects (such as symbol tables parsers use) and this reuse only works within context of a
      * single factory instance.
      *
-     * @param src StreamReadConstraints to use with parsers factory creates
-     * @param swc StreamWriteConstraints to use with generators factory creates
-     * @param erc ErrorReportConfiguration to use with parsers factory creates
+     * @param streamReadConstraints StreamReadConstraints to use with parsers factory creates
+     * @param streamWriteConstraints StreamWriteConstraints to use with generators factory creates
+     * @param errorReportConfiguration ErrorReportConfiguration to use with parsers factory creates
      * @param formatReadFeatures Bitmask of format-specific read features enabled
      * @param formatWriteFeatures Bitmask of format-specific write features enabled
      */
-    protected constructor(src: StreamReadConstraints, swc: StreamWriteConstraints, erc: ErrorReportConfiguration,
-            formatReadFeatures: Int, formatWriteFeatures: Int) {
-        streamReadConstraints = src
-        streamWriteConstraints = swc
-        errorReportConfiguration = erc
+    protected constructor(streamReadConstraints: StreamReadConstraints, streamWriteConstraints: StreamWriteConstraints,
+            errorReportConfiguration: ErrorReportConfiguration, formatReadFeatures: Int, formatWriteFeatures: Int) {
+        this.streamReadConstraints = streamReadConstraints
+        this.streamWriteConstraints = streamWriteConstraints
+        this.errorReportConfiguration = errorReportConfiguration
         recyclerPool = CirJsonRecyclerPools.newConcurrentDequePool()
         factoryFeatures = DEFAULT_FACTORY_FEATURE_FLAGS
         streamReadFeatures = DEFAULT_STREAM_READ_FEATURE_FLAGS
@@ -173,6 +173,14 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @return Builder instance initialized with configuration this stream factory has
      */
     abstract override fun snapshot(): TokenStreamFactory
+
+    /**
+     * Method that can be used to create differently configured stream factories: it will create and return a Builder
+     * instance with exact settings of this stream factory.
+     *
+     * @return Builder instance initialized with configuration this stream factory has
+     */
+    abstract fun rebuild(): TSFBuilder<*, *>
 
     /*
      *******************************************************************************************************************
@@ -535,7 +543,9 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput): CirJsonGenerator
+    fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput): CirJsonGenerator {
+        return createGenerator(writeContext, createDataOutputWrapper(output))
+    }
 
     /**
      * Convenience method for constructing generator that uses default encoding of the format (UTF-8 for CirJSON and
@@ -589,7 +599,9 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream): CirJsonGenerator
+    fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream): CirJsonGenerator {
+        return createGenerator(writeContext, output, CirJsonEncoding.UTF8)
+    }
 
     /**
      * Method for constructing JSON generator for writing CirJSON content using specified output stream. Encoding to use

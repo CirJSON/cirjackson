@@ -1,6 +1,6 @@
 package org.cirjson.cirjackson.core.util
 
-import org.cirjson.cirjackson.core.CirJsonFactory
+import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import java.util.concurrent.ConcurrentLinkedDeque
 
 /**
@@ -20,6 +20,10 @@ object CirJsonRecyclerPools {
      */
     class ConcurrentDequePool private constructor(serialization: Int) :
             RecyclerPool.ConcurrentDequePoolBase<BufferRecycler>(serialization) {
+
+        override fun createPooled(): BufferRecycler {
+            return BufferRecycler()
+        }
 
         companion object {
 

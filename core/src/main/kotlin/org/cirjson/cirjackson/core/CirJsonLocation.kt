@@ -29,22 +29,29 @@ class CirJsonLocation(contentReference: ContentReference?, val byteOffset: Long,
         val lineNumber: Int, val columnNumber: Int) {
 
     /**
-     * Accessor for information about the original input source content is being
-     * read from. Returned reference is never `null` but may not contain
-     * useful information.
+     * Accessor for information about the original input source content is being read from. Returned reference is never
+     * `null` but may not contain useful information.
      */
     val contentReference = contentReference ?: ContentReference.unknown()
 
     /**
-     * Accessor for getting a textual description of source reference
-     * (Object returned by [contentReference]), as included in
-     * description returned by [toString].
+     * Accessor for getting a textual description of source reference (Object returned by [contentReference]), as
+     * included in description returned by [toString].
      *
      * Note: implementation will simply call [ContentReference.buildSourceDescription])
      */
     val sourceDescription: String by lazy {
         this.contentReference.buildSourceDescription()
     }
+
+    constructor(contentReference: ContentReference?, charOffset: Long, lineNumber: Int, columnNumber: Int) : this(
+            contentReference, -1L, charOffset, lineNumber, columnNumber)
+
+    /**
+     * Accessor for a brief summary of Location offsets (line number, column position, or byte offset, if available).
+     */
+    val offsetDescription: String
+        get() = appendOffsetDescription(StringBuilder(40)).toString()
 
     fun appendOffsetDescription(stringBuilder: StringBuilder): StringBuilder {
         if (contentReference.hasTextualContent) {
@@ -78,7 +85,7 @@ class CirJsonLocation(contentReference: ContentReference?, val byteOffset: Long,
 
     fun toString(stringBuilder: StringBuilder): StringBuilder {
         if (this === NA) {
-            return stringBuilder.append(NO_LOCATION_DESCRIPTOR)
+            return stringBuilder.append(NO_LOCATION_DESCRIPTION)
         }
 
         stringBuilder.apply {
@@ -90,9 +97,50 @@ class CirJsonLocation(contentReference: ContentReference?, val byteOffset: Long,
         return appendOffsetDescription(stringBuilder).append(']')
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+
+        if (other !is CirJsonLocation) {
+            return false
+        }
+
+        if (contentReference != other.contentReference) {
+            return false
+        }
+
+        return lineNumber == other.lineNumber && columnNumber == other.columnNumber && charOffset == other.charOffset
+                && byteOffset == other.byteOffset
+    }
+
+    override fun hashCode(): Int {
+        var hash = contentReference.hashCode()
+        hash = hash xor lineNumber
+        hash += columnNumber
+        hash = hash xor charOffset.hashCode()
+        hash += byteOffset.hashCode()
+        return hash
+    }
+
+    override fun toString(): String {
+        if (this == NA) {
+            return NO_LOCATION_DESCRIPTION
+        }
+
+        val srcDesc = sourceDescription
+
+        val sb = StringBuilder().apply {
+            append("[Source: ")
+            append(srcDesc)
+            append("; ")
+        }
+        return appendOffsetDescription(sb).append(']').toString()
+    }
+
     companion object {
 
-        private const val NO_LOCATION_DESCRIPTOR = "[No location information]"
+        private const val NO_LOCATION_DESCRIPTION = "[No location information]"
 
         /**
          * Shared immutable "N/A location" that can be returned to indicate that no location information is available.

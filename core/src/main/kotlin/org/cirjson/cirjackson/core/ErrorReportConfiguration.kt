@@ -1,15 +1,14 @@
 package org.cirjson.cirjackson.core
 
 /**
- * Container for configuration values used when handling erroneous token inputs.
- * For example, unquoted text segments.
+ * Container for configuration values used when handling erroneous token inputs. For example, unquoted text segments.
  *
  * Currently, default settings are:
  * * Maximum length of token to include in error messages (see [maxErrorTokenLength])
  * * Maximum length of raw content to include in error messages (see [maxRawContentLength])
  *
  */
-class ErrorReportConfiguration(maxErrorTokenLength: Int, maxRawContentLength: Int) {
+open class ErrorReportConfiguration protected constructor(maxErrorTokenLength: Int, maxRawContentLength: Int) {
 
     /**
      * Maximum length of token to include in error messages

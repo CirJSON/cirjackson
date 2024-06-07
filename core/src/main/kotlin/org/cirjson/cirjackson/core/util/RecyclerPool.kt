@@ -79,6 +79,8 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
     abstract class StatefulImplBase<P : WithPool<P>> protected constructor(private val serialization: Int) :
             RecyclerPool<P> {
 
+        abstract fun createPooled(): P
+
         companion object {
 
             const val SERIALIZATION_SHARED = -1
@@ -99,6 +101,10 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
 
         @Transient
         private val pool: Deque<P> = ConcurrentLinkedDeque()
+
+        override fun acquirePooled(): P {
+            return pool.pollFirst() ?: createPooled()
+        }
 
     }
 
