@@ -24,6 +24,10 @@ class BufferRecycler : RecyclerPool.WithPool<BufferRecycler> {
         return this
     }
 
+    fun allocateCharBuffer(index: Int, minSize: Int): CharArray {
+        TODO()
+    }
+
     /**
      * Tag-on interface to allow various other types to expose [BufferRecycler] they are constructed with.
      */
@@ -36,6 +40,15 @@ class BufferRecycler : RecyclerPool.WithPool<BufferRecycler> {
          * type of object
          */
         fun bufferRecycler(): BufferRecycler?
+
+    }
+
+    companion object {
+
+        /**
+         * Buffer used as input buffer for tokenization for character-based parsers.
+         */
+        const val CHAR_TOKEN_BUFFER = 0
 
     }
 

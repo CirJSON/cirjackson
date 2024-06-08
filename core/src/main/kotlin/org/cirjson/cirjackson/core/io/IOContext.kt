@@ -20,10 +20,10 @@ import org.cirjson.cirjackson.core.util.BufferRecycler
  * @param isResourceManaged Whether input source is managed (owned) by Jackson library
  * @param encoding Encoding in use
  */
-class IOContext(val streamReadConstraints: StreamReadConstraints, val streamWriteConstraints: StreamWriteConstraints,
-        val errorReportConfiguration: ErrorReportConfiguration, val bufferRecycler: BufferRecycler?,
-        val contentReference: ContentReference?, val isResourceManaged: Boolean, val encoding: CirJsonEncoding?) :
-        AutoCloseable {
+open class IOContext(val streamReadConstraints: StreamReadConstraints,
+        val streamWriteConstraints: StreamWriteConstraints, val errorReportConfiguration: ErrorReportConfiguration,
+        val bufferRecycler: BufferRecycler?, val contentReference: ContentReference?, val isResourceManaged: Boolean,
+        val encoding: CirJsonEncoding?) : AutoCloseable {
 
     /**
      * Flag that indicates whether this context instance should release configured `bufferRecycler` or not: if it does,
@@ -31,6 +31,12 @@ class IOContext(val streamReadConstraints: StreamReadConstraints, val streamWrit
      * is externally managed)
      */
     private var releaseRecycler = true
+
+    /**
+     * Reference to the buffer allocated for tokenization purposes, in which character input is read, and from which it
+     * can be further returned.
+     */
+    private var myTokenCBuffer: CharArray? = null
 
     override fun close() {
         TODO("Not yet implemented")
@@ -43,6 +49,18 @@ class IOContext(val streamReadConstraints: StreamReadConstraints, val streamWrit
     fun markBufferRecyclerReleased(): IOContext {
         releaseRecycler = false
         return this
+    }
+
+    fun allocateTokenBuffer(minSize: Int): CharArray {
+        verifyAllocation(myTokenCBuffer)
+        return bufferRecycler!!.allocateCharBuffer(BufferRecycler.CHAR_TOKEN_BUFFER, minSize)
+                .also { myTokenCBuffer = it }
+    }
+
+    protected fun verifyAllocation(buffer: Any?) {
+        if (buffer != null) {
+            throw IllegalStateException("Trying to call same allocXxx() method second time")
+        }
     }
 
 }

@@ -414,6 +414,29 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     abstract fun createParser(readContext: ObjectReadContext, file: File): CirJsonParser
 
     /**
+     * Method for constructing parser instance to decode contents of specified path.
+     *
+     * Encoding is auto-detected from contents according to CirJSON specification recommended mechanism. CirJson
+     * specification supports only UTF-8, UTF-16 and UTF-32 as valid encodings, so auto-detection implemented only for
+     * this charsets. For other charsets use the `createParser` that uses a [Reader].
+     *
+     * Underlying input stream (needed for reading contents) will be **owned** (and managed, i.e. closed as need be) by
+     * the parser, since caller has no access to it.
+     *
+     * @param readContext Object read context to use
+     *
+     * @param path Path that contains content to parse
+     *
+     * @return Parser constructed
+     *
+     * @throws CirJacksonException If parser construction or initialization fails
+     *
+     * @since 3.0
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun createParser(readContext: ObjectReadContext, path: Path): CirJsonParser
+
+    /**
      * Method for constructing CirJSON parser instance to parse the contents accessed via specified input stream.
      *
      * The input stream will **not be owned** by the parser, it will still be managed (i.e. closed if end-of-stream is
@@ -501,8 +524,9 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteArrayParser(
-            readContext: ObjectReadContext): P
+    open fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteArrayParser(readContext: ObjectReadContext): P {
+        return unsupported("Non-blocking source not (yet?) supported for this format ($formatName)")
+    }
 
     /**
      * Optional method for constructing parser for non-blocking parsing via
@@ -523,8 +547,9 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteBufferParser(
-            readContext: ObjectReadContext): P
+    open fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteBufferParser(readContext: ObjectReadContext): P {
+        return unsupported("Non-blocking source not (yet?) supported for this format ($formatName)")
+    }
 
     /*
      *******************************************************************************************************************
