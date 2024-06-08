@@ -17,7 +17,7 @@ abstract class CirJacksonException : RuntimeException {
     var location: CirJsonLocation?
         private set
 
-    constructor(message: String?, location: CirJsonLocation?, cause: Throwable) : super(message, cause) {
+    constructor(message: String?, location: CirJsonLocation?, cause: Throwable?) : super(message, cause) {
         this.location = location
     }
 
@@ -25,7 +25,7 @@ abstract class CirJacksonException : RuntimeException {
         this.location = null
     }
 
-    constructor(message: String?, cause: Throwable) : super(message, cause) {
+    constructor(message: String?, cause: Throwable?) : super(message, cause) {
         this.location = null
     }
 
