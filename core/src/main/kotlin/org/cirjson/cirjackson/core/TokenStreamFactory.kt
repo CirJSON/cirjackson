@@ -69,17 +69,17 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     /**
      * Active StreamReadConstraints to use.
      */
-    protected val streamReadConstraints: StreamReadConstraints
+    val streamReadConstraints: StreamReadConstraints
 
     /**
      * Active StreamWriteConstraints to use.
      */
-    protected val streamWriteConstraints: StreamWriteConstraints
+    val streamWriteConstraints: StreamWriteConstraints
 
     /**
      * Active ErrorReportConfiguration to use.
      */
-    protected val errorReportConfiguration: ErrorReportConfiguration
+    val errorReportConfiguration: ErrorReportConfiguration
 
     /*
      *******************************************************************************************************************
@@ -970,17 +970,17 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
         /**
          * Bitfield (set of flags) of all factory features that are enabled by default.
          */
-        protected val DEFAULT_FACTORY_FEATURE_FLAGS = Feature.collectDefaults()
+        val DEFAULT_FACTORY_FEATURE_FLAGS = Feature.collectDefaults()
 
         /**
          * Bitfield (set of flags) of all factory features that are enabled by default.
          */
-        protected val DEFAULT_STREAM_READ_FEATURE_FLAGS = StreamReadFeature.collectDefaults()
+        val DEFAULT_STREAM_READ_FEATURE_FLAGS = StreamReadFeature.collectDefaults()
 
         /**
          * Bitfield (set of flags) of all factory features that are enabled by default.
          */
-        protected val DEFAULT_STREAM_WRITE_FEATURE_FLAGS = StreamWriteFeature.collectDefaults()
+        val DEFAULT_STREAM_WRITE_FEATURE_FLAGS = StreamWriteFeature.collectDefaults()
 
     }
 

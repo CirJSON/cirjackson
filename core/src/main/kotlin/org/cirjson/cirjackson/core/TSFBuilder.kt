@@ -16,6 +16,17 @@ abstract class TSFBuilder<F : TokenStreamFactory, B : TSFBuilder<F, B>> private 
         factoryFeatures: Int, streamReadFeatures: Int, streamWriteFeatures: Int, formatReadFeatures: Int,
         formatWriteFeatures: Int) {
 
+    protected constructor(streamReadConstraints: StreamReadConstraints, streamWriteConstraints: StreamWriteConstraints,
+            errorReportConfiguration: ErrorReportConfiguration, formatReadFeatures: Int,
+            formatWriteFeatures: Int) : this(null, streamReadConstraints, streamWriteConstraints,
+            errorReportConfiguration, TokenStreamFactory.DEFAULT_FACTORY_FEATURE_FLAGS,
+            TokenStreamFactory.DEFAULT_STREAM_READ_FEATURE_FLAGS, TokenStreamFactory.DEFAULT_STREAM_WRITE_FEATURE_FLAGS,
+            formatReadFeatures, formatWriteFeatures)
+
+    protected constructor(base: TokenStreamFactory) : this(base.recyclerPool, base.streamReadConstraints,
+            base.streamWriteConstraints, base.errorReportConfiguration, base.factoryFeatures, base.streamReadFeatures,
+            base.streamWriteFeatures, base.formatReadFeatures, base.formatWriteFeatures)
+
     /**
      * Buffer recycler provider to use.
      */
