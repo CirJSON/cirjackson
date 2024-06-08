@@ -49,6 +49,19 @@ open class StreamReadConstraints protected constructor(val maxNestingDepth: Int,
 
     /*
      *******************************************************************************************************************
+     * Lifecycle
+     *******************************************************************************************************************
+     */
+
+    /**
+     * @return New [Builder] initialized with settings of this constraints instance
+     */
+    fun rebuild(): Builder {
+        return Builder(this)
+    }
+
+    /*
+     *******************************************************************************************************************
      * Convenience methods for validation, document limits
      *******************************************************************************************************************
      */
@@ -197,11 +210,11 @@ open class StreamReadConstraints protected constructor(val maxNestingDepth: Int,
      */
 
     @Throws(StreamConstraintsException::class)
-    private fun constructException(message: String): StreamConstraintsException {
+    protected fun constructException(message: String): StreamConstraintsException {
         throw StreamConstraintsException(message)
     }
 
-    private fun constrainRef(method: String): String {
+    protected fun constrainRef(method: String): String {
         return "`StreamReadConstraints.$method`"
     }
 
