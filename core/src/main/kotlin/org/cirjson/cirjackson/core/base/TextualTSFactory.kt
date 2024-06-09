@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.core.base
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.io.UTF8Writer
 import java.io.*
 import java.net.URL
 import java.nio.file.Path
@@ -158,23 +159,51 @@ abstract class TextualTSFactory : DecorableTSFactory {
      *******************************************************************************************************************
      */
 
-    override fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput,
-            encoding: CirJsonEncoding): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
+    @Throws(CirJacksonException::class)
     override fun createGenerator(writeContext: ObjectWriteContext, file: File,
             encoding: CirJsonEncoding): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val output = fileOutputStream(file)
+        val ioContext = createContext(createContentReference(file), true, encoding)
+
+        return if (encoding == CirJsonEncoding.UTF8) {
+            decorate(createUTF8Generator(writeContext, ioContext, decorate(ioContext, output)))
+        } else {
+            decorate(createGenerator(writeContext, ioContext,
+                    decorate(ioContext, createWriter(ioContext, output, encoding))))
+        }
     }
 
+    @Throws(CirJacksonException::class)
+    override fun createGenerator(writeContext: ObjectWriteContext, path: Path,
+            encoding: CirJsonEncoding): CirJsonGenerator {
+        val output = pathOutputStream(path)
+        val ioContext = createContext(createContentReference(path), true, encoding)
+
+        return if (encoding == CirJsonEncoding.UTF8) {
+            decorate(createUTF8Generator(writeContext, ioContext, decorate(ioContext, output)))
+        } else {
+            decorate(createGenerator(writeContext, ioContext,
+                    decorate(ioContext, createWriter(ioContext, output, encoding))))
+        }
+    }
+
+    @Throws(CirJacksonException::class)
     override fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream,
             encoding: CirJsonEncoding): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val ioContext = createContext(createContentReference(output), true, encoding)
+
+        return if (encoding == CirJsonEncoding.UTF8) {
+            decorate(createUTF8Generator(writeContext, ioContext, decorate(ioContext, output)))
+        } else {
+            decorate(createGenerator(writeContext, ioContext,
+                    decorate(ioContext, createWriter(ioContext, output, encoding))))
+        }
     }
 
+    @Throws(CirJacksonException::class)
     override fun createGenerator(writeContext: ObjectWriteContext, writer: Writer): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val ioContext = createContext(createContentReference(writer), false)
+        return decorate(createGenerator(writeContext, ioContext, decorate(ioContext, writer)))
     }
 
     /*
@@ -183,6 +212,49 @@ abstract class TextualTSFactory : DecorableTSFactory {
      *******************************************************************************************************************
      */
 
+    /**
+     * Overridable factory method that actually instantiates generator for given [Writer] and context object.
+     *
+     * This method is specifically designed to remain compatible between minor versions so that subclasses can count on
+     * it being called as expected. That is, it is part of official interface from subclass perspective, although not a
+     * public method available to users of factory implementations.
+     *
+     * @param writeContext Object write context for generator to use
+     *
+     * @param context IOContext for generator to use
+     *
+     * @param writer Writer for generator to use
+     *
+     * @return Generator constructed
+     *
+     * @throws CirJacksonException If there is a problem constructing generator
+     */
+    @Throws(CirJacksonException::class)
+    protected abstract fun createGenerator(writeContext: ObjectWriteContext, context: IOContext,
+            writer: Writer): CirJsonGenerator
+
+    /**
+     * Overridable factory method that actually instantiates generator for given [OutputStream] and context object,
+     * using UTF-8 encoding.
+     *
+     * This method is specifically designed to remain compatible between minor versions so that subclasses can count on
+     * it being called as expected. That is, it is part of official interface from subclass perspective, although not a
+     * public method available to users of factory implementations.
+     *
+     * @param writeContext Object write context for generator to use
+     *
+     * @param context IOContext for generator to use
+     *
+     * @param output OutputStream for generator to use
+     *
+     * @return Generator constructed
+     *
+     * @throws CirJacksonException If there is a problem constructing generator
+     */
+    @Throws(CirJacksonException::class)
+    protected abstract fun createUTF8Generator(writeContext: ObjectWriteContext, context: IOContext,
+            output: OutputStream): CirJsonGenerator
+
     /*
      *******************************************************************************************************************
      * Factory methods: context objects
@@ -190,11 +262,30 @@ abstract class TextualTSFactory : DecorableTSFactory {
      */
 
     override fun createContentReference(contentReference: Any): ContentReference {
-        TODO("Not yet implemented")
+        return ContentReference.construct(true, contentReference, errorReportConfiguration)
     }
 
     override fun createContentReference(contentReference: Any, offset: Int, length: Int): ContentReference {
-        TODO("Not yet implemented")
+        return ContentReference.construct(true, contentReference, offset, length, errorReportConfiguration)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Factory methods: helpers
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun createWriter(context: IOContext, output: OutputStream, encoding: CirJsonEncoding): Writer {
+        if (encoding == CirJsonEncoding.UTF8) {
+            return UTF8Writer(context, output)
+        }
+
+        try {
+            return OutputStreamWriter(output, encoding.javaName)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
 }

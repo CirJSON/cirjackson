@@ -54,7 +54,7 @@ class CirJsonLocation(contentReference: ContentReference?, val byteOffset: Long,
         get() = appendOffsetDescription(StringBuilder(40)).toString()
 
     fun appendOffsetDescription(stringBuilder: StringBuilder): StringBuilder {
-        if (contentReference.hasTextualContent) {
+        if (contentReference.isContentTextual) {
             stringBuilder.append("line: ")
 
             if (lineNumber >= 0) {

@@ -573,25 +573,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     }
 
     /**
-     * Convenience method for constructing generator that uses default encoding of the format (UTF-8 for CirJSON and
-     * most other data formats).
-     *
-     * Note: there are formats that use fixed encoding (like most binary data formats).
-     *
-     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
-     * @param output DataOutput to use for writing CirJSON content
-     * @param encoding Character encoding to use
-     *
-     * @return Constructed generator
-     *
-     * @throws CirJacksonException If there are problems constructing parser
-     */
-    @Throws(CirJacksonException::class)
-    abstract fun createGenerator(writeContext: ObjectWriteContext, output: DataOutput,
-            encoding: CirJsonEncoding): CirJsonGenerator
-
-    /**
-     * Method for constructing JSON generator for writing CirJSON content to specified file, overwriting contents it
+     * Method for constructing CirJSON generator for writing CirJSON content to specified file, overwriting contents it
      * might have (or creating it if such file does not yet exist). Encoding to use must be specified, and needs to be
      * one of available types (as per CirJSON specification).
      *
@@ -608,6 +590,27 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      */
     @Throws(CirJacksonException::class)
     abstract fun createGenerator(writeContext: ObjectWriteContext, file: File,
+            encoding: CirJsonEncoding): CirJsonGenerator
+
+    /**
+     * Method for constructing generator that writes contents to specified path, overwriting contents it might have (or
+     * creating it if such path does not yet exist).
+     *
+     * Underlying stream **is owned** by the generator constructed, i.e. generator will handle closing of file when
+     * [CirJsonGenerator.close] is called.
+     *
+     * @param writeContext Object-binding context where applicable; used for providing contextual configuration
+     *
+     * @param path Path to write contents to
+     *
+     * @param encoding Character set encoding to use (usually {@link CirJsonEncoding.UTF8})
+     *
+     * @return Generator constructed
+     *
+     * @throws CirJacksonException If generator construction or initialization fails
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun createGenerator(writeContext: ObjectWriteContext, path: Path,
             encoding: CirJsonEncoding): CirJsonGenerator
 
     /**
@@ -629,8 +632,8 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     }
 
     /**
-     * Method for constructing JSON generator for writing CirJSON content using specified output stream. Encoding to use
-     * must be specified, and needs to be one of available types (as per CirJSON specification).
+     * Method for constructing CirJSON generator for writing CirJSON content using specified output stream. Encoding to
+     * use must be specified, and needs to be one of available types (as per CirJSON specification).
      *
      * Underlying stream **is NOT owned** by the generator constructed, so that generator will NOT close the output
      * stream when [CirJsonGenerator.close] is called (unless auto-closing feature,

@@ -11,8 +11,8 @@ import kotlin.math.min
  * [org.cirjson.cirjackson.core.CirJsonLocation]) objections, most commonly to be printed out as part of `Exception`
  * messages.
  *
- * @property hasTextualContent Marker flag to indicate whether included content is textual or not: this is taken to
- * mean, by default, that a snippet of content may be displayed for exception messages.
+ * @property isContentTextual Marker flag to indicate whether included content is textual or not: this is taken to mean,
+ * by default, that a snippet of content may be displayed for exception messages.
  *
  * @property rawContent Reference to the actual underlying content.
  *
@@ -20,8 +20,8 @@ import kotlin.math.min
  *
  * @property contentLength For static content, indicates length of content in the static array. `-1` if not in use.
  */
-open class ContentReference(val hasTextualContent: Boolean, val rawContent: Any?, val contentOffset: Int,
-        val contentLength: Int, errorReportConfiguration: ErrorReportConfiguration) {
+open class ContentReference protected constructor(val isContentTextual: Boolean, val rawContent: Any?,
+        val contentOffset: Int, val contentLength: Int, errorReportConfiguration: ErrorReportConfiguration) {
 
     /**
      * Internal accessor, overridable, used for checking length (in units in which content is counted, either bytes or
@@ -31,7 +31,7 @@ open class ContentReference(val hasTextualContent: Boolean, val rawContent: Any?
      */
     protected open val maxRawContentLength = errorReportConfiguration.maxRawContentLength
 
-    constructor(hasTextualContent: Boolean, rawContent: Any?,
+    protected constructor(hasTextualContent: Boolean, rawContent: Any?,
             errorReportConfiguration: ErrorReportConfiguration) : this(hasTextualContent, rawContent, -1, -1,
             errorReportConfiguration)
 
@@ -67,7 +67,7 @@ open class ContentReference(val hasTextualContent: Boolean, val rawContent: Any?
             append(')')
         }
 
-        if (hasTextualContent) {
+        if (isContentTextual) {
             var unitStr = " chars"
 
             val maxLength = maxRawContentLength
@@ -209,6 +209,17 @@ open class ContentReference(val hasTextualContent: Boolean, val rawContent: Any?
 
                 else -> typeName
             }
+        }
+
+        fun construct(isContentTextual: Boolean, rawContent: Any?, contentOffset: Int, contentLength: Int,
+                errorReportConfiguration: ErrorReportConfiguration): ContentReference {
+            return ContentReference(isContentTextual, rawContent, contentOffset, contentLength,
+                    errorReportConfiguration)
+        }
+
+        fun construct(isContentTextual: Boolean, rawContent: Any?,
+                errorReportConfiguration: ErrorReportConfiguration): ContentReference {
+            return ContentReference(isContentTextual, rawContent, errorReportConfiguration)
         }
 
     }
