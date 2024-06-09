@@ -37,4 +37,18 @@ class UTF8Writer(private val myContext: IOContext, private val myOutput: OutputS
         TODO("Not yet implemented")
     }
 
+    companion object {
+
+        internal const val SURR1_FIRST: Int = 0xD800
+
+        internal const val SURR1_LAST: Int = 0xDBFF
+
+        internal const val SURR2_FIRST: Int = 0xDC00
+
+        internal const val SURR2_LAST: Int = 0xDFFF
+
+        val SURROGATE_BASE = 0x10000 - SURR2_FIRST - (SURR1_FIRST shl 10)
+
+    }
+
 }
