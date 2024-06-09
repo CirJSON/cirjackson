@@ -30,16 +30,53 @@ open class IOContext(val streamReadConstraints: StreamReadConstraints,
      * it needs to call (via [BufferRecycler.releaseToPool] when closed; if not, should do nothing (recycler life-cycle
      * is externally managed)
      */
-    private var releaseRecycler = true
+    protected var myShouldReleaseRecycler = true
+
+    /**
+     * Reference to the allocated I/O buffer for low-level input reading, if any allocated.
+     */
+    protected var myReadIOBuffer: ByteArray? = null
+
+    /**
+     * Reference to the allocated I/O buffer used for low-level encoding-related buffering.
+     */
+    protected var myWriteEncodingBuffer: ByteArray? = null
+
+    /**
+     * Reference to the buffer allocated for temporary use with base64 encoding or decoding.
+     */
+    protected var myBase64Buffer: ByteArray? = null
 
     /**
      * Reference to the buffer allocated for tokenization purposes, in which character input is read, and from which it
      * can be further returned.
      */
-    private var myTokenCBuffer: CharArray? = null
+    protected var myTokenCBuffer: CharArray? = null
+
+    /**
+     * Reference to the buffer allocated for buffering it for output, before being encoded: generally this means
+     * concatenating output, then encoding when buffer fills up.
+     */
+    protected var myConcatCBuffer: CharArray? = null
+
+    /**
+     * Reference temporary buffer Parser instances need if calling app decides it wants to access name via
+     * 'getTextCharacters' method. Regular text buffer can not be used as it may contain textual representation of the
+     * value token.
+     */
+    protected var myNameCopyBuffer: CharArray? = null
+
+    private var myIsClosed = false
 
     override fun close() {
-        TODO("Not yet implemented")
+        if (!myIsClosed) {
+            myIsClosed = true
+
+            if (myShouldReleaseRecycler) {
+                myShouldReleaseRecycler = false
+                bufferRecycler!!.releaseToPool()
+            }
+        }
     }
 
     /**
@@ -47,7 +84,7 @@ open class IOContext(val streamReadConstraints: StreamReadConstraints,
      * externally managed.
      */
     fun markBufferRecyclerReleased(): IOContext {
-        releaseRecycler = false
+        myShouldReleaseRecycler = false
         return this
     }
 
