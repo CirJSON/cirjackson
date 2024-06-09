@@ -46,6 +46,14 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
     }
 
     /**
+     * Method that should be called when previously acquired (see [acquireAndLinkPooled]) pooled value that is no longer
+     * needed; this lets pool to take ownership for possible reuse.
+     *
+     * @param pooled Pooled instance to release back to pool
+     */
+    fun releasePooled(pooled: P)
+
+    /**
      * Simple add-on interface that poolable entities must implement.
      *
      * @param P Self type
@@ -60,6 +68,11 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
          * @return This item (for call chaining)
          */
         fun withPool(pool: RecyclerPool<P>): P
+
+        /**
+         * Method called when this item is to be released back to the pool that owns it (if any)
+         */
+        fun releaseToPool()
 
     }
 
@@ -104,6 +117,10 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
 
         override fun acquirePooled(): P {
             return pool.pollFirst() ?: createPooled()
+        }
+
+        override fun releasePooled(pooled: P) {
+            pool.offerLast(pooled)
         }
 
     }
