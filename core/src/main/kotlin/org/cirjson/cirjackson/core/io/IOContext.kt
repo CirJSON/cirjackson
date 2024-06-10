@@ -5,6 +5,8 @@ import org.cirjson.cirjackson.core.ErrorReportConfiguration
 import org.cirjson.cirjackson.core.StreamReadConstraints
 import org.cirjson.cirjackson.core.StreamWriteConstraints
 import org.cirjson.cirjackson.core.util.BufferRecycler
+import org.cirjson.cirjackson.core.util.ReadConstrainedTextBuffer
+import org.cirjson.cirjackson.core.util.TextBuffer
 
 /**
  * To limit number of configuration and state objects to pass, all contextual objects that need to be passed by the
@@ -23,7 +25,7 @@ import org.cirjson.cirjackson.core.util.BufferRecycler
 open class IOContext(val streamReadConstraints: StreamReadConstraints,
         val streamWriteConstraints: StreamWriteConstraints, val errorReportConfiguration: ErrorReportConfiguration,
         val bufferRecycler: BufferRecycler?, val contentReference: ContentReference?, val isResourceManaged: Boolean,
-        val encoding: CirJsonEncoding?) : AutoCloseable {
+        var encoding: CirJsonEncoding?) : AutoCloseable {
 
     /**
      * Flag that indicates whether this context instance should release configured `bufferRecycler` or not: if it does,
@@ -88,16 +90,263 @@ open class IOContext(val streamReadConstraints: StreamReadConstraints,
         return this
     }
 
+    /*
+     *******************************************************************************************************************
+     * Public API, buffer management
+     *******************************************************************************************************************
+     */
+
+    fun constructTextBuffer(): TextBuffer {
+        return TextBuffer(bufferRecycler)
+    }
+
+    fun constructReadConstrainedTextBuffer(): ReadConstrainedTextBuffer {
+        return ReadConstrainedTextBuffer(streamReadConstraints, bufferRecycler)
+    }
+
+    /**
+     * Method for recycling or allocation byte buffer of "read I/O" type.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateReadIOBuffer(): ByteArray {
+        verifyAllocation(myReadIOBuffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_READ_IO_BUFFER).also { myReadIOBuffer = it }
+    }
+
+    /**
+     * Variant of {@link allocReadIOBuffer} that specifies smallest acceptable buffer size.
+     *
+     * @param minSize Minimum size of the buffer to recycle or allocate
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateReadIOBuffer(minSize: Int): ByteArray {
+        verifyAllocation(myReadIOBuffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_READ_IO_BUFFER, minSize)
+                .also { myReadIOBuffer = it }
+    }
+
+    /**
+     * Method for recycling or allocation byte buffer of "write encoding" type.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateWriteEncodingBuffer(): ByteArray {
+        verifyAllocation(myWriteEncodingBuffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_WRITE_ENCODING_BUFFER)
+                .also { myWriteEncodingBuffer = it }
+    }
+
+    /**
+     * Variant of {@link allocWriteEncodingBuffer} that specifies smallest acceptable buffer size.
+     *
+     * @param minSize Minimum size of the buffer to recycle or allocate
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateWriteEncodingBuffer(minSize: Int): ByteArray {
+        verifyAllocation(myWriteEncodingBuffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_WRITE_ENCODING_BUFFER, minSize)
+                .also { myWriteEncodingBuffer = it }
+    }
+
+    /**
+     * Method for recycling or allocation byte buffer of "base 64 encode/decode" type.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateBase64Buffer(): ByteArray {
+        verifyAllocation(myBase64Buffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_BASE64_CODEC_BUFFER).also { myBase64Buffer = it }
+    }
+
+    /**
+     * Variant of {@link allocBase64Buffer} that specifies smallest acceptable buffer size.
+     *
+     * @param minSize Minimum size of the buffer to recycle or allocate
+     *
+     * @return Allocated or recycled byte buffer
+     */
+    fun allocateBase64Buffer(minSize: Int): ByteArray {
+        verifyAllocation(myBase64Buffer)
+        return bufferRecycler!!.allocateByteBuffer(BufferRecycler.BYTE_BASE64_CODEC_BUFFER, minSize)
+                .also { myBase64Buffer = it }
+    }
+
+    /**
+     * Method for recycling or allocation char buffer of "tokenization" type.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled char buffer
+     */
+    fun allocateTokenBuffer(): CharArray {
+        verifyAllocation(myTokenCBuffer)
+        return bufferRecycler!!.allocateCharBuffer(BufferRecycler.CHAR_TOKEN_BUFFER).also { myTokenCBuffer = it }
+    }
+
+    /**
+     * Variant of {@link allocateTokenBuffer} that specifies smallest acceptable buffer size.
+     *
+     * @param minSize Minimum size of the buffer to recycle or allocate
+     *
+     * @return Allocated or recycled char buffer
+     */
     fun allocateTokenBuffer(minSize: Int): CharArray {
         verifyAllocation(myTokenCBuffer)
         return bufferRecycler!!.allocateCharBuffer(BufferRecycler.CHAR_TOKEN_BUFFER, minSize)
                 .also { myTokenCBuffer = it }
     }
 
+    /**
+     * Method for recycling or allocation char buffer of "value buffering" type.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled char buffer
+     */
+    fun allocConcatBuffer(): CharArray {
+        verifyAllocation(myConcatCBuffer)
+        return bufferRecycler!!.allocateCharBuffer(BufferRecycler.CHAR_CONCAT_BUFFER).also { myConcatCBuffer = it }
+    }
+
+    /**
+     * Method for recycling or allocation char buffer of "name storing" type that specifies smallest acceptable buffer
+     * size.
+     *
+     * Note: the method can only be called once during its life cycle. This is to protect against accidental sharing.
+     *
+     * @return Allocated or recycled char buffer
+     */
+    fun allocateNameCopyBuffer(minSize: Int): CharArray {
+        verifyAllocation(myNameCopyBuffer)
+        return bufferRecycler!!.allocateCharBuffer(BufferRecycler.CHAR_NAME_COPY_BUFFER, minSize)
+                .also { myNameCopyBuffer = it }
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseReadIOBuffer(buffer: ByteArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myReadIOBuffer!!)
+        myReadIOBuffer = null
+        bufferRecycler!!.releaseByteBuffer(BufferRecycler.BYTE_READ_IO_BUFFER, buffer)
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseWriteEncodingBuffer(buffer: ByteArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myWriteEncodingBuffer!!)
+        myWriteEncodingBuffer = null
+        bufferRecycler!!.releaseByteBuffer(BufferRecycler.BYTE_WRITE_ENCODING_BUFFER, buffer)
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseBase64Buffer(buffer: ByteArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myBase64Buffer!!)
+        myBase64Buffer = null
+        bufferRecycler!!.releaseByteBuffer(BufferRecycler.BYTE_BASE64_CODEC_BUFFER, buffer)
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseTokenBuffer(buffer: CharArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myTokenCBuffer!!)
+        myReadIOBuffer = null
+        bufferRecycler!!.releaseCharBuffer(BufferRecycler.CHAR_TOKEN_BUFFER, buffer)
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseConcatBuffer(buffer: CharArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myConcatCBuffer!!)
+        myConcatCBuffer = null
+        bufferRecycler!!.releaseCharBuffer(BufferRecycler.CHAR_CONCAT_BUFFER, buffer)
+    }
+
+    /**
+     * Method to call when all the processing buffers can be safely recycled.
+     *
+     * @param buffer Buffer instance to release (return for recycling)
+     */
+    fun releaseNameCopyBuffer(buffer: CharArray?) {
+        if (buffer == null) {
+            return
+        }
+
+        verifyRelease(buffer, myNameCopyBuffer!!)
+        myNameCopyBuffer = null
+        bufferRecycler!!.releaseCharBuffer(BufferRecycler.CHAR_NAME_COPY_BUFFER, buffer)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal helpers
+     *******************************************************************************************************************
+     */
+
     protected fun verifyAllocation(buffer: Any?) {
         if (buffer != null) {
             throw IllegalStateException("Trying to call same allocXxx() method second time")
         }
+    }
+
+    protected fun verifyRelease(toRelease: ByteArray, source: ByteArray) {
+        if (toRelease !== source && toRelease.size < source.size) {
+            throw wrongBuffer()
+        }
+    }
+
+    protected fun verifyRelease(toRelease: CharArray, source: CharArray) {
+        if (toRelease !== source && toRelease.size < source.size) {
+            throw wrongBuffer()
+        }
+    }
+
+    private fun wrongBuffer(): IllegalArgumentException {
+        return IllegalArgumentException("Trying to release buffer smaller than original")
     }
 
 }
