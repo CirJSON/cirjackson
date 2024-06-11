@@ -4,7 +4,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.io.Writer
 
-class UTF8Writer(private val myContext: IOContext, private val myOutput: OutputStream) : Writer() {
+class UTF8Writer(private val myContext: IOContext, private var myOutput: OutputStream?) : Writer() {
 
     private var myOutputBuffer: ByteArray? = myContext.allocateWriteEncodingBuffer()
 
@@ -16,37 +16,302 @@ class UTF8Writer(private val myContext: IOContext, private val myOutput: OutputS
 
     @Throws(IOException::class)
     override fun close() {
-        TODO("Not yet implemented")
+        if (myOutput != null) {
+            if (myOutputPointer > 0) {
+                myOutput!!.write(myOutputBuffer!!, 0, myOutputPointer)
+            }
+
+            val output = myOutput!!
+            myOutput = null
+
+            val buffer = myOutputBuffer
+
+            if (buffer != null) {
+                myOutputBuffer = null
+                myContext.releaseWriteEncodingBuffer(buffer)
+            }
+
+            output.close()
+
+            val code = mySurrogate
+            mySurrogate = 0
+
+            if (code > 0) {
+                illegalSurrogate(code)
+            }
+        }
+
+        myContext.close()
     }
 
     @Throws(IOException::class)
     override fun flush() {
-        TODO("Not yet implemented")
+        if (myOutput == null) {
+            return
+        }
+
+        if (myOutputPointer > 0) {
+            myOutput!!.write(myOutputBuffer!!, 0, myOutputPointer)
+            myOutputPointer = 0
+        }
+
+        myOutput!!.flush()
     }
 
     @Throws(IOException::class)
+    @Suppress("DuplicatedCode")
     override fun write(cbuf: CharArray, off: Int, len: Int) {
-        TODO("Not yet implemented")
+        var length = len
+        var offset = off
+
+        if (length < 2) {
+            if (len == 1) {
+                write(cbuf[offset].code)
+            }
+
+            return
+        }
+
+        if (mySurrogate > 0) {
+            val second = cbuf[offset++]
+            length--
+            write(convertSurrogate(second.code))
+        }
+
+        var outputPointer = myOutputPointer
+        val outputBuffer = myOutputBuffer!!
+        val outputBufferLast = myOutputBufferEnd
+
+        length += offset
+
+        outputLoop@ while (offset < length) {
+            if (outputPointer >= outputBufferLast) {
+                myOutput!!.write(outputBuffer, 0, outputPointer)
+                outputPointer = 0
+            }
+
+            var c = cbuf[offset++].code
+
+            if (c < 0x80) {
+                outputBuffer[outputPointer++] = c.toByte()
+                var maxInCount = length - offset
+                val maxOutCount = outputBufferLast - outputPointer
+
+                if (maxInCount > maxOutCount) {
+                    maxInCount = maxOutCount
+                }
+
+                maxInCount += offset
+
+                while (true) {
+                    if (offset >= maxInCount) {
+                        continue@outputLoop
+                    }
+
+                    c = cbuf[offset++].code
+
+                    if (c >= 0x80) {
+                        break
+                    }
+
+                    outputBuffer[outputPointer++] = c.toByte()
+                }
+            }
+
+            if (c < 0x800) {
+                outputBuffer[outputPointer++] = (0xC0 or (c shr 6)).toByte()
+            } else {
+                if (c !in SURR1_FIRST..SURR2_LAST) {
+                    outputBuffer[outputPointer++] = (0xE0 or (c shr 12)).toByte()
+                    outputBuffer[outputPointer++] = (0x80 or ((c shr 6) and 0x3F)).toByte()
+                    outputBuffer[outputPointer++] = (0x80 or (c and 0x3F)).toByte()
+                    continue
+                }
+
+                if (c > SURR1_LAST) {
+                    myOutputPointer = outputPointer
+                    illegalSurrogate(c)
+                }
+
+                mySurrogate = c
+
+                if (offset >= length) {
+                    break
+                }
+
+                c = convertSurrogate(cbuf[offset++].code)
+
+                if (c > 0x10FFFF) {
+                    myOutputPointer = outputPointer
+                    illegalSurrogate(c)
+                }
+
+                outputBuffer[outputPointer++] = (0xF0 or (c shr 18)).toByte()
+                outputBuffer[outputPointer++] = (0x80 or ((c shr 12) and 0x3F)).toByte()
+                outputBuffer[outputPointer++] = (0x80 or ((c shr 6) and 0x3F)).toByte()
+            }
+
+            outputBuffer[outputPointer++] = (0x80 or (c and 0x3F)).toByte()
+        }
+
+        myOutputPointer = outputPointer
     }
 
     @Throws(IOException::class)
     override fun write(c: Int) {
-        TODO("Not yet implemented")
+        var code = c
+
+        if (mySurrogate > 0) {
+            code = convertSurrogate(code)
+        } else if (code in SURR1_FIRST..SURR2_LAST) {
+            if (code >= SURR1_LAST) {
+                illegalSurrogate(code)
+            }
+
+            mySurrogate = code
+            return
+        }
+
+        if (myOutputPointer >= myOutputBufferEnd) {
+            myOutput!!.write(myOutputBuffer!!, 0, myOutputPointer)
+            myOutputPointer = 0
+        }
+
+        val outputBuffer = myOutputBuffer!!
+
+        if (code < 0x80) {
+            outputBuffer[myOutputPointer++] = code.toByte()
+            return
+        }
+
+        var pointer = myOutputPointer
+
+        if (code < 0x800) {
+            outputBuffer[pointer++] = (0xC0 or (code shr 6)).toByte()
+        } else if (code <= 0xFFFF) {
+            outputBuffer[pointer++] = (0xE0 or (code shr 12)).toByte()
+            outputBuffer[pointer++] = (0x80 or ((code shr 6) and 0x3F)).toByte()
+        } else {
+            if (code > 0x10FFFF) {
+                illegalSurrogate(code)
+            }
+
+            outputBuffer[pointer++] = (0xF0 or (code shr 18)).toByte()
+            outputBuffer[pointer++] = (0x80 or ((code shr 12) and 0x3F)).toByte()
+            outputBuffer[pointer++] = (0x80 or ((code shr 6) and 0x3F)).toByte()
+        }
+
+        outputBuffer[pointer++] = (0x80 or (code and 0x3F)).toByte()
+        myOutputPointer = pointer
     }
 
     @Throws(IOException::class)
     override fun write(cbuf: CharArray) {
-        TODO("Not yet implemented")
+        write(cbuf, 0, cbuf.size)
     }
 
     @Throws(IOException::class)
     override fun write(str: String) {
-        TODO("Not yet implemented")
+        write(str, 0, str.length)
     }
 
     @Throws(IOException::class)
+    @Suppress("DuplicatedCode")
     override fun write(str: String, off: Int, len: Int) {
-        TODO("Not yet implemented")
+        var length = len
+        var offset = off
+
+        if (length < 2) {
+            if (len == 1) {
+                write(str[offset].code)
+            }
+
+            return
+        }
+
+        if (mySurrogate > 0) {
+            val second = str[offset++]
+            length--
+            write(convertSurrogate(second.code))
+        }
+
+        var outputPointer = myOutputPointer
+        val outputBuffer = myOutputBuffer!!
+        val outputBufferLast = myOutputBufferEnd
+
+        length += offset
+
+        outputLoop@ while (offset < length) {
+            if (outputPointer >= outputBufferLast) {
+                myOutput!!.write(outputBuffer, 0, outputPointer)
+                outputPointer = 0
+            }
+
+            var c = str[offset++].code
+
+            if (c < 0x80) {
+                outputBuffer[outputPointer++] = c.toByte()
+                var maxInCount = length - offset
+                val maxOutCount = outputBufferLast - outputPointer
+
+                if (maxInCount > maxOutCount) {
+                    maxInCount = maxOutCount
+                }
+
+                maxInCount += offset
+
+                while (true) {
+                    if (offset >= maxInCount) {
+                        continue@outputLoop
+                    }
+
+                    c = str[offset++].code
+
+                    if (c >= 0x80) {
+                        break
+                    }
+
+                    outputBuffer[outputPointer++] = c.toByte()
+                }
+            }
+
+            if (c < 0x800) {
+                outputBuffer[outputPointer++] = (0xC0 or (c shr 6)).toByte()
+            } else {
+                if (c !in SURR1_FIRST..SURR2_LAST) {
+                    outputBuffer[outputPointer++] = (0xE0 or (c shr 12)).toByte()
+                    outputBuffer[outputPointer++] = (0x80 or ((c shr 6) and 0x3F)).toByte()
+                    outputBuffer[outputPointer++] = (0x80 or (c and 0x3F)).toByte()
+                    continue
+                }
+
+                if (c > SURR1_LAST) {
+                    myOutputPointer = outputPointer
+                    illegalSurrogate(c)
+                }
+
+                mySurrogate = c
+
+                if (offset >= length) {
+                    break
+                }
+
+                c = convertSurrogate(str[offset++].code)
+
+                if (c > 0x10FFFF) {
+                    myOutputPointer = outputPointer
+                    illegalSurrogate(c)
+                }
+
+                outputBuffer[outputPointer++] = (0xF0 or (c shr 18)).toByte()
+                outputBuffer[outputPointer++] = (0x80 or ((c shr 12) and 0x3F)).toByte()
+                outputBuffer[outputPointer++] = (0x80 or ((c shr 6) and 0x3F)).toByte()
+            }
+
+            outputBuffer[outputPointer++] = (0x80 or (c and 0x3F)).toByte()
+        }
+
+        myOutputPointer = outputPointer
     }
 
     @Throws(IOException::class)
