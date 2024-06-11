@@ -359,7 +359,7 @@ class UTF8Writer(private val myContext: IOContext, private var myOutput: OutputS
 
         internal const val SURR2_LAST: Int = 0xDFFF
 
-        val SURROGATE_BASE = 0x10000 - SURR2_FIRST - (SURR1_FIRST shl 10)
+        const val SURROGATE_BASE = 0x10000 - SURR2_FIRST - (SURR1_FIRST shl 10)
 
         @Throws(IOException::class)
         private fun illegalSurrogate(code: Int) {
