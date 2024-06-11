@@ -2,9 +2,9 @@ package org.cirjson.cirjackson.core.io
 
 object CharTypes {
 
-    private const val CHARS = "0123456789ABCDEF"
+    private val CHARS = "0123456789ABCDEF".toCharArray()
 
-    private const val CHARS_LOWER = "0123456789abcdef"
+    private val CHARS_LOWER = "0123456789abcdef".toCharArray()
 
     fun hexToChar(char: Int): Char {
         return CHARS[char]
