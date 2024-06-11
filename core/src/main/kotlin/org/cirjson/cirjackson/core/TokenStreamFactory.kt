@@ -196,7 +196,8 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * Default implementation returns `false` as CirJSON does NOT require stable ordering. Formats that require ordering
      * include positional textual formats like `CSV`, and schema-based binary formats like `Avro`.
      */
-    abstract val isRequiringPropertyOrdering: Boolean
+    open val isRequiringPropertyOrdering: Boolean
+        get() = false
 
     /**
      * Introspection that higher-level functionality may call to see whether underlying data format can read and write

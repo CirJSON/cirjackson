@@ -2,6 +2,8 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.base.TextualTSFactory
+import org.cirjson.cirjackson.core.io.IOContext
+import java.io.*
 
 /**
  * The main factory class of CirJackson package, used to configure and construct reader (aka parser, [CirJsonParser])
@@ -43,7 +45,58 @@ open class CirJsonFactory : TextualTSFactory {
         TODO("Not yet implemented")
     }
 
+    override fun rebuild(): TSFBuilder<*, *> {
+        TODO("Not yet implemented")
+    }
+
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
+            len: Int): CirJsonParser {
+        TODO("Not yet implemented")
+    }
+
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray, offset: Int,
+            len: Int, recyclable: Boolean): CirJsonParser {
+        TODO("Not yet implemented")
+    }
+
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, input: DataInput): CirJsonParser {
+        TODO("Not yet implemented")
+    }
+
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, input: InputStream): CirJsonParser {
+        TODO("Not yet implemented")
+    }
+
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, reader: Reader): CirJsonParser {
+        TODO("Not yet implemented")
+    }
+
+    override fun createGenerator(writeContext: ObjectWriteContext, context: IOContext,
+            writer: Writer): CirJsonGenerator {
+        TODO("Not yet implemented")
+    }
+
+    override fun createUTF8Generator(writeContext: ObjectWriteContext, context: IOContext,
+            output: OutputStream): CirJsonGenerator {
+        TODO("Not yet implemented")
+    }
+
+    override val isParsingAsyncPossible: Boolean
+        get() = TODO("Not yet implemented")
+
+    override fun canUseSchema(schema: FormatSchema): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override val formatName: String
+        get() = TODO("Not yet implemented")
+
     companion object {
+
+        /**
+         * Name used to identify CirJSON format (and returned by [formatName]
+         */
+        const val FORMAT_NAME_CIRJSON = "CirJSON"
 
         /**
          * Bitfield (set of flags) of all parser features that are enabled by default.
