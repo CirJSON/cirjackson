@@ -1,9 +1,16 @@
 package org.cirjson.cirjackson.core.io
 
+import java.io.IOException
 import java.io.OutputStream
 import java.io.Writer
 
 class UTF8Writer(private val myContext: IOContext, private val myOutput: OutputStream) : Writer() {
+
+    private var myOutputBuffer: ByteArray? = myContext.allocateWriteEncodingBuffer()
+
+    private val myOutputBufferEnd = myOutputBuffer!!.size - 4
+
+    private var myOutputPointer = 0
 
     override fun close() {
         TODO("Not yet implemented")
@@ -48,6 +55,15 @@ class UTF8Writer(private val myContext: IOContext, private val myOutput: OutputS
         internal const val SURR2_LAST: Int = 0xDFFF
 
         val SURROGATE_BASE = 0x10000 - SURR2_FIRST - (SURR1_FIRST shl 10)
+
+        @Throws(IOException::class)
+        private fun illegalSurrogate(code: Int) {
+            throw IOException(illegalSurrogateDesc(code))
+        }
+
+        internal fun illegalSurrogateDesc(code: Int): String {
+            TODO("Not yet implemented")
+        }
 
     }
 
