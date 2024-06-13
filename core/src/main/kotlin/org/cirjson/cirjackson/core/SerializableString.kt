@@ -29,7 +29,7 @@ interface SerializableString {
      *
      * @return Length of the String in characters
      */
-    val charLength: Int
+    val length: Int
 
     /**
      * Returns CirJSON quoted form of the String, as character array. Result can be embedded as-is in textual CirJSON as
