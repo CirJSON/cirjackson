@@ -2,8 +2,10 @@ package org.cirjson.cirjackson.core.symbols
 
 import org.cirjson.cirjackson.core.StreamReadConstraints
 import org.cirjson.cirjackson.core.TokenStreamFactory
+import org.cirjson.cirjackson.core.util.InternCache
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
 
 /**
  * This class is a kind of specialized type-safe Map, from char array to String value. Specialization means that in
@@ -334,6 +336,81 @@ class CharsToNameCanonicalizer {
     private fun addSymbol(buffer: CharArray, start: Int, length: Int, i: Int): String {
         var index = i
 
+        if (myIsHashShared) {
+            copyArrays()
+            myIsHashShared = false
+        } else {
+            rehash()
+            index = hashToIndex(calculateHash(buffer, start, length))
+        }
+
+        var newSymbol = String(buffer, start, length)
+
+        if (TokenStreamFactory.Feature.INTERN_PROPERTY_NAMES.isEnabledIn(myFactoryFeatures)) {
+            newSymbol = InternCache.INSTANCE.intern(newSymbol)
+        }
+
+        ++mySize
+
+        if (mySymbols[index] == null) {
+            mySymbols[index] = newSymbol
+            return newSymbol
+        }
+
+        val bix = index shr 1
+        val newBucket = Bucket(newSymbol, myBuckets[bix])
+        val collLength = newBucket.length
+
+        if (collLength > MAX_COLL_CHAIN_LENGTH) {
+            handleSpillOverflow(bix, newBucket, index)
+        } else {
+            myBuckets[bix] = newBucket
+            maxCollisionLength = max(collLength, maxCollisionLength)
+        }
+
+        return newSymbol
+    }
+
+    /**
+     * Method called when copy-on-write is needed; generally when first change is made to a derived symbol table.
+     */
+    private fun copyArrays() {
+        TODO()
+    }
+
+    /**
+     * Method called when size (number of entries) of symbol table grows so big that load factor is exceeded. Since size
+     * has to remain a power of two, arrays will then always be doubled. Main work is really redistributing old entries
+     * into new String/Bucket entries.
+     */
+    private fun rehash() {
+        TODO()
+    }
+
+    /**
+     * Method called when an overflow bucket has hit the maximum expected length: this may be a case of DoS attack. Deal
+     * with it based on settings by either clearing up bucket (to avoid indefinite expansion) or throwing exception.
+     * Currently, the first overflow for any single bucket DOES NOT throw an exception, only second time (per symbol
+     * table instance)
+     */
+    private fun handleSpillOverflow(bucketIndex: Int, newBucket: Bucket, mainIndex: Int) {
+        TODO()
+    }
+
+    /**
+     * Implementation of a hashing method for variable length Strings. Most of the time intention is that this
+     * calculation is done by caller during parsing, not here; however, sometimes it needs to be done for parsed
+     * "String" too.
+     *
+     * @param buffer Input buffer that contains name to decode
+     *
+     * @param start Pointer to the first character of the name
+     *
+     * @param length Length of String; has to be at least 1 (caller guarantees)
+     *
+     * @return Hash code calculated
+     */
+    fun calculateHash(buffer: CharArray, start: Int, length: Int): Int {
         TODO()
     }
 
