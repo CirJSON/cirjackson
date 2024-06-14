@@ -1,0 +1,320 @@
+package org.cirjson.cirjackson.core.symbols
+
+import org.cirjson.cirjackson.core.StreamReadConstraints
+import org.cirjson.cirjackson.core.TokenStreamFactory
+import java.util.*
+import java.util.concurrent.atomic.AtomicReference
+
+/**
+ * This class is a kind of specialized type-safe Map, from char array to String value. Specialization means that in
+ * addition to type-safety and specific access patterns (key char array, Value optionally interned String; values added
+ * on access if necessary), and that instances are meant to be used concurrently, but by using well-defined mechanisms
+ * to obtain such concurrently usable instances. Main use for the class is to store symbol table information for things
+ * like compilers and parsers; especially when number of symbols (keywords) is limited.
+ *
+ * For optimal performance, usage pattern should be one where matches should be very common (especially after
+ * "warm-up"), and as with most hash-based maps/sets, that hash codes are uniformly distributed. Also, collisions are
+ * slightly more expensive than with HashMap or HashSet, since hash codes are not used in resolving collisions; that is,
+ * equals() comparison is done with all symbols in same bucket index.
+ *
+ * Finally, rehashing is also more expensive, as hash codes are not stored; rehashing requires all entries' hash codes
+ * to be recalculated. Reason for not storing hash codes is the reduced memory usage, hoping for better memory locality.
+ *
+ * Usual usage pattern is to create a single "master" instance, and either use that instance in sequential fashion, or
+ * to create derived "child" instances, which after use, are asked to return possible symbol additions to master
+ * instance. In either case benefit is that symbol table gets initialized so that further uses are more efficient, as
+ * eventually all symbols needed will already be in symbol table. At that point no more Symbol String allocations are
+ * needed, nor changes to symbol table itself.
+ *
+ * Note that while individual SymbolTable instances are NOT thread-safe (much like generic collection classes),
+ * concurrently used "child" instances can be freely used without synchronization. However, using master table
+ * concurrently with child instances can only be done if access to master instance is read-only (i.e. no modifications
+ * done).
+ */
+class CharsToNameCanonicalizer {
+
+    /**
+     * Sharing of learnt symbols is done by optional linking of symbol table instances with their parents. When parent
+     * linkage is defined, and child instance is released (call to `release`), parent's shared tables may be updated
+     * from the child instance.
+     */
+    private val myParent: CharsToNameCanonicalizer?
+
+    /**
+     * Member that is only used by the root table instance: root passes immutable state info child instances, and
+     * children may return new state if they add entries to the table. Child tables do NOT use the reference.
+     */
+    private val myTableInfo: AtomicReference<TableInfo>?
+
+    /**
+     * Constraints used by [TokenStreamFactory] that uses this canonicalizer.
+     */
+    private val myStreamReadConstraints: StreamReadConstraints
+
+    /**
+     * Seed value we use as the base to make hash codes non-static between different runs, but still stable for lifetime
+     * of a single symbol table instance.
+     *
+     * This is done for security reasons, to avoid potential DoS attack via hash collisions.
+     */
+    val hashSeed: Int
+
+    /**
+     * Feature flags of [TokenStreamFactory] that uses this canonicalizer.
+     */
+    private val myFactoryFeatures: Int
+
+    /**
+     * Whether any canonicalization should be attempted (whether using intern or not.
+     *
+     * NOTE: non-final since we may need to disable this with overflow.
+     */
+    private var myCanonicalize: Boolean
+
+    /**
+     * Primary matching symbols; it's expected most match occur from
+     * here.
+     */
+    private lateinit var mySymbols: Array<String?>
+
+    /**
+     * Overflow buckets; if primary doesn't match, lookup is done from here.
+     *
+     * Note: Number of buckets is half of number of symbol entries, on assumption there's less need for buckets.
+     */
+    private lateinit var myBuckets: Array<Bucket?>
+
+    /**
+     * Current size (number of entries); needed to know if and when there's a rehash.
+     */
+    private var mySize: Int = 0
+
+    /**
+     * Limit that indicates maximum size this instance can hold before it needs to be expanded and rehashed. Calculated
+     * using fill factor passed in to constructor.
+     */
+    private var mySizeThreshold = 0
+
+    /**
+     * Mask used to get index from hash values; equal to `_buckets.length - 1`, when _buckets.length is a power of two.
+     */
+    private var myIndexMask = 0
+
+    /**
+     * Length of the collision chain.
+     *
+     * We need to keep track of the longest collision list; this is needed both to indicate problems with attacks and to
+     * allow flushing for other cases.
+     *
+     * Mostly needed by unit tests; calculates length of the longest collision chain. This should typically be a low
+     * number, but may be up to [size] - 1 in the pathological case
+     */
+    var maxCollisionLength = 0
+        private set
+
+    /**
+     * Flag that indicates whether underlying data structures for the main hash area are shared or not. If they are,
+     * then they need to be handled in copy-on-write way, i.e. if they need to be modified, a copy needs to be made
+     * first; at this point it will not be shared anymore, and can be modified.
+     *
+     * This flag needs to be checked both when adding new main entries, and when adding new collision list queues (i.e.
+     * creating a new collision list head entry)
+     */
+    private var myIsHashShared = false
+
+    /**
+     * Lazily constructed structure that is used to keep track of collision buckets that have overflowed once: this is
+     * used to detect likely attempts at denial-of-service attacks that uses hash collisions.
+     */
+    private var myOverflows: BitSet? = null
+
+    /**
+     * Main method for constructing a root symbol table instance.
+     */
+    private constructor(streamReadConstraints: StreamReadConstraints, factoryFeatures: Int, seed: Int) {
+        myParent = null
+        hashSeed = seed
+        myStreamReadConstraints = streamReadConstraints
+
+        myCanonicalize = true
+        myFactoryFeatures = factoryFeatures
+        myTableInfo = AtomicReference<TableInfo>(TableInfo.createInitial(DEFAULT_T_SIZE))
+    }
+
+    /**
+     * Internal constructor used when creating child instances.
+     */
+    private constructor(parent: CharsToNameCanonicalizer, streamReadConstraints: StreamReadConstraints,
+            factoryFeatures: Int, seed: Int, parentState: TableInfo) {
+        myParent = parent
+        myStreamReadConstraints = streamReadConstraints
+        hashSeed = seed
+        myTableInfo = null
+        myFactoryFeatures = factoryFeatures
+        myCanonicalize = TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES.isEnabledIn(factoryFeatures)
+
+        mySymbols = parentState.mySymbols
+        myBuckets = parentState.myBuckets
+
+        mySize = parentState.mySize
+        maxCollisionLength = parentState.myLongestCollisionList
+
+        val arrayLength = mySymbols.size
+        mySizeThreshold = thresholdSize(arrayLength)
+        myIndexMask = arrayLength - 1
+
+        myIsHashShared = true
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Life-cycle: factory methods, merging
+     *******************************************************************************************************************
+     */
+
+    /*
+     *******************************************************************************************************************
+     * Public API, generic accessors
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Number of symbol entries contained by this canonicalizer instance
+     */
+    val size
+        get() = myTableInfo?.get()?.mySize ?: mySize
+
+    /**
+     * Accessor for checking number of primary hash buckets this symbol table uses.
+     */
+    val bucketCount
+        get() = mySymbols.size
+
+    val isMaybeDirty
+        get() = !myIsHashShared
+
+    /**
+     * Number of collisions in the primary hash area. Accessor mostly needed by unit tests; calculates number of entries
+     * that are in collision list. Value can be at most ([size] - 1), but should usually be much lower, ideally 0.
+     */
+    val collisionCount
+        get() = myBuckets.fold(0) { a, b -> a + (b?.length ?: 0) }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, accessing symbols
+     *******************************************************************************************************************
+     */
+
+    fun findSymbol(buffer: CharArray, start: Int, length: Int, hash: Int): String {
+        TODO()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper classes
+     *******************************************************************************************************************
+     */
+
+    /**
+     * This class is a symbol table entry. Each entry acts as a node in a linked list.
+     */
+    private class Bucket(val symbol: String, val next: Bucket?) {
+
+        val length: Int = (next?.length ?: 0) + 1
+
+        fun has(buffer: CharArray, start: Int, length: Int): String? {
+            if (symbol.length != length) {
+                return null
+            }
+
+            var i = 0
+
+            do {
+                if (symbol[i] != buffer[i]) {
+                    return null
+                }
+            } while (++i < length)
+
+            return symbol
+        }
+
+    }
+
+    /**
+     * Immutable value class used for sharing information as efficiently as possible, by only require synchronization of
+     * reference manipulation but not access to contents.
+     */
+    private class TableInfo(val mySize: Int, val myLongestCollisionList: Int, val mySymbols: Array<String?>,
+            val myBuckets: Array<Bucket?>) {
+
+        constructor(source: CharsToNameCanonicalizer) : this(source.mySize, source.maxCollisionLength,
+                source.mySymbols, source.myBuckets)
+
+        companion object {
+
+            fun createInitial(size: Int): TableInfo {
+                return TableInfo(0, 0, arrayOfNulls(size), arrayOfNulls(size))
+            }
+
+        }
+
+    }
+
+    companion object {
+
+        /**
+         * If we use "multiply-add" based hash algorithm, this is the multiplier we use.
+         *
+         * Note that JDK uses 31; but it seems that 33 produces fewer collisions, at least with tests we have.
+         */
+        const val HASH_MULT = 33
+
+        /**
+         * Default initial table size. Shouldn't be miniscule (as there's cost to both array reallocation and
+         * rehashing), but let's keep it reasonably small. For systems that properly reuse factories it doesn't matter
+         * either way; but when recreating factories often, initial overhead may dominate.
+         */
+        private const val DEFAULT_T_SIZE = 64
+
+        /**
+         * Let's not expand symbol tables past some maximum size; this should be protected against OOMEs caused by large
+         * documents with unique (~= random) names.
+         *
+         * 64k entries == 256k mem
+         */
+        private const val MAX_T_SIZE = 0x10000
+
+        /**
+         * Let's only share reasonably sized symbol tables. Max size set to 3/4 of 16k; this corresponds to 64k main
+         * hash index. This should allow for enough distinct names for almost any case.
+         */
+        internal const val MAX_ENTRIES_FOR_REUSE = 12000
+
+        /**
+         * Also: to thwart attacks based on hash collisions (which may or may not be cheap to calculate), we will need
+         * to detect "too long" collision chains.
+         *
+         * Note: longest chain we have been able to produce without malicious intent has been 38 (with
+         * "org.cirjson.cirjackson.core.main.TestWithTonsaSymbols"); our setting should be reasonable here.
+         */
+        internal const val MAX_COLL_CHAIN_LENGTH = 150
+
+        private fun thresholdSize(hashAreaSize: Int): Int {
+            return hashAreaSize - (hashAreaSize shr 2)
+        }
+
+        fun createRoot(owner: TokenStreamFactory?): CharsToNameCanonicalizer {
+            return createRoot(owner, 0)
+        }
+
+        fun createRoot(owner: TokenStreamFactory?, seed: Int): CharsToNameCanonicalizer {
+            val realSeed = if (seed != 0) seed else System.identityHashCode(owner)
+            val streamReadConstraints = owner?.streamReadConstraints ?: StreamReadConstraints.defaults()
+            val factoryFeatures = owner?.factoryFeatures ?: 0
+            return CharsToNameCanonicalizer(streamReadConstraints, factoryFeatures, realSeed)
+        }
+
+    }
+
+}
