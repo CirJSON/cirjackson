@@ -172,6 +172,55 @@ class CharsToNameCanonicalizer {
      *******************************************************************************************************************
      */
 
+    /**
+     * "Factory" method; will create a new child instance of this symbol table. It will be a copy-on-write instance,
+     * i.e. it will only use read-only copy of parent's data, but when changes are needed, a copy will be created.
+     *
+     * Note: It is generally not safe to both use makeChild/mergeChild, AND to use instance actively. Instead, a
+     * separate 'root' instance should be used on which only makeChild/mergeChild are called, but instance itself is not
+     * used as a symbol table.
+     *
+     * @return Actual canonicalizer instance that can be used by a parser
+     */
+    fun makeChild(): CharsToNameCanonicalizer {
+        return CharsToNameCanonicalizer(this, myStreamReadConstraints, myFactoryFeatures, hashSeed, myTableInfo!!.get())
+    }
+
+    /**
+     * Method called by the using code to indicate it is done with this instance. This lets instance merge accumulated
+     * changes into parent (if need be), safely and efficiently, and without calling code having to know about parent
+     * information.
+     */
+    fun release() {
+        if (!isMaybeDirty) {
+            return
+        }
+
+        if (myParent != null && myCanonicalize) {
+            myParent.mergeChild(TableInfo(this))
+            myIsHashShared = true
+        }
+    }
+
+    /**
+     * Method that allows contents of child table to potentially be "merged in" with contents of this symbol table.
+     *
+     * Note that caller has to make sure symbol table passed in is really a child or sibling of this symbol table.
+     *
+     * @param childState The state to merge
+     */
+    private fun mergeChild(childState: TableInfo) {
+        val childCount = childState.mySize
+        val currState = myTableInfo!!.get()
+
+        if (childCount == currState.mySize) {
+            return
+        }
+
+        val newValue = if (childCount > MAX_ENTRIES_FOR_REUSE) TableInfo.createInitial(DEFAULT_T_SIZE) else childState
+        myTableInfo.compareAndSet(currState, newValue)
+    }
+
     /*
      *******************************************************************************************************************
      * Public API, generic accessors
@@ -207,6 +256,84 @@ class CharsToNameCanonicalizer {
      */
 
     fun findSymbol(buffer: CharArray, start: Int, length: Int, hash: Int): String {
+        if (length < 1) {
+            return ""
+        }
+
+        if (!myCanonicalize) {
+            myStreamReadConstraints.validateNameLength(length)
+            return String(buffer, start, length)
+        }
+
+        val index = hashToIndex(hash)
+        var symbol = mySymbols[index]
+
+        if (symbol != null) {
+            if (symbol.length == length) {
+                var i = 0
+
+                while (symbol[i] == buffer[start + i]) {
+                    if (++i == length) {
+                        return symbol
+                    }
+                }
+            }
+
+            val bucket = myBuckets[index shr 1]
+
+            if (bucket != null) {
+                symbol = bucket.has(buffer, start, length)
+
+                if (symbol != null) {
+                    return symbol
+                }
+
+                symbol = findOtherSymbol(buffer, start, length, bucket.next)
+
+                if (symbol != null) {
+                    return symbol
+                }
+            }
+        }
+
+        myStreamReadConstraints.validateNameLength(length)
+        return addSymbol(buffer, start, length, index)
+    }
+
+    /**
+     * Helper method that takes in a "raw" hash value, shuffles it as necessary, and truncates to be used as the index.
+     *
+     * @param hash Raw hash value to use for calculating index
+     *
+     * @return Index value calculated
+     */
+    private fun hashToIndex(hash: Int): Int {
+        var rawHash = hash
+        rawHash += rawHash ushr 15
+        rawHash = rawHash xor (rawHash shl 7)
+        rawHash += rawHash ushr 3
+        return rawHash and myIndexMask
+    }
+
+    private fun findOtherSymbol(buffer: CharArray, start: Int, length: Int, bucket: Bucket?): String? {
+        var realBucket = bucket
+
+        while (realBucket != null) {
+            val symbol = realBucket.has(buffer, start, length)
+
+            if (symbol != null) {
+                return symbol
+            }
+
+            realBucket = realBucket.next
+        }
+
+        return null
+    }
+
+    private fun addSymbol(buffer: CharArray, start: Int, length: Int, i: Int): String {
+        var index = i
+
         TODO()
     }
 
