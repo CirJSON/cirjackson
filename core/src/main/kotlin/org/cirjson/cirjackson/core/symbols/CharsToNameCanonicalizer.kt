@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core.symbols
 
 import org.cirjson.cirjackson.core.StreamReadConstraints
 import org.cirjson.cirjackson.core.TokenStreamFactory
+import org.cirjson.cirjackson.core.exception.StreamConstraintsException
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
@@ -375,7 +376,10 @@ class CharsToNameCanonicalizer {
      * Method called when copy-on-write is needed; generally when first change is made to a derived symbol table.
      */
     private fun copyArrays() {
-        TODO()
+        val oldSymbols = mySymbols
+        mySymbols = oldSymbols.copyOf()
+        val oldBuckets = myBuckets
+        myBuckets = oldBuckets.copyOf()
     }
 
     /**
@@ -384,7 +388,73 @@ class CharsToNameCanonicalizer {
      * into new String/Bucket entries.
      */
     private fun rehash() {
-        TODO()
+        val size = mySymbols.size
+        val newSize = size + size
+
+        if (newSize > MAX_T_SIZE) {
+            mySize = 0
+            myCanonicalize = false
+            mySymbols = arrayOfNulls(DEFAULT_T_SIZE)
+            myBuckets = arrayOfNulls(DEFAULT_T_SIZE shr 1)
+            myIndexMask = DEFAULT_T_SIZE - 1
+            myIsHashShared = false
+            return
+        }
+
+        val oldSymbols = mySymbols
+        val oldBuckets = myBuckets
+        mySymbols = arrayOfNulls(newSize)
+        myBuckets = arrayOfNulls(newSize shr 1)
+        myIndexMask = newSize - 1
+        mySizeThreshold = thresholdSize(newSize)
+
+        var count = 0
+        var maxColl = 0
+
+        for (i in 0..<size) {
+            val symbol = oldSymbols[i] ?: continue
+            ++count
+            val index = hashToIndex(calculateHash(symbol))
+
+            if (mySymbols[index] == null) {
+                mySymbols[index] = symbol
+            } else {
+                val bix = index shr 1
+                val newBucket = Bucket(symbol, myBuckets[bix])
+                myBuckets[bix] = newBucket
+                maxColl = max(maxColl, newBucket.length)
+            }
+        }
+
+        val bucketSize = size shr 1
+
+        for (i in 0..<bucketSize) {
+            var bucket = oldBuckets[i]
+
+            while (bucket != null) {
+                ++count
+                val symbol = bucket.symbol
+                val index = hashToIndex(calculateHash(symbol))
+
+                if (mySymbols[index] == null) {
+                    mySymbols[index] = symbol
+                } else {
+                    val bix = index shr 1
+                    val newBucket = Bucket(symbol, myBuckets[bix])
+                    myBuckets[bix] = newBucket
+                    maxColl = max(maxColl, newBucket.length)
+                }
+
+                bucket = bucket.next
+            }
+        }
+
+        maxCollisionLength = maxColl
+        myOverflows = null
+
+        if (count != mySize) {
+            throw IllegalStateException("Internal error on rehash(): had $mySize entries; now have $count")
+        }
     }
 
     /**
@@ -394,7 +464,31 @@ class CharsToNameCanonicalizer {
      * table instance)
      */
     private fun handleSpillOverflow(bucketIndex: Int, newBucket: Bucket, mainIndex: Int) {
-        TODO()
+        if (myOverflows == null) {
+            myOverflows = BitSet()
+            myOverflows!![bucketIndex] = true
+        } else {
+            if (myOverflows!![bucketIndex]) {
+                if (TokenStreamFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW.isEnabledIn(myFactoryFeatures)) {
+                    reportTooManyCollisions(MAX_COLL_CHAIN_LENGTH)
+                }
+
+                myCanonicalize = false
+            } else {
+                myOverflows!![bucketIndex] = true
+            }
+        }
+
+        mySymbols[mainIndex] = newBucket.symbol
+        myBuckets[bucketIndex] = null
+        mySize -= newBucket.length
+        maxCollisionLength = -1
+    }
+
+    private fun reportTooManyCollisions(maxLength: Int) {
+        throw StreamConstraintsException("Longest collision chain in symbol table (of size $mySize) now exceeds " +
+                "maximum, $maxLength -- suspect a DoS attack based on hash collisions. You can disable the check via " +
+                "`TokenStreamFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW`")
     }
 
     /**
@@ -411,7 +505,33 @@ class CharsToNameCanonicalizer {
      * @return Hash code calculated
      */
     fun calculateHash(buffer: CharArray, start: Int, length: Int): Int {
-        TODO()
+        var hash = hashSeed
+
+        for (i in start..<start + length) {
+            hash = hash * HASH_MULT + buffer[i].code
+        }
+
+        return if (hash != 0) hash else 1
+    }
+
+    /**
+     * Implementation of a hashing method for variable length Strings. Most of the time intention is that this
+     * calculation is done by caller during parsing, not here; however, sometimes it needs to be done for parsed
+     * "String" too.
+     *
+     * @param key The key to hash
+     *
+     * @return Hash code calculated
+     */
+    fun calculateHash(key: String): Int {
+        val length = key.length
+        var hash = hashSeed
+
+        for (i in 0..<length) {
+            hash = hash * HASH_MULT + key[i].code
+        }
+
+        return if (hash != 0) hash else 1
     }
 
     /*
@@ -435,7 +555,7 @@ class CharsToNameCanonicalizer {
             var i = 0
 
             do {
-                if (symbol[i] != buffer[i]) {
+                if (symbol[i] != buffer[start + i]) {
                     return null
                 }
             } while (++i < length)
