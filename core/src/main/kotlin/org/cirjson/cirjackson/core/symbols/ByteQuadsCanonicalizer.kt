@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.core.symbols
 
+import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.concurrent.atomic.AtomicReference
 
@@ -210,6 +211,38 @@ class ByteQuadsCanonicalizer {
     }
 
     /**
+     * Factory method used to create actual symbol table instance to use for parsing.
+     *
+     * @param flags Bit flags of active {@link tools.jackson.core.TokenStreamFactory.Feature}s enabled.
+     *
+     * @return Actual canonicalizer instance that can be used by a parser
+     */
+    fun makeChild(flags: Int): ByteQuadsCanonicalizer {
+        return ByteQuadsCanonicalizer(this, hashSeed, myTableInfo!!.get(),
+                TokenStreamFactory.Feature.INTERN_PROPERTY_NAMES.isEnabledIn(flags),
+                TokenStreamFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW.isEnabledIn(flags))
+    }
+
+    /**
+     * Method similar to {@link makeChild} but one that only creates real
+     * instance of {@link tools.jackson.core.TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES} is
+     * enabled: otherwise a "bogus" instance is created.
+     *
+     * @param flags Bit flags of active {@link tools.jackson.core.TokenStreamFactory.Feature}s enabled.
+     *
+     * @return Actual canonicalizer instance that can be used by a parser if (and only if) canonicalization is enabled; otherwise a non-null "placeholder" instance.
+     */
+    fun makeChildOrPlaceholder(flags: Int): ByteQuadsCanonicalizer {
+        return if (TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES.isEnabledIn(flags)) {
+            ByteQuadsCanonicalizer(this, hashSeed, myTableInfo!!.get(),
+                    TokenStreamFactory.Feature.INTERN_PROPERTY_NAMES.isEnabledIn(flags),
+                    TokenStreamFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW.isEnabledIn(flags))
+        } else {
+            ByteQuadsCanonicalizer(myTableInfo!!.get())
+        }
+    }
+
+    /**
      * Immutable value class used for sharing information as efficiently as possible, by only require synchronization of
      * reference manipulation but not access to contents.
      */
@@ -255,6 +288,20 @@ class ByteQuadsCanonicalizer {
         private const val MIN_HASH_SIZE = 16
 
         internal const val MAX_ENTRIES_FOR_REUSE = 6000
+
+        fun createRoot(): ByteQuadsCanonicalizer {
+            val now = System.currentTimeMillis()
+            val seed = (now.toInt() + (now ushr 32).toInt()) or 1
+            return createRoot(seed)
+        }
+
+        /**
+         * Factory method that should only be called from unit tests, where seed value should remain the same.
+         *
+         */
+        internal fun createRoot(seed: Int): ByteQuadsCanonicalizer {
+            return ByteQuadsCanonicalizer(DEFAULT_T_SIZE, seed)
+        }
 
         internal fun calculateTertiaryShift(primarySlots: Int): Int {
             val tertiarySlots = primarySlots shr 2
