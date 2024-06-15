@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.core.symbols
 import org.cirjson.cirjackson.core.StreamReadConstraints
 import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.core.exception.StreamConstraintsException
+import org.cirjson.cirjackson.core.extentions.countNotNull
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
@@ -532,6 +533,73 @@ class CharsToNameCanonicalizer {
         }
 
         return if (hash != 0) hash else 1
+    }
+
+    /**
+     * Diagnostics method that will verify that internal data structures are consistent; not meant as user-facing method
+     * but only for test suites and possible troubleshooting.
+     */
+    internal fun verifyInternalConsistency() {
+        var count = 0
+        val size = mySymbols.size
+
+        for (symbol in mySymbols) {
+            if (symbol != null) {
+                ++count
+            }
+        }
+
+        val bucketSize = size shr 1
+
+        for (i in 0..<bucketSize) {
+            var bucket = myBuckets[i]
+
+            while (bucket != null) {
+                ++count
+                bucket = bucket.next
+            }
+        }
+
+        if (count != mySize) {
+            throw IllegalStateException("Internal error: expected internal size $mySize vs calculated count $count")
+        }
+    }
+
+    override fun toString(): String {
+        return StringBuilder().apply {
+            val primaryCount = mySymbols.countNotNull()
+
+            append("[CharsToNameCanonicalizer, size: ")
+            append(mySize)
+            append('/')
+            append(mySymbols.size)
+            append(", ")
+            append(primaryCount)
+            append('/')
+            append(mySize - primaryCount)
+            append(" coll; avg length: ")
+
+            val averageLength = calculateAverageLength()
+            append(averageLength)
+            append(']')
+        }.toString()
+    }
+
+    private fun calculateAverageLength(): Double {
+        var pathCount = mySize
+
+        for (bucket in myBuckets) {
+            val spillLength = bucket?.length ?: continue
+            for (i in 1..spillLength) {
+                pathCount += i
+            }
+        }
+
+        return if (mySize != 0) {
+            pathCount.toDouble() / mySize.toDouble()
+        } else {
+            0.0
+        }
     }
 
     /*
