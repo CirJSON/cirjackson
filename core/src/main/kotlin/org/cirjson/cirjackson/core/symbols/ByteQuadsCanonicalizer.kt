@@ -243,6 +243,165 @@ class ByteQuadsCanonicalizer {
     }
 
     /**
+     * Method called by the using code to indicate it is done with this instance. This lets instance merge accumulated
+     * changes into parent (if need be), safely and efficiently, and without calling code having to know about parent
+     * information.
+     */
+    fun release() {
+        if (myParent == null || !isMaybeDirty) {
+            return
+        }
+
+        myParent.mergeChild(TableInfo(this))
+        myIsHashShared = true
+    }
+
+    private fun mergeChild(state: TableInfo) {
+        var childState = state
+
+        val childCount = childState.size
+        val currentState = myTableInfo!!.get()
+
+        if (childCount == currentState.myCount) {
+            return
+        }
+
+        if (childCount > MAX_ENTRIES_FOR_REUSE) {
+            childState = TableInfo.createInitial(DEFAULT_T_SIZE)
+        }
+
+        myTableInfo.compareAndSet(currentState, childState)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, generic accessors
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Number of symbol entries contained by this canonicalizer instance
+     */
+    val size
+        get() = myTableInfo?.get()?.size ?: myCount
+
+    /**
+     * Accessor called to quickly check if a child symbol table may have gotten additional entries. Used for checking to
+     * see if a child table should be merged into shared table.
+     */
+    val isMaybeDirty
+        get() = !myIsHashShared
+
+    /**
+     * True for "real", canonicalizing child tables; false for root table as well as placeholder "child" tables.
+     */
+    val isCanonicalizing
+        get() = myParent != null
+
+    /**
+     * Accessor mostly needed by unit tests; calculates number of entries that are in the primary slot set. These are
+     * "perfect" entries, accessible with a single lookup
+     */
+    val primaryCount: Int
+        get() {
+            var count = 0
+            var offset = 3
+            val end = mySecondaryStart
+
+            while (offset < end) {
+                if (myHashArea[offset] != 0) {
+                    ++count
+                }
+
+                offset += 4
+            }
+
+            return count
+        }
+
+    /**
+     * Accessor mostly needed by unit tests; calculates number of entries in secondary buckets
+     */
+    val secondaryCount: Int
+        get() {
+            var count = 0
+            var offset = mySecondaryStart + 3
+            val end = myTertiaryStart
+
+            while (offset < end) {
+                if (myHashArea[offset] != 0) {
+                    ++count
+                }
+
+                offset += 4
+            }
+
+            return count
+        }
+
+    /**
+     * Accessor mostly needed by unit tests; calculates number of entries in tertiary buckets
+     */
+    val tertiaryCount: Int
+        get() {
+            var count = 0
+            var offset = myTertiaryStart + 3
+            val end = offset + bucketCount
+
+            while (offset < end) {
+                if (myHashArea[offset] != 0) {
+                    ++count
+                }
+
+                offset += 4
+            }
+
+            return count
+        }
+
+    /**
+     * Accessor mostly needed by unit tests; calculates number of entries in shared spill-over area
+     */
+    val spilloverCount
+        get() = (mySpilloverEnd - spilloverStart)
+
+    /**
+     * Helper accessor that calculates start of the spillover area
+     */
+    private val spilloverStart: Int
+        get() {
+            val offset = bucketCount
+            return (offset shl 3) - offset
+        }
+
+    val totalCount: Int
+        get() {
+            var count = 0
+            var offset = 3
+            val end = bucketCount shl 3
+
+            while (offset < end) {
+                if (myHashArea[offset] != 0) {
+                    ++count
+                }
+
+                offset += 4
+            }
+
+            return count
+        }
+
+    override fun toString(): String {
+        val primary = primaryCount
+        val secondary = secondaryCount
+        val tertiary = tertiaryCount
+        val spillover = spilloverCount
+        val total = totalCount
+
+        return "[ByteQuadsCanonicalizer: size=$myCount, bucketCount=$bucketCount, $primary/$secondary/$tertiary/$spillover primary/secondary/tertiary/spillover (=${primary + secondary + tertiary + spillover}), total:$total]"
+    }
+
+    /**
      * Immutable value class used for sharing information as efficiently as possible, by only require synchronization of
      * reference manipulation but not access to contents.
      */
