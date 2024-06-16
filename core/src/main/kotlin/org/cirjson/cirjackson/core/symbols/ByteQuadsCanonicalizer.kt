@@ -216,7 +216,7 @@ class ByteQuadsCanonicalizer {
     /**
      * Factory method used to create actual symbol table instance to use for parsing.
      *
-     * @param flags Bit flags of active {@link tools.jackson.core.TokenStreamFactory.Feature}s enabled.
+     * @param flags Bit flags of active [org.cirjson.cirjackson.core.TokenStreamFactory.Feature]s enabled.
      *
      * @return Actual canonicalizer instance that can be used by a parser
      */
@@ -227,13 +227,14 @@ class ByteQuadsCanonicalizer {
     }
 
     /**
-     * Method similar to {@link makeChild} but one that only creates real
-     * instance of {@link tools.jackson.core.TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES} is
-     * enabled: otherwise a "bogus" instance is created.
+     * Method similar to [makeChild] but one that only creates real instance of
+     * [org.cirjson.cirjackson.core.TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES] is enabled: otherwise a
+     * "bogus" instance is created.
      *
-     * @param flags Bit flags of active {@link tools.jackson.core.TokenStreamFactory.Feature}s enabled.
+     * @param flags Bit flags of active [org.cirjson.cirjackson.core.TokenStreamFactory.Feature]s enabled.
      *
-     * @return Actual canonicalizer instance that can be used by a parser if (and only if) canonicalization is enabled; otherwise a non-null "placeholder" instance.
+     * @return Actual canonicalizer instance that can be used by a parser if (and only if) canonicalization is enabled;
+     * otherwise a non-null "placeholder" instance.
      */
     fun makeChildOrPlaceholder(flags: Int): ByteQuadsCanonicalizer {
         return if (TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES.isEnabledIn(flags)) {
@@ -614,7 +615,7 @@ class ByteQuadsCanonicalizer {
      *
      * @param quads Quads of name representation
      *
-     * @param qLength Number of quads in {@code quads}
+     * @param qLength Number of quads in `quads`
      *
      * @return The name represented by the quads, or `null` if it doesn't exist
      */
@@ -1009,7 +1010,7 @@ class ByteQuadsCanonicalizer {
      *
      * @param quads Quads of name representation
      *
-     * @param qLength Number of quads in {@code quads}
+     * @param qLength Number of quads in `quads`
      *
      * @return name (possibly interned)
      *
@@ -1124,11 +1125,11 @@ class ByteQuadsCanonicalizer {
      *
      * @param quads Quads of name representation
      *
-     * @param qLength Number of quads in {@code quads}
+     * @param qLength Number of quads in `quads`
      *
      * @return The calculated hash
      *
-     * @throws IllegalArgumentException if <code>qLength</code> is less than 4
+     * @throws IllegalArgumentException if `qLength` is less than 4
      */
     fun calculateHash(quads: IntArray, qLength: Int): Int {
         if (qLength < 4) {
