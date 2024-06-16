@@ -4,6 +4,8 @@ import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.core.exception.StreamConstraintsException
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Replacement for [CharsToNameCanonicalizer] which aims at more localized memory access due to flattening of name quad
@@ -758,7 +760,191 @@ class ByteQuadsCanonicalizer {
      */
     @Throws(StreamConstraintsException::class)
     private fun findOffsetForAdd(hash: Int): Int {
-        TODO()
+        var offset = calculateOffset(hash)
+        val hashArea = myHashArea
+
+        if (hashArea[offset + 3] == 0) {
+            return offset
+        }
+
+        if (checkNeedForRehash()) {
+            return resizeAndFindOffsetForAdd(hash)
+        }
+
+        var offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+
+        if (hashArea[offset2 + 3] == 0) {
+            return offset2
+        }
+
+        offset2 = myTertiaryStart + ((offset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset2 + bucketSize
+
+        while (offset2 < end) {
+            if (hashArea[offset2 + 3] == 0) {
+                return offset2
+            }
+
+            offset2 += 4
+        }
+
+        offset = mySpilloverEnd
+        mySpilloverEnd += 4
+
+        val realEnd = bucketCount shl 3
+
+        return if (mySpilloverEnd >= realEnd) {
+            if (myIsFailingOnDoS) {
+                reportTooManyCollisions()
+            }
+
+            resizeAndFindOffsetForAdd(hash)
+        } else {
+            offset
+        }
+    }
+
+    private fun checkNeedForRehash(): Boolean {
+        if (myCount <= bucketCount shr 1) {
+            return false
+        }
+
+        val spillCount = (mySpilloverEnd - spilloverStart) shr 2
+        return spillCount > (1 + myCount) shr 7 || myCount > multiplyByFourFifths(bucketCount)
+    }
+
+    @Throws(StreamConstraintsException::class)
+    private fun resizeAndFindOffsetForAdd(hash: Int): Int {
+        rehash()
+
+        var offset = calculateOffset(hash)
+        val hashArea = myHashArea
+
+        if (hashArea[offset + 3] == 0) {
+            return offset
+        }
+
+        var offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+
+        if (hashArea[offset2 + 3] == 0) {
+            return offset2
+        }
+
+        offset2 = myTertiaryStart + ((offset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset2 + bucketSize
+
+        while (offset2 < end) {
+            if (hashArea[offset2 + 3] == 0) {
+                return offset2
+            }
+
+            offset2 += 4
+        }
+
+        offset = mySpilloverEnd
+        mySpilloverEnd += 4
+        return offset
+    }
+
+    private fun rehash() {
+        myIsHashShared = false
+
+        val oldHashArea = myHashArea
+        val oldNames = myNames
+        val oldSize = bucketCount
+        val oldCount = myCount
+        val newSize = oldSize + oldSize
+        val oldEnd = mySpilloverEnd
+
+        if (newSize > MAX_T_SIZE) {
+            nukeSymbols(true)
+            return
+        }
+
+        myHashArea = IntArray(oldHashArea.size + (oldSize shl 3))
+        bucketCount = newSize
+        mySpilloverEnd = newSize shl 2
+        myTertiaryStart = mySecondaryStart + (mySecondaryStart shr 1)
+        myTertiaryShift = calculateTertiaryShift(newSize)
+
+        myNames = arrayOfNulls(oldNames.size shl 1)
+        nukeSymbols(false)
+
+        var copyCount = 0
+        var quads = IntArray(16)
+        var offset = 0
+
+        while (offset < oldEnd) {
+            val length = oldHashArea[offset + 3]
+
+            if (length == 0) {
+                continue
+            }
+
+            ++copyCount
+            val name = oldNames[offset shr 2]!!
+
+            when (length) {
+                1 -> {
+                    quads[0] = oldHashArea[offset]
+                    addName(name, quads, 1)
+                }
+
+                2 -> {
+                    quads[0] = oldHashArea[offset]
+                    quads[1] = oldHashArea[offset + 1]
+                    addName(name, quads, 2)
+                }
+
+                3 -> {
+                    quads[0] = oldHashArea[offset]
+                    quads[1] = oldHashArea[offset + 1]
+                    quads[2] = oldHashArea[offset + 2]
+                    addName(name, quads, 3)
+                }
+
+                else -> {
+                    if (length > quads.size) {
+                        quads = IntArray(length)
+                    }
+
+                    val quadsOffset = oldHashArea[offset + 1]
+                    oldHashArea.copyInto(quads, 0, quadsOffset, quadsOffset + length)
+                    addName(name, quads, length)
+                }
+            }
+
+            offset += 4
+        }
+
+        if (copyCount != oldCount) {
+            throw IllegalStateException("Internal error: Failed rehash(), oldCount=$oldCount, copyCount=$copyCount")
+        }
+    }
+
+    private fun nukeSymbols(fill: Boolean) {
+        myCount = 0
+        mySpilloverEnd = spilloverStart
+        myLongNameOffset = bucketCount shl 3
+
+        if (fill) {
+            myHashArea.fill(0)
+            myNames.fill(null)
+        }
+    }
+
+    @Throws(StreamConstraintsException::class)
+    private fun reportTooManyCollisions() {
+        if (bucketCount <= 1024) {
+            return
+        }
+
+        throw StreamConstraintsException("Spill-over slots in symbol table with $myCount entries, hash area of " +
+                "$bucketCount slots is now full (all ${bucketCount shr 3} slots -- suspect a DoS attack based on " +
+                "hash collisions. You can disable the check via " +
+                "`TokenStreamFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW`")
     }
 
     /**
@@ -852,7 +1038,18 @@ class ByteQuadsCanonicalizer {
     }
 
     private fun appendLongName(quads: IntArray, qLength: Int): Int {
-        TODO()
+        val start = myLongNameOffset
+
+        if (start + qLength > myHashArea.size) {
+            val toAdd = start + qLength - myHashArea.size
+            val minAdd = min(bucketCount, 4096)
+            val newSize = myHashArea.size + max(toAdd, minAdd)
+            myHashArea = myHashArea.copyOf(newSize)
+        }
+
+        quads.copyInto(myHashArea, start, 0, qLength)
+        myLongNameOffset += qLength
+        return start
     }
 
     /*
@@ -869,7 +1066,11 @@ class ByteQuadsCanonicalizer {
      * @return The calculated hash
      */
     fun calculateHash(q1: Int): Int {
-        TODO()
+        var hash = q1 xor hashSeed
+        hash += hash ushr 16
+        hash = hash xor (hash shl 3)
+        hash += hash ushr 12
+        return hash
     }
 
     /**
@@ -882,7 +1083,15 @@ class ByteQuadsCanonicalizer {
      * @return The calculated hash
      */
     fun calculateHash(q1: Int, q2: Int): Int {
-        TODO()
+        var hash = q1
+        hash += hash ushr 15
+        hash = hash xor (hash ushr 9)
+        hash += q2 * MULT
+        hash = hash xor hashSeed
+        hash += hash ushr 16
+        hash = hash xor (hash ushr 4)
+        hash += hash shl 3
+        return hash
     }
 
     /**
@@ -897,7 +1106,17 @@ class ByteQuadsCanonicalizer {
      * @return The calculated hash
      */
     fun calculateHash(q1: Int, q2: Int, q3: Int): Int {
-        TODO()
+        var hash = q1 xor hashSeed
+        hash += hash ushr 9
+        hash *= MULT3
+        hash += q2
+        hash *= MULT
+        hash += hash ushr 15
+        hash = hash xor q3
+        hash += hash ushr 4
+        hash += hash ushr 15
+        hash = hash xor (hash shl 9)
+        return hash
     }
 
     /**
@@ -912,8 +1131,35 @@ class ByteQuadsCanonicalizer {
      * @throws IllegalArgumentException if <code>qLength</code> is less than 4
      */
     fun calculateHash(quads: IntArray, qLength: Int): Int {
-        TODO()
+        if (qLength < 4) {
+            throw IllegalArgumentException("Quads length must be at least 4 (got $qLength)")
+        }
+
+        var hash = quads[0] xor hashSeed
+        hash += hash ushr 9
+        hash += quads[1]
+        hash += hash ushr 15
+        hash *= MULT
+        hash = hash xor quads[2]
+        hash += hash ushr 4
+
+        for (i in 3..<qLength) {
+            var next = quads[i]
+            next = next xor (next shr 21)
+            hash += next
+        }
+
+        hash *= MULT2
+        hash += hash ushr 19
+        hash = hash xor (hash shl 5)
+        return hash
     }
+
+    /*
+     *******************************************************************************************************************
+     * Public API
+     *******************************************************************************************************************
+     */
 
     override fun toString(): String {
         val primary = primaryCount
@@ -924,6 +1170,12 @@ class ByteQuadsCanonicalizer {
 
         return "[ByteQuadsCanonicalizer: size=$myCount, bucketCount=$bucketCount, $primary/$secondary/$tertiary/$spillover primary/secondary/tertiary/spillover (=${primary + secondary + tertiary + spillover}), total:$total]"
     }
+
+    /*
+     *******************************************************************************************************************
+     * Helper class
+     *******************************************************************************************************************
+     */
 
     /**
      * Immutable value class used for sharing information as efficiently as possible, by only require synchronization of
@@ -972,6 +1224,12 @@ class ByteQuadsCanonicalizer {
 
         internal const val MAX_ENTRIES_FOR_REUSE = 6000
 
+        private const val MULT = 33
+
+        private const val MULT2 = 65599
+
+        private const val MULT3 = 31
+
         fun createRoot(): ByteQuadsCanonicalizer {
             val now = System.currentTimeMillis()
             val seed = (now.toInt() + (now ushr 32).toInt()) or 1
@@ -994,6 +1252,10 @@ class ByteQuadsCanonicalizer {
                 tertiarySlots <= 1024 -> 6
                 else -> 7
             }
+        }
+
+        private fun multiplyByFourFifths(number: Int): Int {
+            return ((number * 3_435_973_837L) ushr 32).toInt()
         }
 
     }
