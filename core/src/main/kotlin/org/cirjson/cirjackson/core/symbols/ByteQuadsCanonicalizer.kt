@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.symbols
 
 import org.cirjson.cirjackson.core.TokenStreamFactory
+import org.cirjson.cirjackson.core.exception.StreamConstraintsException
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.concurrent.atomic.AtomicReference
 
@@ -391,6 +392,529 @@ class ByteQuadsCanonicalizer {
             return count
         }
 
+    /*
+     *******************************************************************************************************************
+     * Public API, accessing symbols
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Finds the name represented by the quad
+     *
+     * @param q1 Quad of name representation
+     *
+     * @return The name represented by the quad, or `null` if it doesn't exist
+     */
+    fun findName(q1: Int): String? {
+        val offset = calculateOffset(calculateHash(q1))
+        val hashArea = myHashArea
+        var length = hashArea[offset + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 1) {
+            if (hashArea[offset] == q1) {
+                return myNames[offset shr 2]
+            }
+        }
+
+        val offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+
+        length = hashArea[offset2 + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 1) {
+            if (hashArea[offset2] == q1) {
+                return myNames[offset2 shr 2]
+            }
+        }
+
+        return findSecondary(offset, q1)
+    }
+
+    private fun calculateOffset(hash: Int): Int {
+        val index = hash and (bucketCount - 1)
+        return index shl 2
+    }
+
+    private fun findSecondary(originalOffset: Int, q1: Int): String? {
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val length = hashArea[offset + 3]
+
+            if (length == 0) {
+                return null
+            } else if (length == 1 && hashArea[offset] == q1) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1 && hashArea[offset + 3] == 1) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        return null
+    }
+
+    /**
+     * Finds the name represented by the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @return The name represented by the quads, or `null` if it doesn't exist
+     */
+    fun findName(q1: Int, q2: Int): String? {
+        val offset = calculateOffset(calculateHash(q1, q2))
+        val hashArea = myHashArea
+        var length = hashArea[offset + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 2) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
+                return myNames[offset shr 2]
+            }
+        }
+
+        val offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+
+        length = hashArea[offset2 + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 2) {
+            if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2) {
+                return myNames[offset2 shr 2]
+            }
+        }
+
+        return findSecondary(offset, q1, q2)
+    }
+
+    private fun findSecondary(originalOffset: Int, q1: Int, q2: Int): String? {
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val length = hashArea[offset + 3]
+
+            if (length == 0) {
+                return null
+            } else if (length == 2 && hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 3] == 2) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        return null
+    }
+
+    /**
+     * Finds the name represented by the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @param q3 Third quad of name representation
+     *
+     * @return The name represented by the quads, or `null` if it doesn't exist
+     */
+    fun findName(q1: Int, q2: Int, q3: Int): String? {
+        val offset = calculateOffset(calculateHash(q1, q2, q3))
+        val hashArea = myHashArea
+        var length = hashArea[offset + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 3) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3) {
+                return myNames[offset shr 2]
+            }
+        }
+
+        val offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+
+        length = hashArea[offset2 + 3]
+
+        if (length == 0) {
+            return null
+        } else if (length == 3) {
+            if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2 && hashArea[offset2 + 2] == q3) {
+                return myNames[offset2 shr 2]
+            }
+        }
+
+        return findSecondary(offset, q1, q2, q3)
+    }
+
+    private fun findSecondary(originalOffset: Int, q1: Int, q2: Int, q3: Int): String? {
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val length = hashArea[offset + 3]
+
+            if (length == 0) {
+                return null
+            } else if (length == 3 && hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3 && hashArea[offset + 3] == 3) {
+                return myNames[offset shr 2]
+            }
+
+            offset += 4
+        }
+
+        return null
+    }
+
+    /**
+     * Finds the name represented by the quads
+     *
+     * @param quads Quads of name representation
+     *
+     * @param qLength Number of quads in {@code quads}
+     *
+     * @return The name represented by the quads, or `null` if it doesn't exist
+     */
+    fun findName(quads: IntArray, qLength: Int): String? {
+        if (qLength < 4) {
+            return when (qLength) {
+                3 -> findName(quads[0], quads[1], quads[2])
+                2 -> findName(quads[0], quads[1])
+                1 -> findName(quads[0])
+                else -> ""
+            }
+        }
+
+        val hash = calculateHash(quads, qLength)
+        val offset = calculateOffset(hash)
+        val hashArea = myHashArea
+        val length = hashArea[offset + 3]
+
+        if (length == 0) {
+            return null
+        }
+
+        if (hash == hashArea[offset] && length == qLength) {
+            if (verifyLongName(quads, qLength, hashArea[offset + 1])) {
+                return myNames[offset shr 2]
+            }
+        }
+
+        val offset2 = mySecondaryStart + ((offset shr 3) shl 2)
+        val length2 = hashArea[offset2 + 3]
+
+        if (hash == hashArea[offset2] && length2 == qLength) {
+            if (verifyLongName(quads, qLength, hashArea[offset2 + 1])) {
+                return myNames[offset2 shr 2]
+            }
+        }
+
+        return findSecondary(offset, hash, quads, qLength)
+    }
+
+    private fun findSecondary(originalOffset: Int, hash: Int, quads: IntArray, qLength: Int): String? {
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val length = hashArea[offset + 3]
+
+            if (length == 0) {
+                return null
+            } else if (hash == hashArea[offset] && qLength == length) {
+                if (verifyLongName(quads, qLength, hashArea[offset + 1])) {
+                    return myNames[offset shr 2]
+                }
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart
+
+        while (offset < mySpilloverEnd) {
+            if (hash == hashArea[offset] && qLength == hashArea[offset + 3]) {
+                if (verifyLongName(quads, qLength, hashArea[offset + 1])) {
+                    return myNames[offset shr 2]
+                }
+            }
+
+            offset += 4
+        }
+
+        return null
+    }
+
+    private fun verifyLongName(quads: IntArray, qLength: Int, offset: Int): Boolean {
+        var spillOffset = offset
+        var index = 0
+        val hashArea = myHashArea
+
+        do {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        } while (index < qLength)
+
+        return true
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, mutators
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Adds the name represented by the quad
+     *
+     * @param newName Name to add
+     *
+     * @param q1 Quad representation of the name
+     *
+     * @return name (possibly interned)
+     *
+     * @throws StreamConstraintsException if the constraint isn't respected
+     */
+    @Throws(StreamConstraintsException::class)
+    fun addName(newName: String, q1: Int): String {
+        verifySharing()
+        val name = myInterner?.intern(newName) ?: newName
+        val offset = findOffsetForAdd(calculateHash(q1))
+        myHashArea[offset] = q1
+        myHashArea[offset + 3] = 1
+        myNames[offset shr 2] = name
+        ++myCount
+        return name
+    }
+
+    private fun verifySharing() {
+        if (!myIsHashShared) {
+            return
+        }
+
+        if (myParent != null) {
+            throw if (myCount == 0) {
+                IllegalStateException("Internal error: Cannot add names to Root symbol table")
+            } else {
+                IllegalStateException("Internal error: Cannot add names to Placeholder symbol table")
+            }
+        }
+
+        myHashArea = myHashArea.copyOf()
+        myNames = myNames.copyOf()
+        myIsHashShared = false
+    }
+
+    /**
+     * Method called to find the location within hash table to add a new symbol in.
+     *
+     * @param hash Hash of name for which to find location
+     *
+     * @throws StreamConstraintsException If name length exceeds maximum allowed.
+     */
+    @Throws(StreamConstraintsException::class)
+    private fun findOffsetForAdd(hash: Int): Int {
+        TODO()
+    }
+
+    /**
+     * Adds the name represented by the quads
+     *
+     * @param newName Name to add
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @return name (possibly interned)
+     *
+     * @throws StreamConstraintsException if the constraint isn't respected
+     */
+    @Throws(StreamConstraintsException::class)
+    fun addName(newName: String, q1: Int, q2: Int): String {
+        verifySharing()
+        val name = myInterner?.intern(newName) ?: newName
+        val offset = findOffsetForAdd(calculateHash(q1))
+        myHashArea[offset] = q1
+        myHashArea[offset + 1] = q2
+        myHashArea[offset + 3] = 2
+        myNames[offset shr 2] = name
+        ++myCount
+        return name
+    }
+
+    /**
+     * Adds the name represented by the quads
+     *
+     * @param newName Name to add
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @param q3 Third quad of name representation
+     *
+     * @return name (possibly interned)
+     *
+     * @throws StreamConstraintsException if the constraint isn't respected
+     */
+    @Throws(StreamConstraintsException::class)
+    fun addName(newName: String, q1: Int, q2: Int, q3: Int): String {
+        verifySharing()
+        val name = myInterner?.intern(newName) ?: newName
+        val offset = findOffsetForAdd(calculateHash(q1))
+        myHashArea[offset] = q1
+        myHashArea[offset + 1] = q2
+        myHashArea[offset + 2] = q3
+        myHashArea[offset + 3] = 3
+        myNames[offset shr 2] = name
+        ++myCount
+        return name
+    }
+
+    /**
+     * Adds the name represented by the quads
+     *
+     * @param newName Name to add
+     *
+     * @param quads Quads of name representation
+     *
+     * @param qLength Number of quads in {@code quads}
+     *
+     * @return name (possibly interned)
+     *
+     * @throws StreamConstraintsException if the constraint isn't respected
+     */
+    @Throws(StreamConstraintsException::class)
+    fun addName(newName: String, quads: IntArray, qLength: Int): String {
+        when (qLength) {
+            3 -> return addName(newName, quads[0], quads[1], quads[2])
+            2 -> return addName(newName, quads[0], quads[1])
+            1 -> return addName(newName, quads[0])
+        }
+
+        verifySharing()
+        val name = myInterner?.intern(newName) ?: newName
+        val hash = calculateHash(quads, qLength)
+        val offset = findOffsetForAdd(hash)
+
+        myHashArea[offset] = hash
+        val longStart = appendLongName(quads, qLength)
+        myHashArea[offset + 1] = longStart
+        myHashArea[offset + 3] = qLength
+        myNames[offset shr 2] = name
+        ++myCount
+        return name
+    }
+
+    private fun appendLongName(quads: IntArray, qLength: Int): Int {
+        TODO()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Hash calculation
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Calculates the hash based on the quad
+     *
+     * @param q1 Quad of name representation
+     *
+     * @return The calculated hash
+     */
+    fun calculateHash(q1: Int): Int {
+        TODO()
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @return The calculated hash
+     */
+    fun calculateHash(q1: Int, q2: Int): Int {
+        TODO()
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @param q3 Third quad of name representation
+     *
+     * @return The calculated hash
+     */
+    fun calculateHash(q1: Int, q2: Int, q3: Int): Int {
+        TODO()
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param quads Quads of name representation
+     *
+     * @param qLength Number of quads in {@code quads}
+     *
+     * @return The calculated hash
+     *
+     * @throws IllegalArgumentException if <code>qLength</code> is less than 4
+     */
+    fun calculateHash(quads: IntArray, qLength: Int): Int {
+        TODO()
+    }
+
     override fun toString(): String {
         val primary = primaryCount
         val secondary = secondaryCount
@@ -456,7 +980,6 @@ class ByteQuadsCanonicalizer {
 
         /**
          * Factory method that should only be called from unit tests, where seed value should remain the same.
-         *
          */
         internal fun createRoot(seed: Int): ByteQuadsCanonicalizer {
             return ByteQuadsCanonicalizer(DEFAULT_T_SIZE, seed)
