@@ -26,7 +26,7 @@ object NumberInput {
      *
      * @param str a string representing a number to parse
      *
-     * @param useFastParser whether to use {@code FastDoubleParser} or standard JDK parser
+     * @param useFastParser whether to use `FastDoubleParser` or standard JDK parser
      *
      * @return closest matching Double
      *
@@ -40,9 +40,9 @@ object NumberInput {
     /**
      * Parses a CharArray to a Double
      *
-     * @param array a char array containing a number to parse
+     * @param charArray a char array containing a number to parse
      *
-     * @param useFastParser whether to use {@code FastDoubleParser}
+     * @param useFastParser whether to use `FastDoubleParser`
      *
      * @return closest matching Double
      *
@@ -56,13 +56,13 @@ object NumberInput {
     /**
      * Parses a CharArray to a Double
      *
-     * @param array a char array containing a number to parse
+     * @param charArray a char array containing a number to parse
      *
      * @param offset the offset to apply when parsing the number in the char array
      *
-     * @param len the length of the number in the char array
+     * @param length the length of the number in the char array
      *
-     * @param useFastParser whether to use {@code FastDoubleParser}
+     * @param useFastParser whether to use `FastDoubleParser`
      *
      * @return closest matching Double
      *
@@ -82,7 +82,7 @@ object NumberInput {
      *
      * @param str a string representing a number to parse
      *
-     * @param useFastParser whether to use {@code FastFloatParser} or standard JDK parser
+     * @param useFastParser whether to use `FastFloatParser` or standard JDK parser
      *
      * @return closest matching Float
      *
@@ -96,9 +96,9 @@ object NumberInput {
     /**
      * Parses a CharArray to a Float
      *
-     * @param array a char array containing a number to parse
+     * @param charArray a char array containing a number to parse
      *
-     * @param useFastParser whether to use {@code FastFloatParser}
+     * @param useFastParser whether to use `FastFloatParser`
      *
      * @return closest matching Float
      *
@@ -112,13 +112,13 @@ object NumberInput {
     /**
      * Parses a CharArray to a Float
      *
-     * @param array a char array containing a number to parse
+     * @param charArray a char array containing a number to parse
      *
      * @param offset the offset to apply when parsing the number in the char array
      *
-     * @param len the length of the number in the char array
+     * @param length the length of the number in the char array
      *
-     * @param useFastParser whether to use {@code FastFloatParser}
+     * @param useFastParser whether to use `FastFloatParser`
      *
      * @return closest matching Float
      *
@@ -134,12 +134,10 @@ object NumberInput {
     }
 
     /**
-     * Fast method for parsing unsigned integers that are known to fit into
-     * regular 32-bit signed int type. This means that length is
-     * between 1 and 9 digits (inclusive) and there is no sign character.
+     * Fast method for parsing unsigned integers that are known to fit into regular 32-bit signed int type. This means
+     * that length is between 1 and 9 digits (inclusive) and there is no sign character.
      *
-     * Note: public to let unit tests call it; not meant to be used by any
-     * code outside this package.
+     * Note: public to let unit tests call it; not meant to be used by any code outside this package.
      *
      * @param chars Buffer that contains integer value to decode
      *
@@ -147,7 +145,7 @@ object NumberInput {
      *
      * @param length Length of the number to decode (in characters)
      *
-     * @return Decoded {@code int} value
+     * @return Decoded `Int` value
      */
     fun parseInt(chars: CharArray, offset: Int, length: Int): Int {
         var off = offset
@@ -168,12 +166,54 @@ object NumberInput {
     }
 
     /**
-     * Fast method for parsing unsigned integers that are known to fit into
-     * regular 62-bit signed int type. This means that length is
-     * between 10 and 18 digits (inclusive) and there is no sign character.
+     * Helper method to (more) efficiently parse integer numbers from String values. Input String must be simple Java
+     * Int value. No range checks are made to verify that the value fits in 32-bit Java `Int`: caller is expected to
+     * only calls this in cases where this can be guaranteed (basically: number of digits does not exceed 9)
      *
-     * Note: public to let unit tests call it; not meant to be used by any
-     * code outside this package.
+     * NOTE: semantics differ significantly from the other `parseInt`.
+     *
+     * @param string String that contains integer value to decode
+     *
+     * @return Decoded `int` value
+     */
+    fun parseInt(string: String): Int {
+        var c = string[0]
+        val length = string.length
+        val neg = c == '-'
+        var offset = 1
+
+        if (neg) {
+            if (length == 1 || length > 10) {
+                return string.toInt()
+            }
+
+            c = string[offset++]
+        } else if (length > 9) {
+            return string.toInt()
+        }
+
+        if (c !in '0'..'9') {
+            return string.toInt()
+        }
+
+        var num = c - '0'
+
+        while (offset < length) {
+            c = string[offset++]
+
+            if (c !in '0'..'9') {
+                return string.toInt()
+            }
+
+            num = num * 10 + (c - '0')
+        }
+
+        return if (neg) -num else num
+    }
+
+    /**
+     * Fast method for parsing unsigned integers that are known to fit into regular 62-bit signed int type. This means
+     * that length is between 10 and 18 digits (inclusive) and there is no sign character.
      *
      * @param chars Buffer that contains integer value to decode
      *
@@ -181,9 +221,9 @@ object NumberInput {
      *
      * @param length Length of the number to decode (in characters)
      *
-     * @return Decoded {@code int} value
+     * @return Decoded `int` value
      */
-    fun parseLong(chars: CharArray, offset: Int, length: Int): Long {
+    internal fun parseLong(chars: CharArray, offset: Int, length: Int): Long {
         val length2 = length - 9
         val result = parseInt(chars, offset, length).toLong() * L_BILLION
         return result + parseInt(chars, offset + length2, 9).toLong()
