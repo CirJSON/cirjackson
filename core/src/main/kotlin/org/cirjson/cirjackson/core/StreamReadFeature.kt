@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.util.CirJacksonFeature
+
 enum class StreamReadFeature(override val isEnabledByDefault: Boolean) : CirJacksonFeature {
 
     /**

@@ -1,4 +1,4 @@
-package org.cirjson.cirjackson.core
+package org.cirjson.cirjackson.core.util
 
 /**
  * Basic API implemented by Enums used for simple CirJackson "features": on/off settings and capabilities exposed as

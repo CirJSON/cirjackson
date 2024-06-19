@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.exception.StreamWriteException
+import org.cirjson.cirjackson.core.util.CirJacksonFeature
 import java.io.OutputStream
 import java.io.Writer
 import java.math.BigDecimal
