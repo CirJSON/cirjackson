@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.io.CharacterEscapes
+import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import java.io.Closeable
 import java.io.Flushable
 
@@ -114,6 +116,122 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @param value "Current value" to assign to the current output context of this generator
      */
     abstract fun assignCurrentValue(value: Any?): Any?
+
+    /*
+     *******************************************************************************************************************
+     * Public API, Feature configuration
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for enabling or disabling specified feature:
+     * check {@link StreamWriteFeature} for list of available features.
+     *
+     * NOTE: mostly here just to support disabling of
+     * {@link StreamWriteFeature.AUTO_CLOSE_CONTENT} by {@code cirjackson-databind}
+     *
+     * @param feature Feature to enable or disable
+     *
+     * @param state Whether to enable the feature ({@code true}) or disable ({@code false})
+     *
+     * @return This generator, to allow call chaining
+     */
+    abstract fun configure(feature: StreamWriteFeature, state: Boolean): CirJsonGenerator
+
+    /**
+     * Method for checking whether given feature is enabled.
+     * Check {@link StreamWriteFeature} for list of available features.
+     *
+     * @param feature Feature to check
+     *
+     * @return {@code true} if feature is enabled; {@code false} if not
+     */
+    abstract fun isEnabled(feature: StreamWriteFeature): Boolean
+
+    /**
+     * Bulk access method for getting state of all standard (format-agnostic)
+     * {@link StreamWriteFeature}s.
+     *
+     * @return Bit mask that defines current states of all standard {@link StreamWriteFeature}s.
+     */
+    abstract val streamWriteFeatures: Int
+
+    /*
+     *******************************************************************************************************************
+     * Public API, Other configuration
+     *******************************************************************************************************************
+     */
+
+    /**
+     * {@link FormatSchema} this generator is configured to use, if any; {@code null} if none
+     *
+     * Default implementation returns null.
+     */
+    open val schema: FormatSchema? = null
+
+    /**
+     * Accessor method for testing what is the highest unescaped character
+     * configured for this generator. This may be either positive value
+     * (when escaping configuration has been set and is in effect), or
+     * 0 to indicate that no additional escaping is in effect.
+     * Some generators may not support additional escaping: for example,
+     * generators for binary formats that do not use escaping should
+     * simply return 0.
+     *
+     * Default implementation returns 0
+     */
+    open val highestNonEscapedChar = 0
+
+    /**
+     * {@link CharacterEscapes} this generator is configured to use, if any; {@code null} if none
+     *
+     * Default implementation of getter returns `null`
+     *
+     * Default implementation of setter does nothing
+     */
+    open var characterEscapes: CharacterEscapes?
+        get() = null
+        set(value) {}
+
+    /*
+     *******************************************************************************************************************
+     * Public API, capability introspection methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Introspection method that may be called to see if the underlying
+     * data format supports some kind of Type Ids natively (many do not;
+     * for example, CirJSON doesn't).
+     * This method <b>must</b> be called prior to calling
+     * {@link writeTypeId}.
+     *
+     * Default implementation returns false; overridden by data formats
+     * that do support native Type Ids. Caller is expected to either
+     * use a non-native notation (explicit property or such), or fail,
+     * in case it can not use native type ids.
+     */
+    open val isAbleWriteTypeId = false
+
+    /**
+     * Introspection method to call to check whether it is ok to omit
+     * writing of Object properties or not. Most formats do allow omission,
+     * but certain positional formats (such as CSV) require output of
+     * placeholders, even if no real values are to be emitted.
+     */
+    open val isAbleOmitProperties = true
+
+    /**
+     * Accessor for getting metadata on capabilities of this generator, based on
+     * underlying data format being read (directly or indirectly).
+     */
+    abstract val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
+
+    /*
+     *******************************************************************************************************************
+     * Public API, capability introspection methods
+     *******************************************************************************************************************
+     */
 
     companion object {
 
