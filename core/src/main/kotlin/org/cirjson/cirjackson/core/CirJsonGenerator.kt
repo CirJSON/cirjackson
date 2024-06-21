@@ -481,8 +481,4 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *******************************************************************************************************************
      */
 
-    companion object {
-
-    }
-
 }
