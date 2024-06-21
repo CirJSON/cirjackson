@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.exception.StreamWriteException
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import java.io.Closeable
@@ -124,35 +126,32 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
 
     /**
-     * Method for enabling or disabling specified feature:
-     * check {@link StreamWriteFeature} for list of available features.
+     * Method for enabling or disabling specified feature: check [StreamWriteFeature] for list of available features.
      *
-     * NOTE: mostly here just to support disabling of
-     * {@link StreamWriteFeature.AUTO_CLOSE_CONTENT} by {@code cirjackson-databind}
+     * NOTE: mostly here just to support disabling of [StreamWriteFeature.AUTO_CLOSE_CONTENT] by `cirjackson-databind`
      *
      * @param feature Feature to enable or disable
      *
-     * @param state Whether to enable the feature ({@code true}) or disable ({@code false})
+     * @param state Whether to enable the feature (`true`) or disable (`false`)
      *
      * @return This generator, to allow call chaining
      */
     abstract fun configure(feature: StreamWriteFeature, state: Boolean): CirJsonGenerator
 
     /**
-     * Method for checking whether given feature is enabled.
-     * Check {@link StreamWriteFeature} for list of available features.
+     * Method for checking whether given feature is enabled. Check [StreamWriteFeature] for list of available features.
      *
      * @param feature Feature to check
      *
-     * @return {@code true} if feature is enabled; {@code false} if not
+     * @return `true` if feature is enabled; `false` if not
      */
     abstract fun isEnabled(feature: StreamWriteFeature): Boolean
 
     /**
      * Bulk access method for getting state of all standard (format-agnostic)
-     * {@link StreamWriteFeature}s.
+     * [StreamWriteFeature]s.
      *
-     * @return Bit mask that defines current states of all standard {@link StreamWriteFeature}s.
+     * @return Bit mask that defines current states of all standard [StreamWriteFeature]s.
      */
     abstract val streamWriteFeatures: Int
 
@@ -163,27 +162,24 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
 
     /**
-     * {@link FormatSchema} this generator is configured to use, if any; {@code null} if none
+     * [FormatSchema] this generator is configured to use, if any; `null` if none
      *
      * Default implementation returns null.
      */
     open val schema: FormatSchema? = null
 
     /**
-     * Accessor method for testing what is the highest unescaped character
-     * configured for this generator. This may be either positive value
-     * (when escaping configuration has been set and is in effect), or
-     * 0 to indicate that no additional escaping is in effect.
-     * Some generators may not support additional escaping: for example,
-     * generators for binary formats that do not use escaping should
-     * simply return 0.
+     * Accessor method for testing what is the highest unescaped character configured for this generator. This may be
+     * either positive value (when escaping configuration has been set and is in effect), or 0 to indicate that no
+     * additional escaping is in effect. Some generators may not support additional escaping: for example, generators
+     * for binary formats that do not use escaping should simply return 0.
      *
      * Default implementation returns 0
      */
     open val highestNonEscapedChar = 0
 
     /**
-     * {@link CharacterEscapes} this generator is configured to use, if any; {@code null} if none
+     * [CharacterEscapes] this generator is configured to use, if any; `null` if none
      *
      * Default implementation of getter returns `null`
      *
@@ -200,36 +196,288 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
 
     /**
-     * Introspection method that may be called to see if the underlying
-     * data format supports some kind of Type Ids natively (many do not;
-     * for example, CirJSON doesn't).
-     * This method <b>must</b> be called prior to calling
-     * {@link writeTypeId}.
+     * Introspection method that may be called to see if the underlying data format supports some kind of Type Ids
+     * natively (many do not; for example, CirJSON doesn't). This method **must** be called prior to calling
+     * [writeTypeId].
      *
-     * Default implementation returns false; overridden by data formats
-     * that do support native Type Ids. Caller is expected to either
-     * use a non-native notation (explicit property or such), or fail,
-     * in case it can not use native type ids.
+     * Default implementation returns false; overridden by data formats that do support native Type Ids. Caller is
+     * expected to either use a non-native notation (explicit property or such), or fail, in case it can not use native
+     * type ids.
      */
     open val isAbleWriteTypeId = false
 
     /**
-     * Introspection method to call to check whether it is ok to omit
-     * writing of Object properties or not. Most formats do allow omission,
-     * but certain positional formats (such as CSV) require output of
-     * placeholders, even if no real values are to be emitted.
+     * Introspection method to call to check whether it is ok to omit writing of Object properties or not. Most formats
+     * do allow omission, but certain positional formats (such as CSV) require output of placeholders, even if no real
+     * values are to be emitted.
      */
     open val isAbleOmitProperties = true
 
     /**
-     * Accessor for getting metadata on capabilities of this generator, based on
-     * underlying data format being read (directly or indirectly).
+     * Accessor for getting metadata on capabilities of this generator, based on underlying data format being read
+     * (directly or indirectly).
      */
     abstract val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
 
     /*
      *******************************************************************************************************************
-     * Public API, capability introspection methods
+     * Protected API, ID generation methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for getting the ID of the specified Object
+     *
+     * @param obj The object for which the ID is required
+     *
+     * @return The object's ID
+     */
+    protected abstract fun getObjectID(obj: Any): String
+
+    /**
+     * Method for getting the ID of the specified array
+     *
+     * @param array The array for which the ID is required
+     *
+     * @param T The type of the array
+     *
+     * @return The array's ID
+     */
+    protected abstract fun <T> getArrayID(array: Array<T>): String
+
+    /**
+     * Method for getting the ID of the specified array
+     *
+     * @param array The array for which the ID is required
+     *
+     * @return The array's ID
+     */
+    protected abstract fun getArrayID(array: IntArray): String
+
+    /**
+     * Method for getting the ID of the specified array
+     *
+     * @param array The array for which the ID is required
+     *
+     * @return The array's ID
+     */
+    protected abstract fun getArrayID(array: LongArray): String
+
+    /**
+     * Method for getting the ID of the specified array
+     *
+     * @param array The array for which the ID is required
+     *
+     * @return The array's ID
+     */
+    protected abstract fun getArrayID(array: DoubleArray): String
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, structural
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for writing starting marker of a Array value (for CirJSON this is character `[`; plus possible white space
+     * decoration if pretty-printing is enabled).
+     *
+     * Array values can be written in any context where values are allowed: meaning everywhere except for when a
+     * property name is expected.
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartArray(): CirJsonGenerator
+
+    /**
+     * Method for writing start marker of an Array value, similar to [writeStartArray], but also specifying what is the
+     * object that the Array Object being written represents (if any); `null` may be passed if not known or not
+     * applicable. This value is accessible from context as "current value"
+     *
+     * @param currentValue Object that Array being written represents, if any (or `null` if not known or not applicable)
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartArray(currentValue: Any?): CirJsonGenerator
+
+    /**
+     * Method for writing start marker of an Array value, similar to [writeEndArray], but also specifying what is the
+     * object that the Array Object being written represents (if any) and how many elements will be written for the
+     * array before calling [writeEndArray].
+     *
+     * @param currentValue Java Object that Array being written represents, if any (or `null` if not known or not
+     * applicable)
+     *
+     * @param size Number of elements this Array will have: actual number of values written (before matching call to
+     * [writeEndArray] MUST match; generator MAY verify this is the case (and SHOULD if format itself encodes length)
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartArray(currentValue: Any?, size: Int): CirJsonGenerator
+
+    /**
+     * Method for writing closing marker of a CirJSON Array value (character `]`; plus possible white space decoration
+     * if pretty-printing is enabled).
+     *
+     * Marker can be written if the innermost structured type is Array.
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeEndArray(): CirJsonGenerator
+
+    /**
+     * Method for writing starting marker of an Object value (character `{`; plus possible white space decoration if
+     * pretty-printing is enabled).
+     *
+     * Object values can be written in any context where values are allowed: meaning everywhere except for when a
+     * property name is expected.
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartObject(): CirJsonGenerator
+
+    /**
+     * Method for writing starting marker of an Object value to represent the given Object value. Argument is offered as
+     * metadata, but more importantly it should be assigned as the "current value" for the Object content that gets
+     * constructed and initialized.
+     *
+     * Object values can be written in any context where values are allowed: meaning everywhere except for when a
+     * property name is expected.
+     *
+     * @param currentValue Java Object that Object being written represents, if any (or `null` if not known or not
+     * applicable)
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartObject(currentValue: Any?): CirJsonGenerator
+
+    /**
+     * Method for writing starting marker of an Object value to represent the given Object value. Argument is offered as
+     * metadata, but more importantly it should be assigned as the "current value" for the Object content that gets
+     * constructed and initialized. In addition, caller knows number of key/value pairs ("properties") that will get
+     * written for the Object value: this is relevant for some format backends (but not, as an example, for CirJSON).
+     *
+     * Object values can be written in any context where values are allowed: meaning everywhere except for when a
+     * property name is expected.
+     *
+     * @param currentValue Object value to be written (assigned as "current value" for the Object context that gets
+     * created)
+     *
+     * @param size Number of key/value pairs this Object will have: actual number of entries written (before matching
+     * call to [writeEndObject] MUST match; generator MAY verify this is the case (and SHOULD if format itself encodes
+     * length)
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeStartObject(currentValue: Any?, size: Int): CirJsonGenerator
+
+    /**
+     * Method for writing closing marker of an Object value (character `}`; plus possible white space decoration if
+     * pretty-printing is enabled).
+     *
+     * Marker can be written if the innermost structured type is Object, and the last written event was either a
+     * complete value, or START-OBJECT marker (see CirJSON specification for more details).
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeEndObject(): CirJsonGenerator
+
+    /**
+     * Method for writing an Object Property name (CirJSON String surrounded by double quotes: syntactically identical
+     * to a CirJSON String value), possibly decorated by white space if pretty-printing is enabled.
+     *
+     * Property names can only be written in Object context (check out CirJSON specification for details), when Object
+     * Property name is expected (property names alternate with values).
+     *
+     * @param name Name of the Object Property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeName(name: String): CirJsonGenerator
+
+    /**
+     * Method similar to [writeName], main difference being that it may perform better as some of the processing (such
+     * as quoting of certain characters, or encoding into external encoding if supported by generator) can be done just
+     * once and reused for later calls.
+     *
+     * Default implementation simple uses unprocessed name container in serialized String; implementations are strongly
+     * encouraged to make use of more efficient methods argument object has.
+     *
+     * @param name Pre-encoded name of the Object Property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeName(name: SerializableString): CirJsonGenerator
+
+    /**
+     * Alternative to [writeName] that may be used in cases where Object Property key is of numeric type; usually where
+     * underlying format supports such notion (some binary formats do, unlike CirJSON). Default implementation will
+     * simply convert id into `String` and call [writeName].
+     *
+     * @param id Property key id to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writePropertyId(id: Long): CirJsonGenerator
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, scalar arrays
      *******************************************************************************************************************
      */
 
