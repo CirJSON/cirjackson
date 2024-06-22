@@ -6,6 +6,10 @@ import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import java.io.Closeable
 import java.io.Flushable
+import java.io.InputStream
+import java.io.Reader
+import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Base class that defines public API for writing CirJSON content. Instances are created using factory methods of a
@@ -279,8 +283,8 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
 
     /**
-     * Method for writing starting marker of a Array value (for CirJSON this is character `[`; plus possible white space
-     * decoration if pretty-printing is enabled).
+     * Method for writing starting marker of an Array value (for CirJSON this is character `[`; plus possible white
+     * space decoration if pretty-printing is enabled).
      *
      * Array values can be written in any context where values are allowed: meaning everywhere except for when a
      * property name is expected.
@@ -478,6 +482,770 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     /*
      *******************************************************************************************************************
      * Public API, write methods, scalar arrays
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Value write method that can be called to write a single array (sequence of [CirJsonToken.START_ARRAY], zero or
+     * more [CirJsonToken.VALUE_NUMBER_INT], [CirJsonToken.END_ARRAY])
+     *
+     * @param array Array that contains values to write
+     *
+     * @param offset Offset of the first element to write, within array
+     *
+     * @param length Number of elements in array to write, from `offset` to `offset + len - 1`
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeArray(array: IntArray, offset: Int, length: Int): CirJsonGenerator {
+        verifyOffsets(array.size, offset, length)
+        writeStartArray(array, length)
+
+        for (i in offset..<offset + length) {
+            writeNumber(array[i])
+        }
+
+        writeEndArray()
+        return this
+    }
+
+    protected fun verifyOffsets(arrayLength: Int, offset: Int, length: Int) {
+        if (offset < 0 || offset + length > arrayLength) {
+            throw IllegalArgumentException(
+                    "Invalid argument(s) (offset=$offset, length=$length) for input array of $arrayLength element")
+        }
+    }
+
+    /**
+     * Value write method that can be called to write a single array (sequence of [CirJsonToken.START_ARRAY], zero or
+     * more [CirJsonToken.VALUE_NUMBER_INT], [CirJsonToken.END_ARRAY])
+     *
+     * @param array Array that contains values to write
+     *
+     * @param offset Offset of the first element to write, within array
+     *
+     * @param length Number of elements in array to write, from `offset` to `offset + len - 1`
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeArray(array: LongArray, offset: Int, length: Int): CirJsonGenerator {
+        verifyOffsets(array.size, offset, length)
+        writeStartArray(array, length)
+
+        for (i in offset..<offset + length) {
+            writeNumber(array[i])
+        }
+
+        writeEndArray()
+        return this
+    }
+
+    /**
+     * Value write method that can be called to write a single array (sequence of [CirJsonToken.START_ARRAY], zero or
+     * more [CirJsonToken.VALUE_NUMBER_INT], [CirJsonToken.END_ARRAY])
+     *
+     * @param array Array that contains values to write
+     *
+     * @param offset Offset of the first element to write, within array
+     *
+     * @param length Number of elements in array to write, from `offset` to `offset + len - 1`
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeArray(array: DoubleArray, offset: Int, length: Int): CirJsonGenerator {
+        verifyOffsets(array.size, offset, length)
+        writeStartArray(array, length)
+
+        for (i in offset..<offset + length) {
+            writeNumber(array[i])
+        }
+
+        writeEndArray()
+        return this
+    }
+
+    /**
+     * Value write method that can be called to write a single array (sequence of [CirJsonToken.START_ARRAY], zero or
+     * more [CirJsonToken.VALUE_NUMBER_INT], [CirJsonToken.END_ARRAY])
+     *
+     * @param array Array that contains values to write
+     *
+     * @param offset Offset of the first element to write, within array
+     *
+     * @param length Number of elements in array to write, from `offset` to `offset + len - 1`
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeArray(array: Array<String>, offset: Int, length: Int): CirJsonGenerator {
+        verifyOffsets(array.size, offset, length)
+        writeStartArray(array, length)
+
+        for (i in offset..<offset + length) {
+            writeNumber(array[i])
+        }
+
+        writeEndArray()
+        return this
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, text/String values
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for outputting a String value. Depending on context
+     * this means either array element, (object) property value or
+     * a stand-alone (root-level value) String; but in all cases, String will be
+     * surrounded in double quotes, and contents will be properly
+     * escaped as required by CirJSON specification.
+     *
+     * @param value String value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeString(value: String): CirJsonGenerator
+
+    /**
+     * Method for outputting a String value. Depending on context this means either array element, (object) property
+     * value or a standalone String; but in all cases, String will be surrounded in double quotes, and contents will be
+     * properly escaped as required by CirJSON specification. If `length` is < 0, then write all contents of the reader.
+     * Otherwise, write only `length` characters.
+     *
+     * Note: actual length of content available may exceed `length` but can not be less than it: if not enough content
+     * available, a [StreamWriteException] will be thrown.
+     *
+     * @param reader Reader to use for reading Text value to write
+     *
+     * @param length Maximum Length of Text value to read (in `Char`s, non-negative) if known; `-1` to indicate "read
+     * and write it all"
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream (including the case where `reader` does not
+     * provide enough content)
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeString(reader: Reader, length: Int): CirJsonGenerator
+
+    /**
+     * Method for outputting a String value. Depending on context this means either array element, (object) property
+     * value or a standalone String; but in all cases, String will be surrounded in double quotes, and contents will be
+     * properly escaped as required by CirJSON specification.
+     *
+     * @param buffer Buffer that contains String value to write
+     *
+     * @param offset Offset in `buffer` of the first character of String value to write
+     *
+     * @param length Length of the String value (in characters) to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeString(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method similar to [writeString], but that takes [SerializableString] which can make this potentially more
+     * efficient to call as generator may be able to reuse quoted and/or encoded representation.
+     *
+     * Default implementation just calls [writeString]; subclasses should override it with more efficient implementation
+     * if possible.
+     *
+     * @param value Pre-encoded String value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeString(value: SerializableString): CirJsonGenerator
+
+    /**
+     * Method similar to [writeString] but that takes as its input a UTF-8 encoded String that is to be output as-is,
+     * without additional escaping (type of which depends on data format; backslashes for CirJSON). However, quoting
+     * that data format requires (like double-quotes for CirJSON) will be added around the value if and as necessary.
+     *
+     * Note that some backends may choose not to support this method: for example, if underlying destination is a
+     * [java.io.Writer] using this method would require UTF-8 decoding. If so, implementation may instead choose to
+     * throw a [UnsupportedOperationException] due to ineffectiveness of having to decode input.
+     *
+     * @param buffer Buffer that contains String value to write
+     *
+     * @param offset Offset in `buffer` of the first byte of String value to write
+     *
+     * @param length Length of the String value (in characters) to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRawUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method similar to [writeString] but that takes as its input a UTF-8 encoded String which has **not** been escaped
+     * using whatever escaping scheme data format requires (for CirJSON that is backslash-escaping for control
+     * characters and double-quotes; for other formats something else). This means that textual CirJSON backends need to
+     * check if value needs CirJSON escaping, but otherwise can just be copied as is to output. Also, quoting that data
+     * format requires (like double-quotes for CirJSON) will be added around the value if and as necessary.
+     *
+     * Note that some backends may choose not to support this method: for example, if underlying destination is a
+     * [java.io.Writer] using this method would require UTF-8 decoding. In this case generator implementation may
+     * instead choose to throw a [UnsupportedOperationException] due to ineffectiveness of having to decode input.
+     *
+     * @param buffer Buffer that contains String value to write
+     *
+     * @param offset Offset in `buffer` of the first byte of String value to write
+     *
+     * @param length Length of the String value (in characters) to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, raw content
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that will force generator to copy input text verbatim with **no** modifications (including that no
+     * escaping is done and no separators are added even if context [array, object] would otherwise require such). If
+     * such separators are desired, use [writeRawValue] instead.
+     *
+     * Note that not all generator implementations necessarily support such by-pass methods: those that do not will
+     * throw [UnsupportedOperationException].
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @param text Textual contents to include as-is in output.
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRaw(text: String): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim with **no** modifications (including that no
+     * escaping is done and no separators are added even if context [array, object] would otherwise require such). If
+     * such separators are desired, use [writeRawValue] instead.
+     *
+     * Note that not all generator implementations necessarily support such by-pass methods: those that do not will
+     * throw [UnsupportedOperationException].
+     *
+     * @param text String that has contents to include as-is in output
+     *
+     * @param offset Offset within `text` of the first character to output
+     *
+     * @param length Length of content (from `text`, starting at offset `offset`) to output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRaw(text: String, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim with **no** modifications (including that no
+     * escaping is done and no separators are added even if context [array, object] would otherwise require such). If
+     * such separators are desired, use [writeRawValue] instead.
+     *
+     * Note that not all generator implementations necessarily support such by-pass methods: those that do not will
+     * throw [UnsupportedOperationException].
+     *
+     * @param buffer Buffer that has contents to include as-is in output
+     * @param offset Offset within `text` of the first character to output
+     * @param length Length of content (from `text`, starting at offset `offset`) to output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRaw(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim with **no** modifications (including that no
+     * escaping is done and no separators are added even if context [array, object] would otherwise require such). If
+     * such separators are desired, use [writeRawValue] instead.
+     *
+     * Note that not all generator implementations necessarily support such by-pass methods: those that do not will
+     * throw [UnsupportedOperationException].
+     *
+     * @param char Character to included in output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRaw(char: Char): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim with **no** modifications (including that no
+     * escaping is done and no separators are added even if context [array, object] would otherwise require such). If
+     * such separators are desired, use [writeRawValue] instead.
+     *
+     * Note that not all generator implementations necessarily support such by-pass methods: those that do not will
+     * throw [UnsupportedOperationException].
+     *
+     * The default implementation does `writeRaw(raw.value)`; other backends that support raw inclusion of text are
+     * encouraged to implement it in more efficient manner (especially if they use UTF-8 encoding).
+     *
+     * @param raw Pre-encoded textual contents to included in output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeRaw(raw: SerializableString): CirJsonGenerator {
+        return writeRaw(raw.value)
+    }
+
+    /**
+     * Method that will force generator to copy input text verbatim without any modifications, but assuming it must
+     * constitute a single legal CirJSON value (number, string, boolean, null, Array or List). Assuming this, proper
+     * separators are added if and as needed (comma or colon), and generator state updated to reflect this.
+     *
+     * @param text Textual contents to included in output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRawValue(text: String): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim without any modifications, but assuming it must
+     * constitute a single legal CirJSON value (number, string, boolean, null, Array or List). Assuming this, proper
+     * separators are added if and as needed (comma or colon), and generator state updated to reflect this.
+     *
+     * @param text Textual contents to included in output
+     *
+     * @param offset Offset within `text` of the first character to output
+     *
+     * @param length Length of content (from `text`, starting at offset `offset`) to output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRawValue(text: String, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method that will force generator to copy input text verbatim without any modifications, but assuming it must
+     * constitute a single legal CirJSON value (number, string, boolean, null, Array or List). Assuming this, proper
+     * separators are added if and as needed (comma or colon), and generator state updated to reflect this.
+     *
+     * @param text Textual contents to included in output
+     *
+     * @param offset Offset within `text` of the first character to output
+     *
+     * @param length Length of content (from `text`, starting at offset `offset`) to output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRawValue(text: CharArray, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Method similar to [writeRawValue], but potentially more efficient as it may be able to use pre-encoded content
+     * (similar to [writeRaw]).
+     *
+     * @param raw Pre-encoded textual contents to included in output
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeRawValue(raw: SerializableString): CirJsonGenerator
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, Binary values
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that will output given chunk of binary data as base64 encoded, as a complete String value (surrounded by
+     * double quotes).
+     *
+     * Note: because CirJSON Strings can not contain unescaped linefeeds, if linefeeds are included (as per last
+     * argument), they must be escaped. This adds overhead for decoding without improving readability. Alternatively if
+     * linefeeds are not included, resulting String value may violate the requirement of base64 RFC which mandates
+     * line-length of 76 characters and use of linefeeds. However, all [CirJsonParser] implementations are required to
+     * accept such "long line base64"; as do typical production-level base64 decoders.
+     *
+     * @param variant Base64 variant to use: defines details such as whether padding is used (and if so, using which
+     * character); what is the maximum line length before adding linefeed, and also the underlying alphabet to use.
+     *
+     * @param data Buffer that contains binary data to write
+     *
+     * @param offset Offset in `data` of the first byte of data to write
+     *
+     * @param length Length of data to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeBinary(variant: Base64Variant, data: ByteArray, offset: Int, length: Int): CirJsonGenerator
+
+    /**
+     * Similar to [writeBinary], but default to using the CirJackson default Base64 variant (which is
+     * [Base64Variants.MIME_NO_LINEFEEDS]).
+     *
+     * @param data Buffer that contains binary data to write
+     *
+     * @param offset Offset in `data` of the first byte of data to write
+     *
+     * @param length Length of data to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeBinary(data: ByteArray, offset: Int, length: Int): CirJsonGenerator {
+        return writeBinary(Base64Variants.defaultVariant, data, offset, length)
+    }
+
+    /**
+     * Similar to [writeBinary], but assumes default to using the CirJackson default Base64 variant (which is
+     * [Base64Variants.MIME_NO_LINEFEEDS]). Also assumes that whole byte array is to be output.
+     *
+     * @param data Buffer that contains binary data to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeBinary(data: ByteArray): CirJsonGenerator {
+        return writeBinary(Base64Variants.defaultVariant, data, 0, data.size)
+    }
+
+    /**
+     * Method similar to [writeBinary], but where input is provided through a stream, allowing for incremental writes
+     * without holding the whole input in memory.
+     *
+     * @param variant Base64 variant to use
+     *
+     * @param data InputStream to use for reading binary data to write. Will not be closed after successful write
+     * operation
+     *
+     * @param dataLength (optional) number of bytes that will be available; or -1 to indicate it is not known. If a
+     * positive length is given, `data` MUST provide at least that many bytes: if not, an exception will be thrown. Note
+     * that implementations need not support cases where length is not known in advance; this depends on underlying data
+     * format: CirJSON output does NOT require length, other formats may.
+     *
+     * @return Number of bytes read from `data` and written as binary payload
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): CirJsonGenerator
+
+    /**
+     * Similar to [writeBinary], but assumes default to using the CirJackson default Base64 variant (which is
+     * [Base64Variants.MIME_NO_LINEFEEDS]).
+     *
+     * @param data InputStream to use for reading binary data to write. Will not be closed after successful write
+     * operation
+     *
+     * @param dataLength (optional) number of bytes that will be available; or -1 to indicate it is not known. Note that
+     * implementations need not support cases where length is not known in advance; this depends on underlying data
+     * format: CirJSON output does NOT require length, other formats may
+     *
+     * @return Number of bytes actually written
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeBinary(data: InputStream, dataLength: Int): CirJsonGenerator {
+        return writeBinary(Base64Variants.defaultVariant, data, dataLength)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, numeric
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: Short): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: Int): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: Long): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: BigInteger): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: Double): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: Float): CirJsonGenerator
+
+    /**
+     * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
+     * (Array value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @param value Number value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(value: BigDecimal): CirJsonGenerator
+
+    /**
+     * Write method that can be used for custom numeric types that can not be (easily?) converted to "standard" number
+     * types. Because numbers are not surrounded by double quotes, regular [writeString] method can not be used; nor
+     * [writeRaw] because that does not properly handle value separators needed in Array or Object contexts.
+     *
+     * Note: because of lack of type safety, some generator implementations may not be able to implement this method.
+     * For example, if a binary CirJSON format is used, it may require type information for encoding; similarly for
+     * generator-wrappers around objects or CirJSON nodes. If implementation does not implement this method, it needs to
+     * throw [UnsupportedOperationException].
+     *
+     * @param encodedValue Textual (possibly format) number representation to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws UnsupportedOperationException If underlying data format does not support numbers serialized textually AND
+     * if generator is not allowed to just output a String instead (Schema-based formats may require actual number, for
+     * example)
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNumber(encodedValue: String): CirJsonGenerator
+
+    /**
+     * Overloaded version of [writeNumber] with same semantics but possibly more efficient operation.
+     *
+     * @param encodedValueBuffer Buffer that contains the textual number representation to write
+     *
+     * @param offset Offset of the first character of value to write
+     *
+     * @param length Length of the value (in characters) to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeNumber(encodedValueBuffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
+        return writeNumber(String(encodedValueBuffer, offset, length))
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, literal types
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for outputting literal CirJSON boolean value (one of Strings 'true' and 'false'). Can be called in any
+     * context where a value is expected (Array value, Object property value, root-level value). Additional white space
+     * may be added around the value if pretty-printing is enabled.
+     *
+     * @param state Boolean value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeBoolean(state: Boolean): CirJsonGenerator
+
+    /**
+     * Method for outputting literal CirJSON null value. Can be called in any context where a value is expected (Array
+     * value, Object property value, root-level value). Additional white space may be added around the value if
+     * pretty-printing is enabled.
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeNull(): CirJsonGenerator
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, other value types
      *******************************************************************************************************************
      */
 
