@@ -1249,4 +1249,53 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that can be called on backends that support passing opaque native values that some data formats support;
+     * not used with CirJSON backend, more common with binary formats.
+     *
+     * NOTE: this is NOT the method to call for serializing regular POJOs, see [writePOJO] instead.
+     *
+     * @param obj Native format-specific value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeEmbeddedObject(obj: Any?): CirJsonGenerator {
+        obj ?: return this.also { writeNull() }
+
+        if (obj is ByteArray) {
+            return this.also { writeBinary(obj) }
+        }
+
+        throw constructWriteException("No native support for writing embedded objects of type ${obj.javaClass.name}")
+    }
+
+    protected fun constructWriteException(message: String): StreamWriteException {
+        return StreamWriteException(this, message)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, other value types
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be called to output so-called native Object ID.
+     *
+     * @param referenced Referenced value, for which Object ID is expected to be written
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeObjectId(referenced: Any): CirJsonGenerator
+
 }
