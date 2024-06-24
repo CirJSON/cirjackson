@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.core
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamWriteException
 import org.cirjson.cirjackson.core.io.CharacterEscapes
+import org.cirjson.cirjackson.core.type.WritableTypeID
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import java.io.Closeable
 import java.io.Flushable
@@ -1297,5 +1298,502 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
     @Throws(CirJacksonException::class)
     abstract fun writeObjectId(referenced: Any): CirJsonGenerator
+
+    /**
+     * Method that can be called to output so-called native type ID. Note that it may only be called after ensuring this
+     * is legal (with [isAbleWriteTypeId]), as not all data formats have native type id support; and some may only allow
+     * them in certain positions or locations. If output is not allowed by the data format in this position, a
+     * [StreamWriteException] will be thrown.
+     *
+     * @param id Native Type ID to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeTypeId(id: Any): CirJsonGenerator {
+        throw constructWriteException("No native support for writing type IDs")
+    }
+
+    /**
+     * Replacement method for [writeTypeId] which is called regardless of whether format has native type IDs. If it does
+     * have native type ids, those are to be used (if configuration allows this), if not, structural type ID inclusion
+     * is to be used. For CirJSON, for example, no native type ids exist and structural inclusion is always used.
+     *
+     * NOTE: databind may choose to skip calling this method for some special cases (and instead included type ID via
+     * regular write methods and/or [writeTypeId]) -- this is discouraged, but not illegal, and may be necessary as a
+     * work-around in some cases.
+     *
+     * @param typeIdDefinition Full Type ID definition
+     *
+     * @return [WritableTypeID] for caller to retain and pass to matching [writeTypeSuffix] call
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeTypePrefix(typeIdDefinition: WritableTypeID): WritableTypeID {
+        val id = typeIdDefinition.id
+        val valueShape = typeIdDefinition.valueShape
+
+        if (isAbleWriteTypeId) {
+            typeIdDefinition.isWrapperWritten = false
+            writeTypeId(id!!)
+        } else {
+            val idString = (id as? String) ?: id.toString()
+            var inclusion = typeIdDefinition.inclusion!!
+
+            if (valueShape != CirJsonToken.START_OBJECT && inclusion.isRequiringObjectContext) {
+                inclusion = WritableTypeID.Inclusion.WRAPPER_ARRAY.also { typeIdDefinition.inclusion = it }
+            }
+
+            when (inclusion) {
+                WritableTypeID.Inclusion.PARENT_PROPERTY, WritableTypeID.Inclusion.PAYLOAD_PROPERTY -> {}
+
+                WritableTypeID.Inclusion.METADATA_PROPERTY -> {
+                    writeStartObject(typeIdDefinition.forValue)
+                    writeStringProperty(typeIdDefinition.asProperty!!, idString)
+                    return typeIdDefinition
+                }
+
+                WritableTypeID.Inclusion.WRAPPER_OBJECT -> {
+                    writeStartObject()
+                    writeName(idString)
+                }
+
+                WritableTypeID.Inclusion.WRAPPER_ARRAY -> {
+                    writeStartArray()
+                    writeString(idString)
+                }
+            }
+        }
+
+        if (valueShape == CirJsonToken.START_OBJECT) {
+            writeStartObject(typeIdDefinition.forValue)
+        } else if (valueShape == CirJsonToken.START_ARRAY) {
+            writeStartArray()
+        }
+
+        return typeIdDefinition
+    }
+
+    @Throws(CirJacksonException::class)
+    fun writeTypeSuffix(typeIdDefinition: WritableTypeID): WritableTypeID {
+        val valueShape = typeIdDefinition.valueShape
+
+        if (valueShape == CirJsonToken.START_OBJECT) {
+            writeEndObject()
+        } else if (valueShape == CirJsonToken.START_ARRAY) {
+            writeEndArray()
+        }
+
+        if (typeIdDefinition.isWrapperWritten) {
+            when (typeIdDefinition.inclusion) {
+                WritableTypeID.Inclusion.METADATA_PROPERTY, WritableTypeID.Inclusion.PAYLOAD_PROPERTY -> {}
+
+                WritableTypeID.Inclusion.WRAPPER_ARRAY -> {
+                    writeEndArray()
+                }
+
+                WritableTypeID.Inclusion.WRAPPER_OBJECT -> {
+                    writeEndObject()
+                }
+
+                WritableTypeID.Inclusion.PARENT_PROPERTY -> {
+                    val id = typeIdDefinition.id
+                    val idString = (id as? String) ?: id.toString()
+                    writeStringProperty(typeIdDefinition.asProperty!!, idString)
+                }
+
+                else -> {
+                    writeEndObject()
+                }
+            }
+        }
+
+        return typeIdDefinition
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, write methods, serializing objects
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for writing given object (POJO) as tokens into stream this generator manages; serialization must be a
+     * valid CirJSON Value (Object, Array, null, Number, String or Boolean). This is done by delegating call to
+     * [ObjectWriteContext.writeValue].
+     *
+     * @param pojo Java Object (POJO) value to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writePOJO(pojo: Any): CirJsonGenerator
+
+    /**
+     * Method for writing given CirJSON tree (expressed as a tree where given [TreeNode] is the root) using this
+     * generator. This is done by delegating call to [ObjectWriteContext.writeTree].
+     *
+     * @param rootNode [TreeNode] to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeTree(rootNode: TreeNode): CirJsonGenerator
+
+    /*
+     *******************************************************************************************************************
+     * Public API, convenience property write methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Convenience method for outputting an Object property that contains specified data in base64-encoded form.
+     * Equivalent to:
+     * ```
+     *  writeName(propertyName)
+     *  writeBinary(value)
+     * ```
+     *
+     * @param propertyName Name of Object Property to write
+     * @param data Binary value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws JacksonIOException if there is an underlying I/O problem
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeBinaryProperty(propertyName: String, data: ByteArray): CirJsonGenerator {
+        writeName(propertyName)
+        return writeBinary(data)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has a boolean value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeBoolean(value)
+     * ```
+     *
+     * @param propertyName Name of Object Property to write
+     * @param value Boolean value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeBoolean(propertyName: String, value: Boolean): CirJsonGenerator {
+        writeName(propertyName)
+        return writeBoolean(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has CirJSON literal value null. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNull()
+     * ```
+     *
+     * @param propertyName Name of the null-valued property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNullProperty(propertyName: String): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNull()
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has a String value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeString(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value String value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeStringProperty(propertyName: String, value: String): CirJsonGenerator {
+        writeName(propertyName)
+        return writeString(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: Short): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: Int): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: Long): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: BigInteger): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: Float): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: Double): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property that has the specified numeric value. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeNumber(value)
+     * ```
+     *
+     * @param propertyName Name of the property to write
+     * @param value Numeric value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeNumberProperty(propertyName: String, value: BigDecimal): CirJsonGenerator {
+        writeName(propertyName)
+        return writeNumber(value)
+    }
+
+    /**
+     * Convenience method for outputting an Object property (that will contain a CirJSON Array value), and the
+     * START_ARRAY marker. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeStartArray()
+     * ```
+     *
+     * Note: caller still has to take care to close the array (by calling [writeEndArray]) after writing all values of
+     * the value Array.
+     *
+     * @param propertyName Name of the Array property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeArrayPropertyStart(propertyName: String): CirJsonGenerator {
+        writeName(propertyName)
+        return writeStartArray()
+    }
+
+    /**
+     * Convenience method for outputting an Object property (that will contain an Object value), and the START_OBJECT
+     * marker. Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeStartObject()
+     * ```
+     *
+     * Note: caller still has to take care to close the Object
+     * (by calling [writeEndObject]) after writing all
+     * entries of the value Object.
+     *
+     * @param propertyName Name of the Object property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writeObjectPropertyStart(propertyName: String): CirJsonGenerator {
+        writeName(propertyName)
+        return writeStartObject()
+    }
+
+    /**
+     * Convenience method for outputting am Object property that has contents of specific object (POJO) as its value.
+     * Equivalent to:
+     * ```
+     * writeName(propertyName)
+     * writeObject(pojo)
+     * ```
+     *
+     * NOTE: see [writePOJO] for details on how POJO value actually
+     * gets written (uses delegation).
+     *
+     * @param propertyName Name of the property to write
+     * @param pojo POJO value of the property to write
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    fun writePOJOProperty(propertyName: String, pojo: Any): CirJsonGenerator {
+        writeName(propertyName)
+        return writePOJO(pojo)
+    }
+
+    /**
+     * Method called to indicate that a property in this position was skipped. It is usually only called for generators
+     * that return `false` from [isAbleOmitProperties].
+     *
+     * Default implementation does nothing; method is overridden by some format backends.
+     *
+     * @param propertyName Name of the property that is being omitted
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    open fun writeOmittedProperty(propertyName: String): CirJsonGenerator {
+        return this
+    }
 
 }
