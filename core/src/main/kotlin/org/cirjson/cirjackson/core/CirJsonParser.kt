@@ -36,16 +36,26 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
 
     /**
-     * Method that can be used to access current parsing context reader
-     * is in. There are 3 different types: root, array and object contexts,
-     * with slightly different available information. Contexts are
-     * hierarchically nested, and can be used for example for figuring
-     * out part of the input document that correspond to specific
-     * array or object (for highlighting purposes, or error reporting).
-     * Contexts can also be used for simple xpath-like matching of
-     * input, if so desired.
+     * Accessor that can be used to access current parsing context reader is in. There are 3 different types: root,
+     * array, and object contexts, with slightly different available information. Contexts are hierarchically nested,
+     * and can be used for example for figuring out part of the input document that correspond to specific array or
+     * object (for highlighting purposes, or error reporting). Contexts can also be used for simple xpath-like matching
+     * of input, if so desired.
      */
     abstract val streamReadContext: TokenStreamContext
+
+    /**
+     * Accessor for context object provided by higher level data-binding functionality (or, in some cases, simple placeholder of the same) that allows some level of interaction including ability to trigger deserialization of Object values through generator instance.
+     *
+     * Context object is used by parser to implement some methods, like `readValueAs(...)`
+     */
+    abstract val objectReadContext: ObjectReadContext
+
+    /*
+     *******************************************************************************************************************
+     * Public API, input source, location access
+     *******************************************************************************************************************
+     */
 
     /**
      * Enumeration of possible "native" (optimal) types that can be used for numbers.
