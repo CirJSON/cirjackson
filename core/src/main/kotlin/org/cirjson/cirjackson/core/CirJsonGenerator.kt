@@ -1,14 +1,12 @@
 package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.exception.StreamWriteException
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.type.WritableTypeID
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
-import java.io.Closeable
-import java.io.Flushable
-import java.io.InputStream
-import java.io.Reader
+import java.io.*
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -1794,6 +1792,394 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
     open fun writeOmittedProperty(propertyName: String): CirJsonGenerator {
         return this
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, copy-through methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for copying contents of the current event that the given parser instance points to. Note that the method
+     * **will not** copy any other events, such as events contained within CirJSON Array or Object structures.
+     *
+     * Calling this method will not advance the given parser, although it may cause parser to internally process more
+     * data (if it lazily loads contents of value events, for example)
+     *
+     * @param parser Parser that points to the event to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun copyCurrentEvent(parser: CirJsonParser) {
+        val token = parser.currentToken()
+        val tokenId = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
+
+        when (tokenId) {
+            CirJsonTokenId.ID_NOT_AVAILABLE -> {
+                reportError<Unit>("No current event to copy")
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                writeStartObject()
+            }
+
+            CirJsonTokenId.ID_END_OBJECT -> {
+                writeEndObject()
+            }
+
+            CirJsonTokenId.ID_START_ARRAY -> {
+                writeStartArray()
+            }
+
+            CirJsonTokenId.ID_END_ARRAY -> {
+                writeEndArray()
+            }
+
+            CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                writeName(parser.idName)
+            }
+
+            CirJsonTokenId.ID_PROPERTY_NAME -> {
+                writeName(parser.currentName()!!)
+            }
+
+            CirJsonTokenId.ID_STRING -> {
+                copyCurrentStringValue(parser)
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                copyCurrentIntValue(parser)
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                copyCurrentFloatValue(parser)
+            }
+
+            CirJsonTokenId.ID_TRUE -> {
+                writeBoolean(true)
+            }
+
+            CirJsonTokenId.ID_FALSE -> {
+                writeBoolean(false)
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                writeNull()
+            }
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> {
+                writePOJO(parser.embeddedObject!!)
+            }
+
+            else -> {
+                throw IllegalArgumentException("Internal error: unknown current token, $token")
+            }
+        }
+    }
+
+    /**
+     * Helper method used for constructing and throwing [StreamWriteException] with given message.
+     *
+     * Note that subclasses may override this method to add more detail or use a [StreamWriteException] subclass.
+     *
+     * @param T Bogus type parameter to "return anything" so that compiler won't complain when chaining calls
+     *
+     * @param message Message to construct exception with
+     *
+     * @return Does not return at all as exception is always thrown, but nominally returns "anything"
+     *
+     * @throws StreamWriteException that was constructed with given message
+     */
+    @Throws(StreamWriteException::class)
+    protected open fun <T> reportError(message: String): T {
+        throw constructWriteException(message)
+    }
+
+    /**
+     * Method for copying current [CirJsonToken.VALUE_STRING] value; overridable by format backend implementations.
+     *
+     * @param parser Parser that points to the value to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun copyCurrentStringValue(parser: CirJsonParser) {
+        if (parser.isTextCharactersAvailable) {
+            writeString(parser.textCharacters, parser.textOffset, parser.textLength)
+        } else {
+            writeString(parser.text)
+        }
+    }
+
+    /**
+     * Method for copying current [CirJsonToken.VALUE_NUMBER_INT] value; overridable by format backend implementations.
+     *
+     * @param parser Parser that points to the value to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun copyCurrentIntValue(parser: CirJsonParser) {
+        val numberType = parser.numberType
+
+        when (numberType) {
+            CirJsonParser.NumberType.INT -> {
+                writeNumber(parser.intValue)
+            }
+
+            CirJsonParser.NumberType.LONG -> {
+                writeNumber(parser.longValue)
+            }
+
+            else -> {
+                writeNumber(parser.bigIntegerValue)
+            }
+        }
+    }
+
+    /**
+     * Method for copying current [CirJsonToken.VALUE_NUMBER_FLOAT] value; overridable by format backend
+     * implementations. Implementation checks [CirJsonParser.numberType] for declared type and uses matching accessors:
+     * this may cause inexact conversion for some textual formats (depending on settings). If this is problematic, use
+     * [copyCurrentFloatValueExact] instead (note that doing so may add overhead).
+     *
+     * @param parser Parser that points to the value to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun copyCurrentFloatValue(parser: CirJsonParser) {
+        val numberType = parser.numberType
+
+        when (numberType) {
+            CirJsonParser.NumberType.BIG_DECIMAL -> {
+                writeNumber(parser.bigDecimalValue)
+            }
+
+            CirJsonParser.NumberType.FLOAT -> {
+                writeNumber(parser.floatValue)
+            }
+
+            else -> {
+                writeNumber(parser.doubleValue)
+            }
+        }
+    }
+
+    /**
+     * Same as [copyCurrentEvent] with the exception that copying of numeric values tries to avoid any conversion
+     * losses; in particular for floating-point numbers. This usually matters when transcoding from textual format like
+     * CirJSON to a binary format. See [copyCurrentFloatValueExact] for details.
+     *
+     * @param parser Parser that points to the event to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    open fun copyCurrentEventExact(parser: CirJsonParser) {
+        val token = parser.currentToken()
+        val tokenId = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
+
+        if (tokenId == CirJsonTokenId.ID_NUMBER_FLOAT) {
+            copyCurrentFloatValueExact(parser)
+        } else {
+            copyCurrentEvent(parser)
+        }
+    }
+
+    /**
+     * Method for copying current [CirJsonToken.VALUE_NUMBER_FLOAT] value; overridable by format backend
+     * implementations. Implementation ensures it uses most accurate accessors necessary to retain exact value in case
+     * of possible numeric conversion: in practice this means that [BigDecimal] is usually used as the representation
+     * accessed from [CirJsonParser], regardless of whether [Double] might be accurate (since detecting lossy conversion
+     * is not possible to do efficiently). If minimal overhead is desired, use [copyCurrentFloatValue] instead.
+     *
+     * @param parser Parser that points to the value to copy
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem (reading or writing)
+     *
+     * @throws StreamReadException for problems with decoding of token stream
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun copyCurrentFloatValueExact(parser: CirJsonParser) {
+        when (val number = parser.numberValueExact) {
+            is BigDecimal -> {
+                writeNumber(number)
+            }
+
+            is Double -> {
+                writeNumber(number)
+            }
+
+            else -> {
+                writeNumber(number.toFloat())
+            }
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun copyCurrentStructure(parser: CirJsonParser) {
+        var token = parser.currentToken()
+        var id = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
+
+        if (id == CirJsonTokenId.ID_PROPERTY_NAME) {
+            writeName(parser.currentName()!!)
+            token = parser.nextToken()
+            id = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
+        }
+
+        when (id) {
+            CirJsonTokenId.ID_START_OBJECT -> {
+                writeStartObject()
+                copyCurrentContents(parser)
+            }
+
+            CirJsonTokenId.ID_START_ARRAY -> {
+                writeStartArray()
+                copyCurrentContents(parser)
+            }
+
+            else -> {
+                copyCurrentEvent(parser)
+            }
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected open fun copyCurrentContents(parser: CirJsonParser) {
+        var depth = 1
+        lateinit var token: CirJsonToken
+
+        while (parser.nextToken()?.also { token = it } != null) {
+            when (token.id) {
+                CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                    writeName(parser.idName)
+                }
+
+                CirJsonTokenId.ID_PROPERTY_NAME -> {
+                    writeName(parser.currentName()!!)
+                }
+
+                CirJsonTokenId.ID_START_ARRAY -> {
+                    writeStartArray()
+                    ++depth
+                }
+
+                CirJsonTokenId.ID_START_OBJECT -> {
+                    writeStartObject()
+                    ++depth
+                }
+
+                CirJsonTokenId.ID_END_ARRAY -> {
+                    writeEndArray()
+
+                    if (--depth == 0) {
+                        return
+                    }
+                }
+
+                CirJsonTokenId.ID_END_OBJECT -> {
+                    writeEndObject()
+
+                    if (--depth == 0) {
+                        return
+                    }
+                }
+
+                CirJsonTokenId.ID_STRING -> {
+                    copyCurrentStringValue(parser)
+                }
+
+                CirJsonTokenId.ID_NUMBER_INT -> {
+                    copyCurrentIntValue(parser)
+                }
+
+                CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                    copyCurrentFloatValue(parser)
+                }
+
+                CirJsonTokenId.ID_TRUE -> {
+                    writeBoolean(true)
+                }
+
+                CirJsonTokenId.ID_FALSE -> {
+                    writeBoolean(false)
+                }
+
+                CirJsonTokenId.ID_NULL -> {
+                    writeNull()
+                }
+
+                CirJsonTokenId.ID_EMBEDDED_OBJECT -> {
+                    writePOJO(parser.embeddedObject!!)
+                }
+
+                else -> {
+                    throw IllegalArgumentException("Internal error: unknown current token, $token")
+                }
+            }
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper methods for sub-classes
+     *******************************************************************************************************************
+     */
+
+    protected open fun <T> reportUnsupportedOperation(): T {
+        return reportUnsupportedOperation("Operation not supported by `CirJsonGenerator` of type ${javaClass.name}")
+    }
+
+    protected open fun <T> reportUnsupportedOperation(message: String): T {
+        throw UnsupportedOperationException(message)
+    }
+
+    /**
+     * Helper method used for constructing and throwing [StreamWriteException] with given message, in cases where
+     * argument(s) used for a call (usually one of {@code writeX()} methods) is invalid.
+     *
+     * Default implementation simply delegates to [reportError].
+     *
+     * @param T Bogus type parameter to "return anything" so that compiler won't complain when chaining calls
+     *
+     * @param message Message to construct exception with
+     *
+     * @return Does not return at all as exception is always thrown, but nominally returns "anything"
+     *
+     * @throws StreamWriteException that was constructed with given message
+     */
+    @Throws(StreamWriteException::class)
+    protected open fun <T> reportArgumentError(message: String): T {
+        return reportError(message)
+    }
+
+    protected fun wrapIOFailure(e: IOException): CirJacksonException {
+        return CirJacksonIOException.construct(e, this)
     }
 
 }
