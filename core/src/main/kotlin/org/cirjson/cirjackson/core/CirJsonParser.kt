@@ -3,11 +3,13 @@ package org.cirjson.cirjackson.core
 import org.cirjson.cirjackson.core.CirJsonParser.NumberTypeFP.UNKNOWN
 import org.cirjson.cirjackson.core.async.NonBlockingInputFeeder
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
+import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
+import org.cirjson.cirjackson.core.util.TextBuffer
 import java.io.*
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -25,7 +27,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * Whether parser owns the input source depends on factory method that was used to construct instance (so check
      * [org.cirjson.cirjackson.core.cirjson.CirJsonFactory] for details), but the general idea is that if caller passes
      * in closable resource (such as [InputStream] or [Reader]) parser does NOT own the source; but if it passes a
-     * reference (such as [java.io.File] or [java.net.URL] and creates stream or reader it does own them.
+     * reference (such as [java.io.File] or [java.net.URL]) and creates stream or reader it does own them.
      */
     abstract override fun close()
 
@@ -507,6 +509,132 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
     abstract fun currentToken(): CirJsonToken?
 
+    /**
+     * Method similar to [currentToken] but that returns an `Int` instead of [CirJsonToken] (enum value).
+     *
+     * Use of int directly is typically more efficient on switch statements, so this method may be useful when building
+     * low-overhead codecs. Note, however, that effect may not be big enough to matter: make sure to profile performance
+     * before deciding to use this method.
+     *
+     * @return `Int` matching one of constants from [CirJsonTokenId].
+     */
+    abstract fun currentTokenId(): Int
+
+    /**
+     * Method for checking whether parser currently points to a token (and data for that token is available). Equivalent
+     * to check for `parser.currentToken() != null`.
+     *
+     * @return `true` if the parser just returned a valid token via [nextToken]; `false` otherwise (parser was just
+     * constructed, encountered end-of-input and returned `null` from [nextToken], or the token has been consumed)
+     */
+    abstract val isCurrentTokenNotNull: Boolean
+
+    /**
+     * Method that is functionally equivalent to:
+     * ```
+     * return currentTokenId() == id
+     * ```
+     * but may be more efficiently implemented.
+     *
+     * Note that no traversal or conversion is performed; so in some cases calling accessor like
+     * [isExpectedStartArrayToken] is necessary instead.
+     *
+     * @param id Token id to match (from [CirJsonTokenId])
+     *
+     * @return `true` if the parser current points to specified token
+     */
+    abstract fun hasTokenId(id: Int): Boolean
+
+    /**
+     * Method that is functionally equivalent to:
+     * ```
+     * return currentToken() == token
+     * ```
+     * but may be more efficiently implemented.
+     *
+     * Note that no traversal or conversion is performed; so in some cases calling accessor like
+     * [isExpectedStartArrayToken] is necessary instead.
+     *
+     * @param token Token to match
+     *
+     * @return `true` if the parser current points to specified token
+     */
+    abstract fun hasToken(token: CirJsonToken): Boolean
+
+    /**
+     * Specialized accessor that can be used to verify that the current token indicates start array (usually meaning
+     * that current token is [CirJsonToken.START_ARRAY]) when start array is expected. For some specialized parsers this
+     * can return true for other cases as well; this is usually done to emulate arrays in cases underlying format is
+     * ambiguous (XML, for example, has no format-level difference between Objects and Arrays; it just has elements).
+     *
+     * Default implementation is equivalent to:
+     * ```
+     * currentToken() == CirJsonToken.START_ARRAY
+     * ```
+     * but may be overridden by custom parser implementations.
+     *
+     * @return `true` if the current token can be considered as a start-array marker (such [CirJsonToken.START_ARRAY]);
+     * `false` if not
+     */
+    abstract val isExpectedStartArrayToken: Boolean
+
+    /**
+     * Similar to [isExpectedStartArrayToken], but checks whether stream currently points to
+     * [CirJsonToken.START_OBJECT].
+     *
+     * @return `true` if the current token can be considered as a start-array marker (such [CirJsonToken.START_OBJECT]);
+     * `false` if not
+     */
+    abstract val isExpectedStartObjectToken: Boolean
+
+    /**
+     * Similar to [isExpectedStartArrayToken], but checks whether stream currently points to [CirJsonToken.VALUE_NUMBER_INT].
+     *
+     * The initial use case is for XML backend to efficiently (attempt to) coerce textual content into numbers.
+     *
+     * @return True if the current token can be considered as a start-array marker (such [CirJsonToken.VALUE_NUMBER_INT]); `false` if not
+     */
+    abstract val isExpectedNumberIntToken: Boolean
+
+    /**
+     * Accessor for checking whether current token is a special "not-a-number" (NaN) token (including both "NaN" AND
+     * positive/negative infinity!). These values are not supported by all formats: CirJSON, for example, only supports
+     * them if [CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS] is enabled.
+     *
+     * NOTE: in case where numeric value is outside range of requested type -- most notably [Float] or [Double] -- and
+     * decoding results effectively in a NaN value, this method DOES NOT return `true`: only explicit incoming markers
+     * do. This is because value could still be accessed as a valid [BigDecimal].
+     *
+     * @return `true` if the current token is reported as [CirJsonToken.VALUE_NUMBER_FLOAT] and represents a "Not a
+     * Number" value; `false` for other tokens and regular floating-point numbers.
+     */
+    abstract val isNaN: Boolean
+
+    /*
+     *******************************************************************************************************************
+     * Public API, token state overrides
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called to "consume" the current token by effectively removing it so that [isCurrentTokenNotNull] returns
+     * `false`, and [currentToken] `null`. Cleared token value can still be accessed by calling [lastClearedToken] (if
+     * absolutely needed), but usually isn't.
+     *
+     * Method was added to be used by the optional data binder, since it has to be able to consume last token used for
+     * binding (so that it will not be used again).
+     */
+    abstract fun clearCurrentToken()
+
+    /**
+     * Method that can be called to get the last token that was cleared using [clearCurrentToken]. This is not
+     * necessarily the latest token read. Will return `null` if no tokens have been cleared, or if parser has been
+     * closed.
+     *
+     * @return Last cleared token, if any; `null` otherwise
+     */
+    abstract val lastClearedToken: CirJsonToken?
+
     /*
      *******************************************************************************************************************
      * Public API, access to token information, text
@@ -540,6 +668,30 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
     @get:Throws(CirJacksonException::class)
     abstract val text: String
+
+    /**
+     * Method to read the textual representation of the current token in chunks and pass it to the given Writer.
+     * Conceptually same as calling:
+     * ```
+     * writer.write(parser.text);
+     * ```
+     * but should typically be more efficient as longer content does need to be combined into a single `String` to
+     * return, and write can occur directly from intermediate buffers CirJackson uses.
+     *
+     * NOTE: textual content **will** still be buffered (usually using [TextBuffer]) and **will** be accessible with
+     * other `text` calls (that is, it will not be consumed). So this accessor only avoids construction of [String]
+     * compared to plain [text] accessor.
+     *
+     * @param writer Writer to write textual content to
+     *
+     * @return The number of characters written to the Writer
+     *
+     * @throws CirJacksonIOException for low-level read issues, or failed write using [Writer]
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun getText(writer: Writer): Int
 
     /**
      * Accessor similar to [text], but that will return underlying (unmodifiable) character array that contains textual
@@ -601,7 +753,16 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
 
     /**
-     * Method similar to [numberValue] with the difference that for floating-point numbers value returned may be
+     * Generic number value accessor method that will work for all kinds of numeric values. It will return the optimal
+     * (simplest/smallest possible) wrapper object that can express the numeric value just parsed.
+     *
+     * @throws InputCoercionException If the current token is not of numeric type
+     */
+    @get:Throws(InputCoercionException::class)
+    abstract val numberValue: Number
+
+    /**
+     * Accessor similar to [numberValue] with the difference that for floating-point numbers value returned may be
      * [BigDecimal] if the underlying format does not store floating-point numbers using native representation: for
      * example, textual formats represent numbers as Strings (which are 10-based), and conversion to [Double] is
      * potentially lossy operation.
@@ -614,10 +775,63 @@ abstract class CirJsonParser : Closeable, Versioned {
     abstract val numberValueExact: Number
 
     /**
+     * Method similar to [numberValue] but that returns **either** same [Number] value as [numberValue] (if already
+     * decoded), **or** `String` representation of as-of-yet undecoded number. Typically textual formats allow deferred
+     * decoding from String, whereas binary formats either decode numbers eagerly or have binary representation from
+     * which to decode value to return.
+     *
+     * Same constraints apply to calling this method as to [numberValue]: current token must be either
+     * [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT]; otherwise an exception is thrown.
+     *
+     * Default implementation simply returns [numberValue].
+     *
+     * @throws InputCoercionException If the current token is not of numeric type
+     */
+    @get:Throws(InputCoercionException::class)
+    abstract val numberValueDeferred: Number
+
+    /**
      * If current token is of type [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT], returns one of
      * [NumberType] constants; otherwise returns `null`.
      */
     abstract val numberType: NumberType
+
+    /**
+     * If current token is of type [CirJsonToken.VALUE_NUMBER_FLOAT], returns one of [NumberTypeFP] constants; otherwise
+     * returns [NumberTypeFP.UNKNOWN]. If parser does not point to numeric token; returns `null`.
+     */
+    abstract val numberTypeFP: NumberTypeFP?
+
+    /**
+     * Numeric accessor that can be called when the current token is of type [CirJsonToken.VALUE_NUMBER_INT] and it can
+     * be expressed as a value of `Byte` primitive type. Note that in addition to "natural" input range of
+     * `[-128, 127]`, this also allows "unsigned 8-bit byte" values `[128, 255]`: but for this range value will be
+     * translated by truncation, leading to sign change.
+     *
+     * It can also be called for [CirJsonToken.VALUE_NUMBER_FLOAT]; if so, it is equivalent to calling [doubleValue] and
+     * then casting; except for possible overflow/underflow exception.
+     *
+     * Note: if the resulting integer value falls outside range of `[-128, 255]`, an [InputCoercionException] will be
+     * thrown to indicate numeric overflow/underflow.
+     *
+     * @throws InputCoercionException If either token type is not a number OR numeric value exceeds allowed range
+     */
+    @get:Throws(InputCoercionException::class)
+    abstract val byteValue: Byte
+
+    /**
+     * Numeric accessor that can be called when the current token is of type [CirJsonToken.VALUE_NUMBER_INT] and it can
+     * be expressed as a value of `Short` primitive type. It can also be called for [CirJsonToken.VALUE_NUMBER_FLOAT];
+     * if so, it is equivalent to calling [doubleValue] and then casting; except for possible overflow/underflow
+     * exception.
+     *
+     * Note: if the resulting integer value falls outside range of `Short`, an [InputCoercionException] will be thrown
+     * to indicate numeric overflow/underflow.
+     *
+     * @throws InputCoercionException If either token type is not a number OR numeric value exceeds allowed range
+     */
+    @get:Throws(InputCoercionException::class)
+    abstract val shortValue: Short
 
     /**
      * Numeric accessor that can be called when the current token is of type [CirJsonToken.VALUE_NUMBER_INT] and it can
