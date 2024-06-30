@@ -14,4 +14,3 @@ plugins {
 rootProject.name = "cirjackson"
 include(":cirjackson-core")
 project(":cirjackson-core").projectDir = file("./core")
-

@@ -13,6 +13,7 @@ val cirJacksonVersion: String = properties.getProperty("cirjackson.version")
 plugins {
     kotlin("jvm")
     id("org.jetbrains.dokka")
+    id("org.jetbrains.kotlinx.kover") version "0.8.2"
 }
 
 group = "org.cirjson.cirjackson"
@@ -87,10 +88,9 @@ task<Test>("checkAll") {
     }
 }
 
-
-
 configure(subprojects) {
     apply(plugin = "org.jetbrains.dokka")
+    apply(plugin = "org.jetbrains.kotlinx.kover")
     configurePathsaver()
     configureDokkaSetup()
 }
@@ -105,6 +105,10 @@ tasks.withType<DokkaMultiModuleTask>().named("dokkaHtmlMultiModule") {
 dependencies {
     // Add explicit dependency between Dokka and Knit plugin
     add("dokkaHtmlMultiModulePlugin", "org.jetbrains.kotlinx:dokka-pathsaver-plugin:$knitVersion")
+
+    for (lib in allLibs) {
+        kover(project(lib))
+    }
 }
 
 // Dependencies for Knit processing: Knit plugin to work with Dokka
