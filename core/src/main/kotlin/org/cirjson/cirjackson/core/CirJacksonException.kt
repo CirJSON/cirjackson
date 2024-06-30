@@ -29,6 +29,10 @@ abstract class CirJacksonException : RuntimeException {
         this.location = null
     }
 
+    constructor(message: String?, location: CirJsonLocation) : super(message) {
+        this.location = location
+    }
+
     /**
      * Method that allows to remove context information from this exception's message. Useful when you are parsing
      * security-sensitive data and don't want original data excerpts to be present in CirJackson parser error messages.

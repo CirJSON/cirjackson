@@ -8,6 +8,8 @@ import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
+import org.cirjson.cirjackson.core.type.ResolvedType
+import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.core.util.TextBuffer
 import java.io.*
@@ -742,6 +744,10 @@ abstract class CirJsonParser : Closeable, Versioned {
      * Default implementation simply returns false since only actual implementation class has knowledge of its internal
      * buffering state. Implementations are strongly encouraged to properly override this method, to allow efficient
      * copying of content by other code.
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
      */
     @get:Throws(CirJacksonException::class)
     abstract val isTextCharactersAvailable: Boolean
@@ -913,6 +919,16 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
 
     /**
+     * Convenience accessor that can be called when the current token is [CirJsonToken.VALUE_TRUE] or
+     * [CirJsonToken.VALUE_FALSE], to return matching `Boolean` value. If the current token is of some other type,
+     * [InputCoercionException] will be thrown
+     *
+     * @throws InputCoercionException if the current token is not of `Boolean` type
+     */
+    @get:Throws(InputCoercionException::class)
+    abstract val booleanValue: Boolean
+
+    /**
      * Accessor that can be called if (and only if) the current token is [CirJsonToken.VALUE_EMBEDDED_OBJECT]. For other
      * token types, `null` is returned.
      *
@@ -921,6 +937,402 @@ abstract class CirJsonParser : Closeable, Versioned {
      * base64 encoding or not) which typically is accessible using this method, as well as [binaryValue].
      */
     abstract val embeddedObject: Any?
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, binary
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be used to read (and consume -- results may not be accessible using other methods after the call)
+     * base64-encoded binary data included in the current textual CirJSON value. It works similar to getting String
+     * value via [text] and decoding result (except for decoding part), but should be significantly more performant.
+     *
+     * Note that non-decoded textual contents of the current token are not guaranteed to be accessible after this method
+     * is called. Current implementation, for example, clears up textual content during decoding. Decoded binary
+     * content, however, will be retained until parser is advanced to the next event.
+     *
+     * @param base64Variant Expected variant of base64 encoded content (see [Base64Variants] for definitions of
+     * "standard" variants).
+     *
+     * @return Decoded binary data
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun getBinaryValue(base64Variant: Base64Variant): ByteArray
+
+    /**
+     * Convenience alternative to [getBinaryValue] that defaults to using [Base64Variants.defaultVariant] as the default
+     * encoding.
+     *
+     * @return Decoded binary data
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @get:Throws(CirJacksonException::class)
+    open val binaryValue: ByteArray
+        get() = getBinaryValue(Base64Variants.defaultVariant)
+
+    /**
+     * Method that can be used as an alternative to [binaryValue],
+     * especially when value can be large. The main difference (beyond method
+     * of returning content using [OutputStream] instead of as byte array)
+     * is that content will NOT remain accessible after method returns: any content
+     * processed will be consumed and is not buffered in any way. If caller needs
+     * buffering, it has to implement it.
+     *
+     * @param output Output stream to use for passing decoded binary data
+     *
+     * @return Number of bytes that were decoded and written via [OutputStream]
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class)
+    open fun readBinaryValue(output: OutputStream): Int {
+        return readBinaryValue(Base64Variants.defaultVariant, output)
+    }
+
+    /**
+     * Similar to [readBinaryValue] but allows explicitly specifying base64 variant to use.
+     *
+     * @param base64Variant base64 variant to use
+     *
+     * @param output Output stream to use for passing decoded binary data
+     *
+     * @return Number of bytes that were decoded and written via [OutputStream]
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class)
+    open fun readBinaryValue(base64Variant: Base64Variant, output: OutputStream): Int {
+        reportUnsupportedOperation()
+        return 0
+    }
+
+    /**
+     * Helper method to call for operations that are not supported by parser implementation.
+     */
+    protected fun reportUnsupportedOperation() {
+        throw UnsupportedOperationException("Operation not supported by parser of type ${javaClass.name}")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, coercion/conversion
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Accessor that will try to convert value of current token to a **Boolean**. CirJSON booleans map naturally;
+     * integer numbers other than `0` map to `true` and `0` maps to `false`, and Strings `true` and `false` map to
+     * corresponding values.
+     *
+     * If representation can not be converted to a `Boolean` value (including structured types like Objects and Arrays),
+     * default value of `false` will be returned; no exceptions are thrown.
+     */
+    open val valueAsBoolean: Boolean
+        get() = getValueAsBoolean(false)
+
+    /**
+     * Method that will try to convert value of current token to a **Boolean**. CirJSON booleans map naturally; integer
+     * numbers other than `0` map to `true` and `0` maps to `false`, and Strings `true` and `false` map to corresponding
+     * values.
+     *
+     * If representation can not be converted to a `Boolean` value (including structured types like Objects and Arrays),
+     * specified **defaultValue** will be returned; no exceptions are thrown.
+     *
+     * @param defaultValue Default value to return if conversion to `Boolean` is not possible
+     *
+     * @return `Boolean` value current token is converted to, if possible; `defaultValue` otherwise
+     */
+    abstract fun getValueAsBoolean(defaultValue: Boolean): Boolean
+
+    /**
+     * Accessor that will try to convert value of current token to an `Int` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0` (`false`) and `1` (`true`), and Strings are parsed using default Kotlin
+     * language integer parsing rules.
+     *
+     * If representation can not be converted to an `Int` (including structured type markers like start/end
+     * Object/Array) default value of **0** will be returned; no exceptions are thrown.
+     *
+     * @return `Int` value current token is converted to, if possible; default value otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Int` range
+     */
+    @get:Throws(InputCoercionException::class)
+    open val valueAsInt: Int
+        get() = getValueAsInt(0)
+
+    /**
+     * Method that will try to convert value of current token to an `Int` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0` (`false`) and `1` (`true`), and Strings are parsed using default Kotlin
+     * language integer parsing rules.
+     *
+     * If representation can not be converted to an `Int` (including structured type markers like start/end
+     * Object/Array) specified **defaultValue** will be returned; no exceptions are thrown.
+     *
+     * @param defaultValue Default value to return if conversion to `Int` is not possible
+     *
+     * @return `Int` value current token is converted to, if possible; `defaultValue` otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Int` range
+     */
+    @Throws(InputCoercionException::class)
+    open fun getValueAsInt(defaultValue: Int): Int {
+        return defaultValue
+    }
+
+    /**
+     * Accessor that will try to convert value of current token to a `Long` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0L` (`false`) and `1L` (`true`), and Strings are parsed using default Kotlin
+     * language integer parsing rules.
+     *
+     * If representation can not be converted to a `Long` (including structured type markers like start/end
+     * Object/Array) default value of **0L** will be returned; no exceptions are thrown.
+     *
+     * @return `Long` value current token is converted to, if possible; default value otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Long` range
+     */
+    @get:Throws(InputCoercionException::class)
+    open val valueAsLong: Long
+        get() = getValueAsLong(0L)
+
+    /**
+     * Method that will try to convert value of current token to a `Long` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0L` (`false`) and `1L` (`true`), and Strings are parsed using default Kotlin
+     * language integer parsing rules.
+     *
+     * If representation can not be converted to a `Long` (including structured type markers like start/end
+     * Object/Array) specified **defaultValue** will be returned; no exceptions are thrown.
+     *
+     * @param defaultValue Default value to return if conversion to `Long` is not possible
+     *
+     * @return `Int` value current token is converted to, if possible; `defaultValue` otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Long` range
+     */
+    @Throws(InputCoercionException::class)
+    open fun getValueAsLong(defaultValue: Long): Long {
+        return defaultValue
+    }
+
+    /**
+     * Accessor that will try to convert value of current token to a `Double` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0.0` (`false`) and `1.0` (`true`), and Strings are parsed using default Kotlin
+     * language floating-point parsing rules.
+     *
+     * If representation can not be converted to a `Double` (including structured type markers like start/end
+     * Object/Array) default value of **0.0** will be returned; no exceptions are thrown.
+     *
+     * @return `Double` value current token is converted to, if possible; default value otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Double` range
+     */
+    @get:Throws(InputCoercionException::class)
+    open val valueAsDouble: Double
+        get() = getValueAsDouble(0.0)
+
+    /**
+     * Method that will try to convert value of current token to a `Long` value. Numbers are coerced using default
+     * Kotlin rules; booleans convert to `0.0` (`false`) and `1.0` (`true`), and Strings are parsed using default Kotlin
+     * language floating-point parsing rules.
+     *
+     * If representation can not be converted to a `Double` (including structured type markers like start/end
+     * Object/Array) specified **defaultValue** will be returned; no exceptions are thrown.
+     *
+     * @param defaultValue Default value to return if conversion to `Double` is not possible
+     *
+     * @return `Double` value current token is converted to, if possible; `defaultValue` otherwise
+     *
+     * @throws InputCoercionException If numeric value exceeds `Double` range
+     */
+    @Throws(InputCoercionException::class)
+    open fun getValueAsDouble(defaultValue: Double): Double {
+        return defaultValue
+    }
+
+    /**
+     * Accessor that will try to convert value of current token to a [String]. CirJSON Strings map naturally; scalar
+     * values get converted to their textual representation. If representation can not be converted to a String value
+     * (including structured types like Objects and Arrays and `null` token), default value of **null** will be
+     * returned; no exceptions are thrown.
+     */
+    open val valueAsString: String?
+        get() = getValueAsString(null)
+
+    /**
+     * Method that will try to convert value of current token to a [String]. CirJSON Strings map naturally; scalar
+     * values get converted to their textual representation. If representation can not be converted to a String value
+     * (including structured types like Objects and Arrays and `null` token), specified default value will be returned;
+     * no exceptions are thrown.
+     *
+     * @param defaultValue Default value to return if conversion to `String` is not possible
+     *
+     * @return [String] value current token is converted to, if possible; `defaultValue` otherwise
+     */
+    abstract fun getValueAsString(defaultValue: String?): String?
+
+    /*
+     *******************************************************************************************************************
+     * Public API, Native Ids (type, object)
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Introspection method that may be called to see if the underlying data format supports some kind of Type Ids
+     * natively (many do not; for example, CirJSON doesn't).
+     *
+     * Default implementation returns true; overridden by data formats that do support native Type Ids. Caller is
+     * expected to either use a non-native notation (explicit property or such), or fail, in case it can not use native
+     * type ids.
+     */
+    open val isReadingTypeIdPossible = false
+
+    /**
+     * Accessor that can be called to check whether current token (one that was just read) has an associated Object id,
+     * and if so, return it.
+     */
+    abstract val objectId: Any?
+
+    /**
+     * Method that can be called to check whether current token (one that was just read) has an associated type id,
+     * and if so, return it. Note that while typically caller should check with [isReadingTypeIdPossible] first, it is
+     * not illegal to call this method even if that method returns true; but if so, it will return null. This may be
+     * used to simplify calling code.
+     *
+     * Default implementation will simply return `null`.
+     */
+    abstract val typeId: Any?
+
+    /*
+     *******************************************************************************************************************
+     * Public API, optional data binding functionality
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to deserialize stream content into a non-container type (it can be an array type, however): typically a
+     * bean, array or a wrapper type (like [Boolean]).
+     *
+     * **Note**: method can only be called if the parser has been constructed with a linkage to [ObjectReadContext];
+     * this is true if constructed by databinding layer above, or by factory method that takes in context object.
+     *
+     * This method may advance the event stream, for structured values the current token will be the closing end marker
+     * (END_ARRAY, END_OBJECT) of the bound structure. For non-structured values (and for
+     * [CirJsonToken.VALUE_EMBEDDED_OBJECT]) stream is not advanced.
+     *
+     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is that
+     * due to type erasure, key and value types can not be introspected when using this method.
+     *
+     * @param T Nominal type parameter to specify expected node type to reduce need to cast result value
+     *
+     * @param valueType Type to bind content to
+     *
+     * @return Value read from content
+     *
+     * @throws CirJacksonException if there is either an underlying I/O problem or decoding issue at format layer
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun <T> readValueAs(valueType: Class<T>): T
+
+    /**
+     * Method to deserialize stream content into a Java type, reference to which is passed as argument. Type is passed
+     * using so-called "super type token" and specifically needs to be used if the root type is a parameterized
+     * (generic) container type.
+     *
+     * **Note**: method can only be called if the parser has been constructed with a linkage to [ObjectReadContext];
+     * this is true if constructed by databinding layer above, or by factory method that takes in context object.
+     *
+     * This method may advance the event stream, for structured types the current token will be the closing end marker
+     * (END_ARRAY, END_OBJECT) of the bound structure. For non-structured types (and for
+     * [CirJsonToken.VALUE_EMBEDDED_OBJECT]) stream is not advanced.
+     *
+     * @param T Nominal type parameter to specify expected node type to reduce need to cast result value
+     *
+     * @param valueTypeReference Type to bind content to
+     *
+     * @return Value read from content
+     *
+     * @throws CirJacksonException if there is either an underlying I/O problem or decoding issue at format layer
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun <T> readValueAs(valueTypeReference: TypeReference<T>): T
+
+    @Throws(CirJacksonException::class)
+    abstract fun <T> readValueAs(type: ResolvedType): T
+
+    /**
+     * Method to deserialize stream content into equivalent "tree model", represented by root [TreeNode] of resulting
+     * model. For Array values it will an array node (with child nodes), for Object values object node (with child
+     * nodes), and for other types matching leaf node type. Empty or whitespace documents are `null`.
+     *
+     * **Note**: method can only be called if the parser has been constructed with a linkage to [ObjectReadContext];
+     * this is true if constructed by databinding layer above, or by factory method that takes in context object.
+     *
+     * @param T Nominal type parameter for result node type (to reduce need for casting)
+     *
+     * @return root of the document, or null if empty or whitespace.
+     *
+     * @throws CirJacksonException if there is either an underlying I/O problem or decoding issue at format layer
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun <T : TreeNode> readValueAsTree(): T?
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Helper method for constructing [StreamReadException] based on current state of the parser
+     *
+     * @param message Base exception message to construct exception with
+     *
+     * @return [StreamReadException] constructed
+     */
+    protected fun constructReadException(message: String): StreamReadException {
+        return StreamReadException(this, message)
+    }
+
+    /**
+     * Helper method for constructing [StreamReadException] based on current state of the parser and indicating that the
+     * given [Throwable] is the root cause.
+     *
+     * @param message Base exception message to construct exception with
+     *
+     * @param throwable Root cause to assign
+     *
+     * @return Read exception (of type [StreamReadException]) constructed
+     */
+    protected fun constructReadException(message: String, throwable: Throwable): StreamReadException {
+        return StreamReadException(this, message, throwable)
+    }
+
+    /**
+     * Helper method for constructing [StreamReadException] based on current state of the parser, except for specified
+     * [CirJsonLocation] for problem location (which may not be the exact current location)
+     *
+     * @param message Base exception message to construct exception with
+     *
+     * @param location Error location to report
+     *
+     * @return Read exception (of type [StreamReadException]) constructed
+     */
+    protected fun constructReadException(message: String, location: CirJsonLocation): StreamReadException {
+        return StreamReadException(this, message, location)
+    }
 
     /**
      * Enumeration of possible "native" (optimal) types that can be used for numbers.

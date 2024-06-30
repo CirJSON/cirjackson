@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.exception
 
 import org.cirjson.cirjackson.core.CirJacksonException
+import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
 
 /**
@@ -19,6 +20,10 @@ open class StreamReadException : CirJacksonException {
     }
 
     constructor(processor: CirJsonParser?, message: String, cause: Throwable) : super(message, cause) {
+        myProcessor = processor
+    }
+
+    constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation) : super(message, location) {
         myProcessor = processor
     }
 
