@@ -184,4 +184,18 @@ interface TreeNode {
      */
     fun at(pointerExpression: String): TreeNode
 
+    /**
+     * Method for constructing a [CirJsonParser] instance for iterating over contents of the tree that this node is root
+     * of. Functionally equivalent to first serializing tree and then reparsing but more efficient.
+     *
+     * NOTE: constructed parser instance will NOT initially point to a token, so before passing it to deserializers, it
+     * is typically necessary to advance it to the first available token by calling [CirJsonParser.nextToken].
+     *
+     * @param objectReadContext [ObjectReadContext] to associate with parser constructed (to allow seamless databinding
+     * functionality)
+     *
+     * @return [CirJsonParser] that will stream over contents of this node
+     */
+    fun traverse(objectReadContext: ObjectReadContext): CirJsonParser
+
 }
