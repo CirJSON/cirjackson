@@ -509,7 +509,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     /**
      * Optional method for constructing parser for non-blocking parsing via
      * [org.cirjson.cirjackson.core.async.ByteArrayFeeder] interface (accessed using
-     * [CirJsonParser.getNonBlockingInputFeeder] from constructed instance).
+     * [CirJsonParser.nonBlockingInputFeeder] from constructed instance).
      *
      * If this factory does not support non-blocking parsing (either at all, or from byte array), will throw
      * [UnsupportedOperationException].
@@ -532,7 +532,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     /**
      * Optional method for constructing parser for non-blocking parsing via
      * [org.cirjson.cirjackson.core.async.ByteBufferFeeder] interface (accessed using
-     * [CirJsonParser.getNonBlockingInputFeeder] from constructed instance).
+     * [CirJsonParser.nonBlockingInputFeeder] from constructed instance).
      *
      * If this factory does not support non-blocking parsing (either at all, or from byte array), will throw
      * [UnsupportedOperationException].
