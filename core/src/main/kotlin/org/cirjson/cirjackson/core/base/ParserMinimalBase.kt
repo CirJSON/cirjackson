@@ -2,10 +2,13 @@ package org.cirjson.cirjackson.core.base
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.core.util.Other
 import java.io.IOException
+import java.io.Writer
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -207,13 +210,112 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *******************************************************************************************************************
      */
 
+    @Throws(CirJacksonException::class)
     override fun nextName(): String? {
         return if (nextToken() === CirJsonToken.PROPERTY_NAME) currentName() else null
     }
 
+    @Throws(CirJacksonException::class)
     override fun nextName(string: SerializableString): Boolean {
         return nextToken() === CirJsonToken.PROPERTY_NAME && string.value == currentName()
     }
+
+    @Throws(CirJacksonException::class)
+    override fun nextNameMatch(matcher: PropertyNameMatcher): Int {
+        val string = nextName()
+
+        return if (string != null) {
+            matcher.matchName(string)
+        } else if (myCurrentToken === CirJsonToken.END_OBJECT) {
+            PropertyNameMatcher.MATCH_END_OBJECT
+        } else {
+            PropertyNameMatcher.MATCH_ODD_TOKEN
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun currentNameMatch(matcher: PropertyNameMatcher): Int {
+        return if (myCurrentToken === CirJsonToken.PROPERTY_NAME) {
+            matcher.matchName(currentName()!!)
+        } else if (myCurrentToken === CirJsonToken.END_OBJECT) {
+            PropertyNameMatcher.MATCH_END_OBJECT
+        } else {
+            PropertyNameMatcher.MATCH_ODD_TOKEN
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, token state override
+     *******************************************************************************************************************
+     */
+
+    override fun clearCurrentToken() {
+        if (myCurrentToken != null) {
+            lastClearedToken = myCurrentToken
+            myCurrentToken = null
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, text
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    override fun getText(writer: Writer): Int {
+        val string = text ?: return 0
+
+        try {
+            writer.write(string)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+
+        return string.length
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, numeric
+     *******************************************************************************************************************
+     */
+
+    override val numberTypeFP: NumberTypeFP?
+        get() = NumberTypeFP.UNKNOWN
+
+    @get:Throws(InputCoercionException::class)
+    override val numberValueExact: Number
+        get() = numberValue
+
+    @get:Throws(InputCoercionException::class)
+    override val numberValueDeferred: Number
+        get() = numberValue
+
+    @get:Throws(InputCoercionException::class)
+    override val byteValue: Byte
+        get() {
+            val value = intValue
+
+            if (value !in INT_MIN_BYTE..INT_MAX_BYTE) {
+                reportOverflowByte(text!!, currentToken()!!)
+            }
+
+            return value.toByte()
+        }
+
+    @get:Throws(InputCoercionException::class)
+    override val shortValue: Short
+        get() {
+            val value = intValue
+
+            if (value !in INT_MIN_SHORT..INT_MAX_SHORT) {
+                reportOverflowShort(text!!, currentToken()!!)
+            }
+
+            return value.toShort()
+        }
 
     /*
      *******************************************************************************************************************
@@ -231,6 +333,66 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     protected fun <T> throwInternal(): T {
         return Other.throwInternalReturnAny()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Error reporting, numeric conversion/parsing issues
+     *******************************************************************************************************************
+     */
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowByte(numDesc: String, inputType: CirJsonToken) {
+        throw constructInputCoercion(
+                "Numeric value (${longIntegerDesc(numDesc)}) out of range of `Byte` ($INT_MIN_BYTE - $INT_MAX_BYTE)",
+                inputType, Byte::class.java)
+    }
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowShort(numDesc: String, inputType: CirJsonToken) {
+        throw constructInputCoercion(
+                "Numeric value (${longIntegerDesc(numDesc)}) out of range of `Short` ($INT_MIN_SHORT - $INT_MAX_SHORT)",
+                inputType, Byte::class.java)
+    }
+
+    protected fun longIntegerDesc(numDesc: String): String {
+        var rawLength = numDesc.length
+
+        if (rawLength < 1000) {
+            return numDesc
+        }
+
+        if (numDesc.startsWith("-")) {
+            rawLength--
+        }
+
+        return "[Integer with $rawLength digits]"
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Error reporting, input coercion support
+     *******************************************************************************************************************
+     */
+
+    protected fun constructNotNumericType(actualToken: CirJsonToken, expectedNumericType: Int): InputCoercionException {
+        val message = "Current token ($actualToken) not numeric, can not use numeric value accessors"
+        val targetType = when (expectedNumericType) {
+            NUMBER_INT -> Int::class.java
+            NUMBER_LONG -> Long::class.java
+            NUMBER_BIG_INT -> BigInteger::class.java
+            NUMBER_FLOAT -> Float::class.java
+            NUMBER_DOUBLE -> Double::class.java
+            NUMBER_BIG_DECIMAL -> BigDecimal::class.java
+            else -> Number::class.java
+        }
+
+        return constructInputCoercion(message, actualToken, targetType)
+    }
+
+    protected fun constructInputCoercion(message: String, inputType: CirJsonToken,
+            targetType: Class<*>): InputCoercionException {
+        return InputCoercionException(this, message, inputType, targetType)
     }
 
     companion object {

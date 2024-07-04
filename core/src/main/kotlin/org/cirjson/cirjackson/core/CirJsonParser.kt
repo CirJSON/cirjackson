@@ -652,14 +652,14 @@ abstract class CirJsonParser : Closeable, Versioned {
 
     /**
      * Accessor for textual representation of the current token; if no current token (before first call to [nextToken],
-     * or after encountering end-of-input), returns null. Accessor can be called for any token type.
+     * or after encountering end-of-input), returns `null`. Accessor can be called for any token type.
      *
      * @throws CirJacksonIOException for low-level read issues
      *
      * @throws StreamReadException for decoding problems
      */
     @get:Throws(CirJacksonException::class)
-    abstract val text: String
+    abstract val text: String?
 
     /**
      * Method to read the textual representation of the current token in chunks and pass it to the given Writer.
