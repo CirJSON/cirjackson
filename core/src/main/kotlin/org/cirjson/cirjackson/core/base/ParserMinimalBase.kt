@@ -6,7 +6,11 @@ import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.exception.UnexpectedEndOfInputException
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.io.NumberInput
 import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
+import org.cirjson.cirjackson.core.type.ResolvedType
+import org.cirjson.cirjackson.core.type.TypeReference
+import org.cirjson.cirjackson.core.util.ByteArrayBuilder
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.core.util.Other
 import java.io.IOException
@@ -321,6 +325,246 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     /*
      *******************************************************************************************************************
+     * Public API, access to token information, other
+     *******************************************************************************************************************
+     */
+
+    @get:Throws(InputCoercionException::class)
+    override val booleanValue: Boolean
+        get() {
+            val token = currentToken()
+
+            return if (token === CirJsonToken.VALUE_TRUE) {
+                true
+            } else if (token === CirJsonToken.VALUE_FALSE) {
+                false
+            } else {
+                throw constructInputCoercion("Current token ($token) not of boolean type", token!!, Boolean::class.java)
+            }
+        }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, binary
+     *******************************************************************************************************************
+     */
+
+    override val embeddedObject: Any?
+        get() = null
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access with conversion/coercion
+     *******************************************************************************************************************
+     */
+
+    override fun getValueAsBoolean(defaultValue: Boolean): Boolean {
+        val token = myCurrentToken ?: return defaultValue
+
+        return when (token.id) {
+            CirJsonTokenId.ID_STRING -> {
+                val string = text!!.trim()
+
+                if (string == "true") {
+                    true
+                } else if (string == "false") {
+                    false
+                } else if (hasTextualNull(string)) {
+                    false
+                } else {
+                    defaultValue
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> intValue != 0
+
+            CirJsonTokenId.ID_TRUE -> true
+
+            CirJsonTokenId.ID_FALSE, CirJsonTokenId.ID_NULL -> false
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> (embeddedObject as? Boolean) ?: defaultValue
+
+            else -> defaultValue
+        }
+    }
+
+    override val valueAsInt: Int
+        get() = if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT
+                || myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            intValue
+        } else {
+            getValueAsInt(0)
+        }
+
+    override fun getValueAsInt(defaultValue: Int): Int {
+        val token = myCurrentToken ?: return defaultValue
+
+        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            return intValue
+        }
+
+
+        return when (token.id) {
+            CirJsonTokenId.ID_STRING -> {
+                val string = text
+
+                return if (!hasTextualNull(string)) {
+                    NumberInput.parseAsInt(string, defaultValue)
+                } else {
+                    0
+                }
+            }
+
+            CirJsonTokenId.ID_TRUE -> 1
+
+            CirJsonTokenId.ID_FALSE, CirJsonTokenId.ID_NULL -> 0
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> (embeddedObject as? Number)?.toInt() ?: defaultValue
+
+            else -> defaultValue
+        }
+    }
+
+    override val valueAsLong: Long
+        get() = if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT
+                || myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            longValue
+        } else {
+            getValueAsLong(0L)
+        }
+
+    override fun getValueAsLong(defaultValue: Long): Long {
+        val token = myCurrentToken ?: return defaultValue
+
+        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            return longValue
+        }
+
+
+        return when (token.id) {
+            CirJsonTokenId.ID_STRING -> {
+                val string = text
+
+                return if (!hasTextualNull(string)) {
+                    NumberInput.parseAsLong(string, defaultValue)
+                } else {
+                    0L
+                }
+            }
+
+            CirJsonTokenId.ID_TRUE -> 1L
+
+            CirJsonTokenId.ID_FALSE, CirJsonTokenId.ID_NULL -> 0L
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> (embeddedObject as? Number)?.toLong() ?: defaultValue
+
+            else -> defaultValue
+        }
+    }
+
+    override fun getValueAsDouble(defaultValue: Double): Double {
+        val token = myCurrentToken ?: return defaultValue
+
+        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            return doubleValue
+        }
+
+        return when (token.id) {
+            CirJsonTokenId.ID_STRING -> {
+                val string = text
+
+                return if (!hasTextualNull(string)) {
+                    NumberInput.parseAsDouble(string, defaultValue, isEnabled(StreamReadFeature.USE_FAST_DOUBLE_PARSER))
+                } else {
+                    0.0
+                }
+            }
+
+            CirJsonTokenId.ID_TRUE -> 1.0
+
+            CirJsonTokenId.ID_FALSE, CirJsonTokenId.ID_NULL -> 0.0
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> (embeddedObject as? Number)?.toDouble() ?: defaultValue
+
+            else -> defaultValue
+        }
+    }
+
+    override val valueAsString: String?
+        get() = getValueAsString(null)
+
+    override fun getValueAsString(defaultValue: String?): String? {
+        return if (myCurrentToken === CirJsonToken.VALUE_STRING) {
+            text
+        } else if (myCurrentToken === CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
+            idName
+        } else if (myCurrentToken === CirJsonToken.PROPERTY_NAME) {
+            currentName()
+        } else if (myCurrentToken == null || myCurrentToken === CirJsonToken.VALUE_NULL
+                || !myCurrentToken!!.isScalarValue) {
+            defaultValue
+        } else {
+            text
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Databind callbacks
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    override fun <T> readValueAs(valueType: Class<T>): T {
+        return objectReadContext.readValue(this, valueType)
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun <T> readValueAs(valueTypeReference: TypeReference<T>): T {
+        return objectReadContext.readValue(this, valueTypeReference)
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun <T> readValueAs(type: ResolvedType): T {
+        return objectReadContext.readValue(this, type)
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun <T : TreeNode> readValueAsTree(): T? {
+        return objectReadContext.readTree(this)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper methods, Base64 decoding
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Helper method that can be used for base64 decoding in cases where encoded content has already been read as a
+     * String.
+     *
+     * @param string String to decode
+     *
+     * @param builder Builder used to buffer binary content decoded
+     *
+     * @param base64Variant Base64 variant expected in content
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class)
+    protected fun decodeBase64(string: String, builder: ByteArrayBuilder, base64Variant: Base64Variant) {
+        try {
+            base64Variant.decode(string, builder)
+        } catch (e: IllegalArgumentException) {
+            reportError<Unit>(e.message!!)
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
      * Helper methods
      *******************************************************************************************************************
      */
@@ -334,8 +578,12 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *
      * @return Same as [currentLocation] except offset by `-1`
      */
-    fun currentLocationMinusOne(): CirJsonLocation {
+    protected fun currentLocationMinusOne(): CirJsonLocation {
         return currentLocation()
+    }
+
+    protected fun hasTextualNull(value: String?): Boolean {
+        return value == "null"
     }
 
     /*
