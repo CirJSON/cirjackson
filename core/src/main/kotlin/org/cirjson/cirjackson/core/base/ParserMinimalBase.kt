@@ -203,6 +203,20 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     /*
      *******************************************************************************************************************
+     * CirJsonParser impl: stream iteration, property names
+     *******************************************************************************************************************
+     */
+
+    override fun nextName(): String? {
+        return if (nextToken() === CirJsonToken.PROPERTY_NAME) currentName() else null
+    }
+
+    override fun nextName(string: SerializableString): Boolean {
+        return nextToken() === CirJsonToken.PROPERTY_NAME && string.value == currentName()
+    }
+
+    /*
+     *******************************************************************************************************************
      * Error reporting, generic
      *******************************************************************************************************************
      */

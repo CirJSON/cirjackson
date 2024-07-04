@@ -327,7 +327,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws StreamReadException for decoding problems
      */
     @Throws(CirJacksonException::class)
-    abstract fun nextName(): String
+    abstract fun nextName(): String?
 
     /**
      * Method that fetches next token (as if calling [nextToken]) and verifies whether it is
