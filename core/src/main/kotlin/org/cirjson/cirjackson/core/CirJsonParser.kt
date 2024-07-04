@@ -276,7 +276,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws StreamReadException for decoding problems
      */
     @Throws(CirJacksonException::class)
-    abstract fun nextValue(): CirJsonToken
+    abstract fun nextValue(): CirJsonToken?
 
     /**
      * Method that will skip all child tokens of an array or object token that the parser currently points to, if stream
@@ -583,9 +583,6 @@ abstract class CirJsonParser : Closeable, Versioned {
     /**
      * Similar to [isExpectedStartArrayToken], but checks whether stream currently points to
      * [CirJsonToken.START_OBJECT].
-     *
-     * @return `true` if the current token can be considered as a start-array marker (such [CirJsonToken.START_OBJECT]);
-     * `false` if not
      */
     abstract val isExpectedStartObjectToken: Boolean
 
@@ -593,8 +590,6 @@ abstract class CirJsonParser : Closeable, Versioned {
      * Similar to [isExpectedStartArrayToken], but checks whether stream currently points to [CirJsonToken.VALUE_NUMBER_INT].
      *
      * The initial use case is for XML backend to efficiently (attempt to) coerce textual content into numbers.
-     *
-     * @return True if the current token can be considered as a start-array marker (such [CirJsonToken.VALUE_NUMBER_INT]); `false` if not
      */
     abstract val isExpectedNumberIntToken: Boolean
 
@@ -606,9 +601,6 @@ abstract class CirJsonParser : Closeable, Versioned {
      * NOTE: in case where numeric value is outside range of requested type -- most notably [Float] or [Double] -- and
      * decoding results effectively in a NaN value, this method DOES NOT return `true`: only explicit incoming markers
      * do. This is because value could still be accessed as a valid [BigDecimal].
-     *
-     * @return `true` if the current token is reported as [CirJsonToken.VALUE_NUMBER_FLOAT] and represents a "Not a
-     * Number" value; `false` for other tokens and regular floating-point numbers.
      */
     abstract val isNaN: Boolean
 
@@ -629,11 +621,9 @@ abstract class CirJsonParser : Closeable, Versioned {
     abstract fun clearCurrentToken()
 
     /**
-     * Method that can be called to get the last token that was cleared using [clearCurrentToken]. This is not
+     * Accessor that can be called to get the last token that was cleared using [clearCurrentToken]. This is not
      * necessarily the latest token read. Will return `null` if no tokens have been cleared, or if parser has been
      * closed.
-     *
-     * @return Last cleared token, if any; `null` otherwise
      */
     abstract val lastClearedToken: CirJsonToken?
 
