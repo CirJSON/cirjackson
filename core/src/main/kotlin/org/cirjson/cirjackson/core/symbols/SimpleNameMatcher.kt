@@ -14,6 +14,22 @@ class SimpleNameMatcher : HashedMatcherBase {
 
     private constructor(primary: SimpleNameMatcher, secondary: SimpleNameMatcher) : super(primary, secondary)
 
+    override fun matchByQuad(q1: Int): Int {
+        return MATCH_UNKNOWN_NAME
+    }
+
+    override fun matchByQuad(q1: Int, q2: Int): Int {
+        return MATCH_UNKNOWN_NAME
+    }
+
+    override fun matchByQuad(q1: Int, q2: Int, q3: Int): Int {
+        return MATCH_UNKNOWN_NAME
+    }
+
+    override fun matchByQuad(quads: IntArray, quadLength: Int): Int {
+        return MATCH_UNKNOWN_NAME
+    }
+
     companion object {
 
         /**

@@ -15,12 +15,74 @@ import java.util.*
  * @property nameLookup Array of names that this matcher may match (with indices that match non-negative values by
  * `matchXxx` methods)
  */
-abstract class PropertyNameMatcher(protected val locale: Locale?, protected val backupMatcher: PropertyNameMatcher?,
+abstract class PropertyNameMatcher(protected val myLocale: Locale?, protected val myBackupMatcher: PropertyNameMatcher?,
         val nameLookup: Array<String>?) : Serializable {
+
+    /*
+     *******************************************************************************************************************
+     * Public API: lookup by String
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Lookup method that does not assume name to be matched to be [String.intern]ed (although passing interned String
+     * is likely to result in more efficient matching).
+     *
+     * @param toMatch Name to match
+     *
+     * @return Index of the name matched, if any (non-negative number); or an error code (negative constant `MATCH_xxx`)
+     * if none
+     */
+    abstract fun matchName(toMatch: String): Int
+
+    /*
+     *******************************************************************************************************************
+     * Public API: lookup by quad-bytes
+     *******************************************************************************************************************
+     */
+
+    abstract fun matchByQuad(q1: Int): Int
+
+    abstract fun matchByQuad(q1: Int, q2: Int): Int
+
+    abstract fun matchByQuad(q1: Int, q2: Int, q3: Int): Int
+
+    abstract fun matchByQuad(quads: IntArray, quadLength: Int): Int
+
+    /*
+     *******************************************************************************************************************
+     * Configuration access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Secondary lookup method used for matchers that operate with more complex matching rules, such as case-insensitive
+     * matchers.
+     *
+     * @param toMatch Name to match
+     *
+     * @return Index for the match, if any (non-negative); or error code if no match
+     */
+    protected fun matchSecondary(toMatch: String): Int {
+        return myBackupMatcher?.matchName(toMatch.lowercase(myLocale!!)) ?: MATCH_UNKNOWN_NAME
+    }
 
     companion object {
 
+        /**
+         * Marker for case where `CirJsonToken.END_OBJECT` encountered.
+         */
+        const val MATCH_END_OBJECT = -1
+
+        /**
+         * Marker for case where property name encountered but not one of matches.
+         */
         const val MATCH_UNKNOWN_NAME = -2
+
+        /**
+         * Marker for case where token encountered is neither `PROPERTY_NAME` nor `END_OBJECT`.
+         */
+        const val MATCH_ODD_TOKEN = -3
 
         private val INTERNER = InternCache.INSTANCE
 
