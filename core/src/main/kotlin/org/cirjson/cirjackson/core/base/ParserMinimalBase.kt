@@ -3,6 +3,8 @@ package org.cirjson.cirjackson.core.base
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.InputCoercionException
+import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.exception.UnexpectedEndOfInputException
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
@@ -319,6 +321,25 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     /*
      *******************************************************************************************************************
+     * Helper methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method used to provide location for cases where we must read and consume a single "wrong" character (to
+     * possibly allow error recovery), but need to report accurate location for that character: if so, the current
+     * location is past location we want, and location we want will be "one location earlier".
+     *
+     * Default implementation simply returns [currentLocation].
+     *
+     * @return Same as [currentLocation] except offset by `-1`
+     */
+    fun currentLocationMinusOne(): CirJsonLocation {
+        return currentLocation()
+    }
+
+    /*
+     *******************************************************************************************************************
      * Error reporting, generic
      *******************************************************************************************************************
      */
@@ -355,6 +376,52 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
                 inputType, Byte::class.java)
     }
 
+    /**
+     * Method called to throw an exception for integral (not floating point) input token with value outside the signed
+     * 32-bit range when requested as `Int`. Result will be [InputCoercionException] being thrown.
+     *
+     * @throws InputCoercionException Exception that describes problem with number range validity
+     */
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowInt() {
+        reportOverflowInt(text!!)
+    }
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowInt(numDesc: String) {
+        reportOverflowInt(numDesc, currentToken()!!)
+    }
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowInt(numDesc: String, inputType: CirJsonToken) {
+        throw constructInputCoercion("Numeric value (${
+            longIntegerDesc(numDesc)
+        }) out of range of `Int` (${Int.MIN_VALUE} - ${Int.MAX_VALUE})", inputType, Int::class.java)
+    }
+
+    /**
+     * Method called to throw an exception for integral (not floating point) input token with value outside the signed
+     * 64-bit range when requested as `Long`. Result will be [InputCoercionException] being thrown.
+     *
+     * @throws InputCoercionException Exception that describes problem with number range validity
+     */
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowLong() {
+        reportOverflowLong(text!!)
+    }
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowLong(numDesc: String) {
+        reportOverflowLong(numDesc, currentToken()!!)
+    }
+
+    @Throws(InputCoercionException::class)
+    protected fun reportOverflowLong(numDesc: String, inputType: CirJsonToken) {
+        throw constructInputCoercion("Numeric value (${
+            longIntegerDesc(numDesc)
+        }) out of range of `Long` (${Long.MIN_VALUE} - ${Long.MAX_VALUE})", inputType, Long::class.java)
+    }
+
     protected fun longIntegerDesc(numDesc: String): String {
         var rawLength = numDesc.length
 
@@ -367,6 +434,102 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         }
 
         return "[Integer with $rawLength digits]"
+    }
+
+    protected fun longNumberDesc(numDesc: String): String {
+        var rawLength = numDesc.length
+
+        if (rawLength < 1000) {
+            return numDesc
+        }
+
+        if (numDesc.startsWith("-")) {
+            rawLength--
+        }
+
+        return "[Number with $rawLength characters]"
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Error reporting, EOF, unexpected chars/content
+     *******************************************************************************************************************
+     */
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportBadInputStream(readLength: Int): T {
+        throw wrapIOFailure(IOException(
+                "Bad input source: InputStream.read() returned 0 bytes when trying to read $readLength bytes"))
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportBadReader(readLength: Int): T {
+        throw wrapIOFailure(
+                IOException("Bad input source: Reader.read() returned 0 bytes when trying to read $readLength bytes"))
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidEOF(): T {
+        return reportInvalidEOF("in $myCurrentToken", myCurrentToken!!)
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidEOFInValue(currentToken: CirJsonToken): T {
+        val message = if (currentToken === CirJsonToken.VALUE_STRING) {
+            "in a String value"
+        } else if (currentToken === CirJsonToken.VALUE_NUMBER_INT || currentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            "in a Number value"
+        } else {
+            "in a value"
+        }
+
+        return reportInvalidEOF(message, currentToken)
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidEOF(message: String, currentToken: CirJsonToken): T {
+        throw UnexpectedEndOfInputException(this, currentToken, "Unexpected end-of-input $message")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidSpace(code: Int): T {
+        val char = code.toChar()
+
+        val message = "Illegal character (${
+            getCharDesc(char)
+        }): only regular white space (\\r, \\n, \\t) is allowed between tokens"
+        throw constructReadException(message, currentLocationMinusOne())
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportMissingRootWhiteSpace(char: Char): T {
+        return reportUnexpectedChar(char, "Expected space separating root-level values")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportUnexpectedChar(char: Char, comment: String?): T {
+        if (char.code < 0) {
+            return reportInvalidEOF()
+        }
+
+        var message = "Unexpected character (${getCharDesc(char)})"
+
+        if (comment != null) {
+            message += ": $comment"
+        }
+
+        throw constructReadException(message, currentLocationMinusOne())
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportUnexpectedNumberChar(char: Char, comment: String?): T {
+        var message = "Unexpected character (${getCharDesc(char)}) in numeric value"
+
+        if (comment != null) {
+            message += ": $comment"
+        }
+
+        throw constructReadException(message, currentLocationMinusOne())
     }
 
     /*
@@ -530,6 +693,18 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
          */
 
         val STREAM_READ_FEATURE_DEFAULTS = StreamReadFeature.collectDefaults()
+
+        fun getCharDesc(char: Char): String {
+            val code = char.code
+
+            return if (char.isISOControl()) {
+                "(CTRL-CHAR, code $code)"
+            } else if (code > 255) {
+                "'$char' (code $code / 0x${code.toString(16)})"
+            } else {
+                "'$char' (code $code)"
+            }
+        }
 
     }
 
