@@ -17,7 +17,7 @@ abstract class HashedMatcherBase(locale: Locale?, backupMatcher: PropertyNameMat
     constructor(base: HashedMatcherBase, nameLookup: Array<String>?) : this(base.myLocale, base.myBackupMatcher,
             nameLookup, base.myNames, base.myOffsets, base.myMask)
 
-    override fun matchName(toMatch: String): Int {
+    final override fun matchName(toMatch: String): Int {
         val index = hash(toMatch.hashCode(), myMask)
 
         if (myNames[index] === toMatch) {
