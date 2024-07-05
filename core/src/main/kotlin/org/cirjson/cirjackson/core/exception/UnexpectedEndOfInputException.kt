@@ -11,5 +11,5 @@ import org.cirjson.cirjackson.core.CirJsonToken
  * @property tokenBeingDecoded Accessor for possibly available information about token that was being decoded while
  * encountering end of input.
  */
-class UnexpectedEndOfInputException(parser: CirJsonParser, val tokenBeingDecoded: CirJsonToken, message: String) :
+class UnexpectedEndOfInputException(parser: CirJsonParser, val tokenBeingDecoded: CirJsonToken?, message: String) :
         StreamReadException(parser, message)

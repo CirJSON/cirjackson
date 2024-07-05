@@ -179,14 +179,14 @@ open class ContentReference protected constructor(val isContentTextual: Boolean,
          * Constant that may be used when source/target content is not known (or not exposed). Assumed to contain
          * Binary content, meaning that no content snippets will be included.
          */
-        val UNKNOWN_CONTENT = ContentReference(false, null, ErrorReportConfiguration.defaults())
+        private val UNKNOWN_CONTENT = ContentReference(false, null, ErrorReportConfiguration.defaults())
 
         /**
          * As content is redacted by default, a marker reference for slightly different description from "unknown" is
          * used, to indicate explicit removal of source/content reference (as opposed to it missing from not being
          * available or so)
          */
-        val REDACTED_CONTENT = ContentReference(false, null, ErrorReportConfiguration.defaults())
+        private val REDACTED_CONTENT = ContentReference(false, null, ErrorReportConfiguration.defaults())
 
         /**
          * Accessor for getting a placeholder for cases where actual content is not known (or is not something that
@@ -195,6 +195,15 @@ open class ContentReference protected constructor(val isContentTextual: Boolean,
          * @return Placeholder "unknown" (or "empty") instance to use instead of `null` reference
          */
         fun unknown() = UNKNOWN_CONTENT
+
+        /**
+         * Accessor for getting a placeholder when actual content is not to be exposed: different from [unknown] where
+         * content is not available to be referenced.
+         *
+         * @return Placeholder instance to use in cases where reference is explicitly blocked, usually for security
+         * reasons.
+         */
+        fun redacted() = REDACTED_CONTENT
 
         private fun getTypeName(srcRef: Any): String {
             val srcType = if (srcRef is Class<*>) srcRef else srcRef.javaClass

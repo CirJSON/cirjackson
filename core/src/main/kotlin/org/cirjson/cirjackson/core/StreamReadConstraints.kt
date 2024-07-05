@@ -116,7 +116,7 @@ open class StreamReadConstraints protected constructor(val maxNestingDepth: Int,
      * @throws StreamConstraintsException If length exceeds maximum
      */
     @Throws(StreamConstraintsException::class)
-    fun validateFPLength(length: Int) {
+    fun validateFloatingPointLength(length: Int) {
         if (length > maxNumberLength) {
             throw constructException(
                     "Number value length ($length) exceeds the maximum allowed ($maxNumberLength, from ${

@@ -29,7 +29,7 @@ import java.math.BigInteger
  * reuse/recycling.
  */
 abstract class ParserMinimalBase private constructor(override val objectReadContext: ObjectReadContext,
-        private val myIOContext: IOContext?, override val streamReadFeatures: Int,
+        protected val myIOContext: IOContext?, override val streamReadFeatures: Int,
         override val streamReadConstraints: StreamReadConstraints) : CirJsonParser() {
 
     override var isClosed: Boolean = false
@@ -296,7 +296,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         get() = numberValue
 
     @get:Throws(InputCoercionException::class)
-    override val numberValueDeferred: Number
+    override val numberValueDeferred: Any
         get() = numberValue
 
     @get:Throws(InputCoercionException::class)
@@ -735,7 +735,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     }
 
     @Throws(StreamReadException::class)
-    protected fun <T> reportInvalidEOF(message: String, currentToken: CirJsonToken): T {
+    protected fun <T> reportInvalidEOF(message: String, currentToken: CirJsonToken?): T {
         throw UnexpectedEndOfInputException(this, currentToken, "Unexpected end-of-input $message")
     }
 
@@ -791,7 +791,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         val targetType = when (expectedNumericType) {
             NUMBER_INT -> Int::class.java
             NUMBER_LONG -> Long::class.java
-            NUMBER_BIG_INT -> BigInteger::class.java
+            NUMBER_BIG_INTEGER -> BigInteger::class.java
             NUMBER_FLOAT -> Float::class.java
             NUMBER_DOUBLE -> Double::class.java
             NUMBER_BIG_DECIMAL -> BigDecimal::class.java
@@ -882,7 +882,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
         const val NUMBER_LONG = 0x0002
 
-        const val NUMBER_BIG_INT = 0x0004
+        const val NUMBER_BIG_INTEGER = 0x0004
 
         const val NUMBER_DOUBLE = 0x0008
 

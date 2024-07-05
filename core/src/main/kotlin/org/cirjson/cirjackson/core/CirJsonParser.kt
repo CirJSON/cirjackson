@@ -53,7 +53,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * object (for highlighting purposes, or error reporting). Contexts can also be used for simple xpath-like matching
      * of input, if so desired.
      */
-    abstract val streamReadContext: TokenStreamContext
+    abstract val streamReadContext: TokenStreamContext?
 
     /**
      * Accessor for context object provided by higher level data-binding functionality (or, in some cases, simple
@@ -784,7 +784,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws InputCoercionException If the current token is not of numeric type
      */
     @get:Throws(InputCoercionException::class)
-    abstract val numberValueDeferred: Number
+    abstract val numberValueDeferred: Any
 
     /**
      * If current token is of type [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT], returns one of
