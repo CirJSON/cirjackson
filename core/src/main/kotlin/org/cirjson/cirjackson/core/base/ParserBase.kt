@@ -863,6 +863,121 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     /*
      *******************************************************************************************************************
+     * Base64 handling support
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that subclasses must implement to support escaped sequences in base64-encoded sections. Subclasses that do
+     * not need base64 support can leave this as is.
+     *
+     * Default implementation throws [UnsupportedOperationException].
+     *
+     * @return Character decoded, if any
+     *
+     * @throws CirJacksonException If escape decoding fails
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun decodeEscaped(): Char {
+        throw UnsupportedOperationException()
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun decodeBase64Escape(base64Variant: Base64Variant, code: Int, index: Int): Int {
+        if (code != '\\'.code) {
+            return reportInvalidBase64Char(base64Variant, code.toChar(), index)
+        }
+
+        val unescaped = decodeEscaped()
+
+        if (unescaped.code <= CODE_SPACE) {
+            if (index == 0) {
+                return -1
+            }
+        }
+
+        val bits = base64Variant.decodeBase64Char(unescaped)
+
+        if (bits < 0) {
+            if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                return reportInvalidBase64Char(base64Variant, unescaped, index)
+            }
+        }
+
+        return bits
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun decodeBase64Escape(base64Variant: Base64Variant, char: Char, index: Int): Int {
+        if (char != '\\') {
+            return reportInvalidBase64Char(base64Variant, char, index)
+        }
+
+        val unescaped = decodeEscaped()
+
+        if (unescaped.code <= CODE_SPACE) {
+            if (index == 0) {
+                return -1
+            }
+        }
+
+        val bits = base64Variant.decodeBase64Char(unescaped)
+
+        if (bits < 0) {
+            if (bits != Base64Variant.BASE64_VALUE_PADDING || index < 2) {
+                return reportInvalidBase64Char(base64Variant, unescaped, index)
+            }
+        }
+
+        return bits
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidBase64Char(base64Variant: Base64Variant, char: Char, index: Int): T {
+        return reportInvalidBase64Char(base64Variant, char, index, null)
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidBase64Char(base64Variant: Base64Variant, char: Char, index: Int,
+            message: String?): T {
+        val code = char.code
+
+        var base = when {
+            code <= CODE_SPACE -> {
+                "Illegal white space character (code 0x${
+                    code.toString(16)
+                }) as character #${index + 1} of 4-char base64 unit: can only used between units"
+            }
+
+            base64Variant.usesPaddingChar(char) -> {
+                "Unexpected padding character ('${base64Variant.paddingChar}') as character #${
+                    index + 1
+                } of 4-char base64 unit: padding only legal as 3rd or 4th character"
+            }
+
+            !char.isDefined() || char.isISOControl() -> {
+                "Illegal character (code 0x${code.toString(16)}) in base64 content"
+            }
+
+            else -> {
+                "Illegal character '$char' (code 0x${code.toString(16)}) in base64 content"
+            }
+        }
+
+        if (message != null) {
+            base += ": $message"
+        }
+
+        return reportError(base)
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> handleBase64MissingPadding(base64Variant: Base64Variant): T {
+        return reportError(base64Variant.missingPaddingMessage)
+    }
+
+    /*
+     *******************************************************************************************************************
      * Internal/package methods: other
      *******************************************************************************************************************
      */
