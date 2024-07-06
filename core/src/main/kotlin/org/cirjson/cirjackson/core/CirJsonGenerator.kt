@@ -1917,7 +1917,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
         if (parser.isTextCharactersAvailable) {
             writeString(parser.textCharacters, parser.textOffset, parser.textLength)
         } else {
-            writeString(parser.text)
+            writeString(parser.text!!)
         }
     }
 

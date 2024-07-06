@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.extentions.growBy
 import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.io.NumberInput
 import org.cirjson.cirjackson.core.util.ByteArrayBuilder
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -416,6 +417,102 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
             }
         }
 
+    @get:Throws(CirJacksonException::class)
+    override val intValue: Int
+        get() {
+            if (myNumberTypesValid and NUMBER_INT == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    return parseIntValue()
+                }
+
+                if (myNumberTypesValid and NUMBER_INT == 0) {
+                    convertNumberToInt()
+                }
+            }
+
+            return myNumberInt
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val longValue: Long
+        get() {
+            if (myNumberTypesValid and NUMBER_LONG == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseNumericValue(NUMBER_LONG)
+                }
+
+                if (myNumberTypesValid and NUMBER_LONG == 0) {
+                    convertNumberToLong()
+                }
+            }
+
+            return myNumberLong
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val bigIntegerValue: BigInteger
+        get() {
+            if (myNumberTypesValid and NUMBER_BIG_INTEGER == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseNumericValue(NUMBER_BIG_INTEGER)
+                }
+
+                if (myNumberTypesValid and NUMBER_BIG_INTEGER == 0) {
+                    convertNumberToBigInteger()
+                }
+            }
+
+            return bigInteger
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val floatValue: Float
+        get() {
+            if (myNumberTypesValid and NUMBER_FLOAT == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseNumericValue(NUMBER_FLOAT)
+                }
+
+                if (myNumberTypesValid and NUMBER_FLOAT == 0) {
+                    convertNumberToFloat()
+                }
+            }
+
+            return numberFloat
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val doubleValue: Double
+        get() {
+            if (myNumberTypesValid and NUMBER_DOUBLE == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseNumericValue(NUMBER_DOUBLE)
+                }
+
+                if (myNumberTypesValid and NUMBER_DOUBLE == 0) {
+                    convertNumberToDouble()
+                }
+            }
+
+            return numberDouble
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val bigDecimalValue: BigDecimal
+        get() {
+            if (myNumberTypesValid and NUMBER_BIG_DECIMAL == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseNumericValue(NUMBER_BIG_DECIMAL)
+                }
+
+                if (myNumberTypesValid and NUMBER_BIG_DECIMAL == 0) {
+                    convertNumberToBigDecimal()
+                }
+            }
+
+            return bigDecimal
+        }
+
     /*
      *******************************************************************************************************************
      * Abstract methods subclasses will need to provide
@@ -450,32 +547,236 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToInt() {
-        TODO()
+        myNumberInt = when {
+            myNumberTypesValid and NUMBER_LONG != 0 -> {
+                val result = myNumberLong.toInt()
+
+                if (result.toLong() != myNumberLong) {
+                    reportOverflowInt(text!!, currentToken()!!)
+                }
+
+                result
+            }
+
+            myNumberTypesValid and NUMBER_BIG_INTEGER != 0 -> {
+                val bigInteger = bigInteger
+
+                if (bigInteger !in BIG_INT_MIN_INT..BIG_INT_MAX_INT) {
+                    reportOverflowInt()
+                }
+
+                bigInteger.toInt()
+            }
+
+            myNumberTypesValid and NUMBER_DOUBLE != 0 -> {
+                val double = numberDouble
+
+                if (double !in DOUBLE_MIN_INT..DOUBLE_MAX_INT) {
+                    reportOverflowInt()
+                }
+
+                double.toInt()
+            }
+
+            myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> {
+                val bigDecimal = bigDecimal
+
+                if (bigDecimal !in BIG_DECIMAL_MIN_INT..BIG_DECIMAL_MAX_INT) {
+                    reportOverflowInt()
+                }
+
+                bigDecimal.toInt()
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_INT
     }
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToLong() {
-        TODO()
+        myNumberLong = when {
+            myNumberTypesValid and NUMBER_INT != 0 -> {
+                myNumberInt.toLong()
+            }
+
+            myNumberTypesValid and NUMBER_BIG_INTEGER != 0 -> {
+                val bigInteger = bigInteger
+
+                if (bigInteger !in BIG_INT_MIN_LONG..BIG_INT_MAX_LONG) {
+                    reportOverflowLong()
+                }
+
+                bigInteger.toLong()
+            }
+
+            myNumberTypesValid and NUMBER_DOUBLE != 0 -> {
+                val double = numberDouble
+
+                if (double !in DOUBLE_MIN_LONG..DOUBLE_MAX_LONG) {
+                    reportOverflowLong()
+                }
+
+                double.toLong()
+            }
+
+            myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> {
+                val bigDecimal = bigDecimal
+
+                if (bigDecimal !in BIG_DECIMAL_MIN_LONG..BIG_DECIMAL_MAX_LONG) {
+                    reportOverflowLong()
+                }
+
+                bigDecimal.toLong()
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_LONG
     }
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToBigInteger() {
-        TODO()
+        myNumberBigInteger = when {
+            myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> {
+                convertBigDecimalToBigInteger(bigDecimal)
+            }
+
+            myNumberTypesValid and NUMBER_LONG != 0 -> {
+                BigInteger.valueOf(myNumberLong)
+            }
+
+            myNumberTypesValid and NUMBER_INT != 0 -> {
+                BigInteger.valueOf(myNumberInt.toLong())
+            }
+
+            myNumberTypesValid and NUMBER_DOUBLE != 0 -> {
+                if (myNumberString != null) {
+                    convertBigDecimalToBigInteger(bigDecimal)
+                } else {
+                    convertBigDecimalToBigInteger(BigDecimal.valueOf(numberDouble))
+                }
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_BIG_INTEGER
     }
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToDouble() {
-        TODO()
+        myNumberDouble = when {
+            myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> {
+                if (myNumberString != null) {
+                    numberDouble
+                } else {
+                    bigDecimal.toDouble()
+                }
+            }
+
+            myNumberTypesValid and NUMBER_BIG_INTEGER != 0 -> {
+                if (myNumberString != null) {
+                    numberDouble
+                } else {
+                    bigInteger.toDouble()
+                }
+            }
+
+            myNumberTypesValid and NUMBER_LONG != 0 -> {
+                myNumberLong.toDouble()
+            }
+
+            myNumberTypesValid and NUMBER_INT != 0 -> {
+                myNumberInt.toDouble()
+            }
+
+            myNumberTypesValid and NUMBER_FLOAT != 0 -> {
+                if (myNumberString != null) {
+                    numberDouble
+                } else {
+                    numberFloat.toDouble()
+                }
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_DOUBLE
     }
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToFloat() {
-        TODO()
+        myNumberFloat = when {
+            myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> {
+                if (myNumberString != null) {
+                    numberFloat
+                } else {
+                    bigDecimal.toFloat()
+                }
+            }
+
+            myNumberTypesValid and NUMBER_BIG_INTEGER != 0 -> {
+                if (myNumberString != null) {
+                    numberFloat
+                } else {
+                    bigInteger.toFloat()
+                }
+            }
+
+            myNumberTypesValid and NUMBER_LONG != 0 -> {
+                myNumberLong.toFloat()
+            }
+
+            myNumberTypesValid and NUMBER_INT != 0 -> {
+                myNumberInt.toFloat()
+            }
+
+            myNumberTypesValid and NUMBER_DOUBLE != 0 -> {
+                if (myNumberString != null) {
+                    numberFloat
+                } else {
+                    numberDouble.toFloat()
+                }
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_FLOAT
     }
 
     @Throws(InputCoercionException::class)
     protected fun convertNumberToBigDecimal() {
-        TODO()
+        myNumberBigDecimal = when {
+            myNumberTypesValid and NUMBER_DOUBLE != 0 -> {
+                val numberString = myNumberString ?: text!!
+                NumberInput.parseBigDecimal(numberString, isEnabled(StreamReadFeature.USE_FAST_BIG_NUMBER_PARSER))
+            }
+
+            myNumberTypesValid and NUMBER_BIG_INTEGER != 0 -> {
+                BigDecimal(bigInteger)
+            }
+
+            myNumberTypesValid and NUMBER_LONG != 0 -> {
+                BigDecimal.valueOf(myNumberLong)
+            }
+
+            myNumberTypesValid and NUMBER_INT != 0 -> {
+                BigDecimal.valueOf(myNumberInt.toLong())
+            }
+
+            else -> throwInternal()
+        }
+
+        myNumberTypesValid = myNumberTypesValid or NUMBER_BIG_DECIMAL
+    }
+
+    protected fun convertBigDecimalToBigInteger(bigDecimal: BigDecimal): BigInteger {
+        streamReadConstraints.validateBigIntegerScale(bigDecimal.scale())
+        return bigDecimal.toBigInteger()
     }
 
     /**
@@ -484,7 +785,22 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
     protected val bigInteger: BigInteger
         get() {
-            TODO()
+            if (myNumberBigInteger != null) {
+                return myNumberBigInteger!!
+            } else if (myNumberString == null) {
+                throw IllegalStateException("Cannot get BigInteger from current parser state")
+            }
+
+            try {
+                myNumberBigInteger = NumberInput.parseBigInteger(myNumberString!!,
+                        isEnabled(StreamReadFeature.USE_FAST_BIG_NUMBER_PARSER))
+            } catch (e: NumberFormatException) {
+                throw constructReadException("Malformed numeric value (${longNumberDesc(myNumberString!!)})", e)
+            }
+
+            myNumberString = null
+
+            return myNumberBigInteger!!
         }
 
     /**
@@ -493,7 +809,22 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
     protected val bigDecimal: BigDecimal
         get() {
-            TODO()
+            if (myNumberBigDecimal != null) {
+                return myNumberBigDecimal!!
+            } else if (myNumberString == null) {
+                throw IllegalStateException("Cannot get BigInteger from current parser state")
+            }
+
+            try {
+                myNumberBigDecimal = NumberInput.parseBigDecimal(myNumberString!!,
+                        isEnabled(StreamReadFeature.USE_FAST_BIG_NUMBER_PARSER))
+            } catch (e: NumberFormatException) {
+                throw constructReadException("Malformed numeric value (${longNumberDesc(myNumberString!!)})", e)
+            }
+
+            myNumberString = null
+
+            return myNumberBigDecimal!!
         }
 
     /**
@@ -501,7 +832,16 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
     protected val numberDouble: Double
         get() {
-            TODO()
+            if (myNumberString != null) {
+                try {
+                    myNumberDouble = NumberInput.parseDouble(myNumberString!!,
+                            isEnabled(StreamReadFeature.USE_FAST_DOUBLE_PARSER))
+                } catch (e: NumberFormatException) {
+                    throw constructReadException("Malformed numeric value (${longNumberDesc(myNumberString!!)})", e)
+                }
+            }
+
+            return myNumberDouble
         }
 
     /**
@@ -509,7 +849,16 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
     protected val numberFloat: Float
         get() {
-            TODO()
+            if (myNumberString != null) {
+                try {
+                    myNumberFloat = NumberInput.parseFloat(myNumberString!!,
+                            isEnabled(StreamReadFeature.USE_FAST_DOUBLE_PARSER))
+                } catch (e: NumberFormatException) {
+                    throw constructReadException("Malformed numeric value (${longNumberDesc(myNumberString!!)})", e)
+                }
+            }
+
+            return myNumberFloat
         }
 
     /*
