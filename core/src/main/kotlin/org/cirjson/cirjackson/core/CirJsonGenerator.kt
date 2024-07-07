@@ -53,7 +53,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     /**
      * Get the constraints to apply when performing streaming writes.
      */
-    open val streamWriteConstraints = StreamReadConstraints.defaults()
+    open val streamWriteConstraints = StreamWriteConstraints.defaults()
 
     /**
      * Accessor for context object that provides information about low-level logical position withing output token
