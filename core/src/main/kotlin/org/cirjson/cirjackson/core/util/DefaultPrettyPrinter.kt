@@ -38,7 +38,13 @@ open class DefaultPrettyPrinter protected constructor(protected var myArrayInden
         protected var myObjectIndenter: Indenter, protected val myRootValueSeparator: SerializableString?,
         @Transient protected var myNesting: Int, protected val mySeparators: Separators,
         protected val myObjectNameValueSeparator: String, protected val myObjectEntrySeparator: String,
-        protected val myArrayElementSeparator: String) : PrettyPrinter, Instantiatable<DefaultPrettyPrinter> {
+        protected val myObjectEmptySeparator: String, protected val myArrayElementSeparator: String,
+        protected val myArrayEmptySeparator: String) : PrettyPrinter, Instantiatable<DefaultPrettyPrinter> {
+
+    /**
+     * Default constructor for "vanilla" instance with default settings.
+     */
+    constructor() : this(PrettyPrinter.DEFAULT_SEPARATORS)
 
     /**
      * Default constructor for "vanilla" instance with default settings,
@@ -49,8 +55,8 @@ open class DefaultPrettyPrinter protected constructor(protected var myArrayInden
     constructor(separators: Separators) : this(FixedSpaceIndenter.instance(), DefaultIndenter.SYSTEM_LINEFEED_INSTANCE,
             separators.rootSeparator?.let { SerializedString(it) }, 0, separators,
             separators.objectNameValueSpacing.apply(separators.objectNameValueSeparator),
-            separators.objectEntrySpacing.apply(separators.objectEntrySeparator),
-            separators.arrayElementSpacing.apply(separators.arrayElementSeparator))
+            separators.objectEntrySpacing.apply(separators.objectEntrySeparator), separators.objectEmptySeparator,
+            separators.arrayElementSpacing.apply(separators.arrayElementSeparator), separators.arrayEmptySeparator)
 
     /**
      * Copy constructor.
@@ -59,7 +65,8 @@ open class DefaultPrettyPrinter protected constructor(protected var myArrayInden
      */
     constructor(base: DefaultPrettyPrinter) : this(base.myArrayIndenter, base.myObjectIndenter,
             base.myRootValueSeparator, base.myNesting, base.mySeparators, base.myObjectNameValueSeparator,
-            base.myObjectEntrySeparator, base.myArrayElementSeparator)
+            base.myObjectEntrySeparator, base.myObjectEmptySeparator, base.myArrayElementSeparator,
+            base.myArrayEmptySeparator)
 
     /**
      * Copy constructor with override
@@ -70,57 +77,126 @@ open class DefaultPrettyPrinter protected constructor(protected var myArrayInden
     constructor(base: DefaultPrettyPrinter, separators: Separators) : this(base.myArrayIndenter, base.myObjectIndenter,
             separators.rootSeparator?.let { SerializedString(it) }, base.myNesting, separators,
             separators.objectNameValueSpacing.apply(separators.objectNameValueSeparator),
-            separators.objectEntrySpacing.apply(separators.objectEntrySeparator),
-            separators.arrayElementSpacing.apply(separators.arrayElementSeparator))
+            separators.objectEntrySpacing.apply(separators.objectEntrySeparator), separators.objectEmptySeparator,
+            separators.arrayElementSpacing.apply(separators.arrayElementSeparator), separators.arrayEmptySeparator)
+
+    fun indentArraysWith(indenter: Indenter?) {
+        myArrayIndenter = indenter ?: NopIndenter.instance()
+    }
+
+    fun indentObjectsWith(indenter: Indenter?) {
+        myObjectIndenter = indenter ?: NopIndenter.instance()
+    }
+
+    fun withArrayIndenter(indenter: Indenter?): DefaultPrettyPrinter {
+        val realIndenter = indenter ?: NopIndenter.instance()
+
+        return if (myArrayIndenter !== realIndenter) {
+            DefaultPrettyPrinter(this).apply { myArrayIndenter = realIndenter }
+        } else {
+            this
+        }
+    }
+
+    fun withObjectIndenter(indenter: Indenter?): DefaultPrettyPrinter {
+        val realIndenter = indenter ?: NopIndenter.instance()
+
+        return if (myObjectIndenter !== realIndenter) {
+            DefaultPrettyPrinter(this).apply { myObjectIndenter = realIndenter }
+        } else {
+            this
+        }
+    }
+
+    /**
+     * Method for configuring separators for a new pretty-printer to use
+     *
+     * @param separators Separator definitions to use
+     *
+     * @return The new pretty-printer instance (for call chaining)
+     */
+    fun withSeparators(separators: Separators): DefaultPrettyPrinter {
+        return DefaultPrettyPrinter(this, separators)
+    }
 
     @Throws(CirJacksonException::class)
     override fun writeRootValueSeparator(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        myRootValueSeparator?.let { generator.writeRaw(it) }
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        generator.writeRaw('{')
+
+        if (!myObjectIndenter.isInline) {
+            myNesting++
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(generator: CirJsonGenerator, numberOfEntries: Int) {
-        TODO("Not yet implemented")
+        if (!myObjectIndenter.isInline) {
+            myNesting--
+        }
+
+        if (numberOfEntries > 0) {
+            myObjectIndenter.writeIndentation(generator, myNesting)
+        } else {
+            generator.writeRaw(myObjectEmptySeparator)
+        }
+
+        generator.writeRaw('}')
     }
 
     @Throws(CirJacksonException::class)
     override fun writeObjectEntrySeparator(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        generator.writeRaw(myObjectEntrySeparator)
+        myObjectIndenter.writeIndentation(generator, myNesting)
     }
 
     @Throws(CirJacksonException::class)
     override fun writeObjectNameValueSeparator(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        generator.writeRaw(myObjectNameValueSeparator)
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        if (!myArrayIndenter.isInline) {
+            myNesting++
+        }
+
+        generator.writeRaw('[')
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndArray(generator: CirJsonGenerator, numberOfEntries: Int) {
-        TODO("Not yet implemented")
+        if (!myArrayIndenter.isInline) {
+            myNesting--
+        }
+
+        if (numberOfEntries > 0) {
+            myArrayIndenter.writeIndentation(generator, myNesting)
+        } else {
+            generator.writeRaw(myArrayEmptySeparator)
+        }
+
+        generator.writeRaw(']')
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArrayValueSeparator(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        generator.writeRaw(myArrayElementSeparator)
+        myArrayIndenter.writeIndentation(generator, myNesting)
     }
 
     @Throws(CirJacksonException::class)
     override fun beforeArrayValues(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        myArrayIndenter.writeIndentation(generator, myNesting)
     }
 
     @Throws(CirJacksonException::class)
     override fun beforeObjectEntries(generator: CirJsonGenerator) {
-        TODO("Not yet implemented")
+        myObjectIndenter.writeIndentation(generator, myNesting)
     }
 
     override fun createInstance(): DefaultPrettyPrinter {
