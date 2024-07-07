@@ -6,7 +6,7 @@ package org.cirjson.cirjackson.core.util
  * @see org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
  * @see org.cirjson.cirjackson.core.util.MinimalPrettyPrinter
  */
-data class Separators(val rootSeparator: String, val objectNameValueSeparator: Char,
+data class Separators(val rootSeparator: String?, val objectNameValueSeparator: Char,
         val objectNameValueSpacing: Spacing, val objectEntrySeparator: Char, val objectEntrySpacing: Spacing,
         val objectEmptySeparator: String, val arrayElementSeparator: Char, val arrayElementSpacing: Spacing,
         val arrayEmptySeparator: String) {
