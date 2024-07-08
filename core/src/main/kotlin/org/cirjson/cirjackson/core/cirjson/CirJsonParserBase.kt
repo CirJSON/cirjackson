@@ -52,6 +52,37 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
     override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
         get() = DEFAULT_READ_CAPABILITIES
 
+    /*
+     *******************************************************************************************************************
+     * ParserBase method implementations/overrides
+     *******************************************************************************************************************
+     */
+
+    override fun currentValue(): Any? {
+        return streamReadContext!!.currentValue()
+    }
+
+    override fun assignCurrentValue(value: Any?) {
+        streamReadContext!!.assignCurrentValue(value)
+    }
+
+    override val currentName: String?
+        get() {
+            if (myCurrentToken != CirJsonToken.START_OBJECT && myCurrentToken != CirJsonToken.START_ARRAY) {
+                return streamReadContext!!.currentName
+            }
+
+            val parent = streamReadContext!!.parent ?: return streamReadContext!!.currentName
+            return parent.currentName
+        }
+
+    override val isTextCharactersAvailable: Boolean
+        get() = when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING, CirJsonToken.CIRJSON_ID_PROPERTY_NAME -> true
+            CirJsonToken.PROPERTY_NAME -> myIsNameCopied
+            else -> false
+        }
+
     companion object {
 
         private val NO_CHARS = charArrayOf()

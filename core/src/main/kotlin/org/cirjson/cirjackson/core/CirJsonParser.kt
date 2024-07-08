@@ -642,13 +642,11 @@ abstract class CirJsonParser : Closeable, Versioned {
     abstract val idName: String
 
     /**
-     * Method that can be called to get the name associated with the current token: for [CirJsonToken.PROPERTY_NAME]s it
-     * will be the same as what [text] returns; for Object property values it will be the preceding property name; and
-     * for others (array element, root-level values) `null`.
-     *
-     * @return Name of the current property name, if any, in the parsing context (`null` if none)
+     * Accessor that can be called to get the name associated with the current token: for [CirJsonToken.PROPERTY_NAME]s
+     * it will be the same as what [text] returns; for Object property values it will be the preceding property name;
+     * and for others (array element, root-level values) `null`.
      */
-    abstract fun currentName(): String?
+    abstract val currentName: String?
 
     /**
      * Accessor for textual representation of the current token; if no current token (before first call to [nextToken],
