@@ -24,6 +24,8 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         private var myDuplicateDetector: DuplicateDetector?, type: Int, private var myLineNumber: Int,
         private var myColumnNumber: Int) : TokenStreamContext() {
 
+    private var myChild: CirJsonReadContext? = null
+
     private var myCurrentName: String? = null
 
     private var myCurrentValue: Any? = null
@@ -71,6 +73,20 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         return this
     }
 
+    fun createChildArrayContext(lineNumber: Int, columnNumber: Int): CirJsonReadContext {
+        val context = myChild ?: CirJsonReadContext(this, nestingDepth + 1, myDuplicateDetector?.child(), TYPE_ARRAY,
+                lineNumber, columnNumber).also { myChild = it }
+        context.reset(TYPE_ARRAY, lineNumber, columnNumber)
+        return context
+    }
+
+    fun createChildObjectContext(lineNumber: Int, columnNumber: Int): CirJsonReadContext {
+        val context = myChild ?: CirJsonReadContext(this, nestingDepth + 1, myDuplicateDetector?.child(), TYPE_OBJECT,
+                lineNumber, columnNumber).also { myChild = it }
+        context.reset(TYPE_OBJECT, lineNumber, columnNumber)
+        return context
+    }
+
     fun withDuplicateDetector(duplicateDetector: DuplicateDetector?): CirJsonReadContext {
         myDuplicateDetector = duplicateDetector
         return this
@@ -87,6 +103,19 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
 
         val source = duplicateDetector.source
         throw StreamReadException(source as? CirJsonParser, "Duplicate Object property \"$name\"")
+    }
+
+    companion object {
+
+        fun createRootContext(lineNumber: Int, columnNumber: Int,
+                duplicateDetector: DuplicateDetector?): CirJsonReadContext {
+            return CirJsonReadContext(null, 0, duplicateDetector, TYPE_ROOT, lineNumber, columnNumber)
+        }
+
+        fun createRootContext(duplicateDetector: DuplicateDetector?): CirJsonReadContext {
+            return CirJsonReadContext(null, 0, duplicateDetector, TYPE_ROOT, 1, 0)
+        }
+
     }
 
 }
