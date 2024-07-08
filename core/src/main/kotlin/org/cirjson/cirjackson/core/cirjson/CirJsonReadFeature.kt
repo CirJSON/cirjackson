@@ -1,8 +1,9 @@
 package org.cirjson.cirjackson.core.cirjson
 
+import org.cirjson.cirjackson.core.FormatFeature
 import org.cirjson.cirjackson.core.util.CirJacksonFeature
 
-enum class CirJsonReadFeature(override val isEnabledByDefault: Boolean) : CirJacksonFeature {
+enum class CirJsonReadFeature(override val isEnabledByDefault: Boolean) : CirJacksonFeature, FormatFeature {
 
     /**
      * Feature that determines whether parser will allow use of Java/C++ style comments (both `/`+`*` and `//`
