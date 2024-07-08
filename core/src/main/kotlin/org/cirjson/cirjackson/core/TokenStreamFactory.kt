@@ -340,14 +340,14 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @param readContext Object read context to use
      * @param data Buffer that contains data to parse
      * @param offset Offset of the first data byte within buffer
-     * @param len Length of contents to parse within buffer
+     * @param length Length of contents to parse within buffer
      *
      * @return Constructed parser
      *
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, len: Int): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, length: Int): CirJsonParser
 
     /**
      * Method for constructing parser for parsing contents of given char array.
@@ -370,14 +370,15 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @param readContext Object read context to use
      * @param content Array that contains data to parse
      * @param offset Offset of the first data byte within buffer
-     * @param len Length of contents to parse within buffer
+     * @param length Length of contents to parse within buffer
      *
      * @return Constructed parser
      *
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int, len: Int): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int,
+            length: Int): CirJsonParser
 
     /**
      * Optional method for constructing parser for reading contents from specified [DataInput] instance.

@@ -53,29 +53,30 @@ abstract class TextualTSFactory : DecorableTSFactory {
      */
 
     @Throws(CirJacksonException::class)
-    override fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, len: Int): CirJsonParser {
-        val context = createContext(createContentReference(data, offset, len), true)
+    override fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int,
+            length: Int): CirJsonParser {
+        val context = createContext(createContentReference(data, offset, length), true)
 
         if (inputDecorator != null) {
-            val input = inputDecorator.decorate(context, data, offset, len)
+            val input = inputDecorator.decorate(context, data, offset, length)
 
             if (input != null) {
                 return createParser(readContext, context, input)
             }
         }
 
-        return createParser(readContext, context, data, offset, len)
+        return createParser(readContext, context, data, offset, length)
     }
 
     @Throws(CirJacksonException::class)
     override fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int,
-            len: Int): CirJsonParser {
+            length: Int): CirJsonParser {
         if (inputDecorator != null) {
-            return createParser(readContext, CharArrayReader(content, offset, len))
+            return createParser(readContext, CharArrayReader(content, offset, length))
         }
 
-        return createParser(readContext, createContext(createContentReference(content, offset, len), true), content,
-                offset, len, false) // important: buffer is NOT recyclable, as it's from caller
+        return createParser(readContext, createContext(createContentReference(content, offset, length), true), content,
+                offset, length, false) // important: buffer is NOT recyclable, as it's from caller
     }
 
     @Throws(CirJacksonException::class)
