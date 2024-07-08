@@ -924,7 +924,9 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeRawValue(raw: SerializableString): CirJsonGenerator
+    open fun writeRawValue(raw: SerializableString): CirJsonGenerator {
+        return writeRawValue(raw.value)
+    }
 
     /*
      *******************************************************************************************************************
@@ -1435,7 +1437,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writePOJO(pojo: Any): CirJsonGenerator
+    abstract fun writePOJO(pojo: Any?): CirJsonGenerator
 
     /**
      * Method for writing given CirJSON tree (expressed as a tree where given [TreeNode] is the root) using this
@@ -1450,7 +1452,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeTree(rootNode: TreeNode): CirJsonGenerator
+    abstract fun writeTree(rootNode: TreeNode?): CirJsonGenerator
 
     /*
      *******************************************************************************************************************

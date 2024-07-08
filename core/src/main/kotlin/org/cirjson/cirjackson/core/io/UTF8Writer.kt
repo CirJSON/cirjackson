@@ -351,13 +351,13 @@ class UTF8Writer(private val myContext: IOContext, private var myOutput: OutputS
 
     companion object {
 
-        internal const val SURR1_FIRST: Int = 0xD800
+        const val SURR1_FIRST: Int = 0xD800
 
-        internal const val SURR1_LAST: Int = 0xDBFF
+        const val SURR1_LAST: Int = 0xDBFF
 
-        internal const val SURR2_FIRST: Int = 0xDC00
+        const val SURR2_FIRST: Int = 0xDC00
 
-        internal const val SURR2_LAST: Int = 0xDFFF
+        const val SURR2_LAST: Int = 0xDFFF
 
         const val SURROGATE_BASE = 0x10000 - SURR2_FIRST - (SURR1_FIRST shl 10)
 

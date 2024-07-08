@@ -856,8 +856,8 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
 
     @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForByteArray(data: ByteArray?, offset: Int, len: Int) {
-        data ?: reportRangeError("Invalid `data` argument: `null`")
-        checkRange(data!!.size, offset, len)
+        data ?: return reportRangeError("Invalid `data` argument: `null`")
+        checkRange(data.size, offset, len)
     }
 
     @Throws(CirJacksonException::class)
@@ -882,8 +882,8 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
 
     @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForCharArray(data: CharArray?, offset: Int, len: Int) {
-        data ?: reportRangeError("Invalid `data` argument: `null`")
-        checkRange(data!!.size, offset, len)
+        data ?: return reportRangeError("Invalid `data` argument: `null`")
+        checkRange(data.size, offset, len)
     }
 
     /**
