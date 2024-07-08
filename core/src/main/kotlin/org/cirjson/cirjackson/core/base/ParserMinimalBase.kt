@@ -162,13 +162,13 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     }
 
     override val isExpectedStartArrayToken: Boolean
-        get() = myCurrentToken === CirJsonToken.START_ARRAY
+        get() = myCurrentToken == CirJsonToken.START_ARRAY
 
     override val isExpectedStartObjectToken: Boolean
-        get() = myCurrentToken === CirJsonToken.START_OBJECT
+        get() = myCurrentToken == CirJsonToken.START_OBJECT
 
     override val isExpectedNumberIntToken: Boolean
-        get() = myCurrentToken === CirJsonToken.VALUE_NUMBER_INT
+        get() = myCurrentToken == CirJsonToken.VALUE_NUMBER_INT
 
     @Throws(CirJacksonException::class)
     override fun nextValue(): CirJsonToken? {
@@ -218,12 +218,12 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     @Throws(CirJacksonException::class)
     override fun nextName(): String? {
-        return if (nextToken() === CirJsonToken.PROPERTY_NAME) currentName() else null
+        return if (nextToken() == CirJsonToken.PROPERTY_NAME) currentName() else null
     }
 
     @Throws(CirJacksonException::class)
     override fun nextName(string: SerializableString): Boolean {
-        return nextToken() === CirJsonToken.PROPERTY_NAME && string.value == currentName()
+        return nextToken() == CirJsonToken.PROPERTY_NAME && string.value == currentName()
     }
 
     @Throws(CirJacksonException::class)
@@ -232,7 +232,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
         return if (string != null) {
             matcher.matchName(string)
-        } else if (myCurrentToken === CirJsonToken.END_OBJECT) {
+        } else if (myCurrentToken == CirJsonToken.END_OBJECT) {
             PropertyNameMatcher.MATCH_END_OBJECT
         } else {
             PropertyNameMatcher.MATCH_ODD_TOKEN
@@ -241,9 +241,9 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     @Throws(CirJacksonException::class)
     override fun currentNameMatch(matcher: PropertyNameMatcher): Int {
-        return if (myCurrentToken === CirJsonToken.PROPERTY_NAME) {
+        return if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
             matcher.matchName(currentName()!!)
-        } else if (myCurrentToken === CirJsonToken.END_OBJECT) {
+        } else if (myCurrentToken == CirJsonToken.END_OBJECT) {
             PropertyNameMatcher.MATCH_END_OBJECT
         } else {
             PropertyNameMatcher.MATCH_ODD_TOKEN
@@ -334,9 +334,9 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         get() {
             val token = currentToken()
 
-            return if (token === CirJsonToken.VALUE_TRUE) {
+            return if (token == CirJsonToken.VALUE_TRUE) {
                 true
-            } else if (token === CirJsonToken.VALUE_FALSE) {
+            } else if (token == CirJsonToken.VALUE_FALSE) {
                 false
             } else {
                 throw constructInputCoercion("Current token ($token) not of boolean type", token!!, Boolean::class.java)
@@ -389,8 +389,8 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     }
 
     override val valueAsInt: Int
-        get() = if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT
-                || myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        get() = if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT
+                || myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
             intValue
         } else {
             getValueAsInt(0)
@@ -399,7 +399,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     override fun getValueAsInt(defaultValue: Int): Int {
         val token = myCurrentToken ?: return defaultValue
 
-        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        if (token == CirJsonToken.VALUE_NUMBER_INT || token == CirJsonToken.VALUE_NUMBER_FLOAT) {
             return intValue
         }
 
@@ -426,8 +426,8 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     }
 
     override val valueAsLong: Long
-        get() = if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT
-                || myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        get() = if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT
+                || myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
             longValue
         } else {
             getValueAsLong(0L)
@@ -436,7 +436,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     override fun getValueAsLong(defaultValue: Long): Long {
         val token = myCurrentToken ?: return defaultValue
 
-        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        if (token == CirJsonToken.VALUE_NUMBER_INT || token == CirJsonToken.VALUE_NUMBER_FLOAT) {
             return longValue
         }
 
@@ -465,7 +465,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     override fun getValueAsDouble(defaultValue: Double): Double {
         val token = myCurrentToken ?: return defaultValue
 
-        if (token === CirJsonToken.VALUE_NUMBER_INT || token === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        if (token == CirJsonToken.VALUE_NUMBER_INT || token == CirJsonToken.VALUE_NUMBER_FLOAT) {
             return doubleValue
         }
 
@@ -494,13 +494,13 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         get() = getValueAsString(null)
 
     override fun getValueAsString(defaultValue: String?): String? {
-        return if (myCurrentToken === CirJsonToken.VALUE_STRING) {
+        return if (myCurrentToken == CirJsonToken.VALUE_STRING) {
             text
-        } else if (myCurrentToken === CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
+        } else if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
             idName
-        } else if (myCurrentToken === CirJsonToken.PROPERTY_NAME) {
+        } else if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
             currentName()
-        } else if (myCurrentToken == null || myCurrentToken === CirJsonToken.VALUE_NULL
+        } else if (myCurrentToken == null || myCurrentToken == CirJsonToken.VALUE_NULL
                 || !myCurrentToken!!.isScalarValue) {
             defaultValue
         } else {
@@ -723,9 +723,9 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     @Throws(StreamReadException::class)
     protected fun <T> reportInvalidEOFInValue(currentToken: CirJsonToken): T {
-        val message = if (currentToken === CirJsonToken.VALUE_STRING) {
+        val message = if (currentToken == CirJsonToken.VALUE_STRING) {
             "in a String value"
-        } else if (currentToken === CirJsonToken.VALUE_NUMBER_INT || currentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+        } else if (currentToken == CirJsonToken.VALUE_NUMBER_INT || currentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
             "in a Number value"
         } else {
             "in a value"

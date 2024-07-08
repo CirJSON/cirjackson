@@ -296,7 +296,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     }
 
     override val isNaN: Boolean
-        get() = myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT && myNumberIsNaN
+        get() = myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT && myNumberIsNaN
 
     /*
      *******************************************************************************************************************
@@ -311,7 +311,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
             }
 
             return when {
-                myCurrentToken === CirJsonToken.VALUE_NUMBER_INT -> {
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_INT -> {
                     when {
                         myNumberTypesValid and NUMBER_INT != 0 -> myNumberInt
                         myNumberTypesValid and NUMBER_LONG != 0 -> myNumberLong
@@ -332,7 +332,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     override val numberValueExact: Number
         get() {
-            if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT) {
+            if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT) {
                 if (myNumberTypesValid == NUMBER_UNKNOWN) {
                     parseNumericValue(NUMBER_UNKNOWN)
                 }
@@ -359,7 +359,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     override val numberValueDeferred: Any
         get() {
-            return if (myCurrentToken === CirJsonToken.VALUE_NUMBER_INT) {
+            return if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT) {
                 if (myNumberTypesValid == NUMBER_UNKNOWN) {
                     parseNumericValue(NUMBER_UNKNOWN)
                 }
@@ -381,7 +381,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
                     else -> throwInternal()
                 }
-            } else if (myCurrentToken === CirJsonToken.VALUE_NUMBER_FLOAT) {
+            } else if (myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
                 when {
                     myNumberTypesValid and NUMBER_BIG_DECIMAL != 0 -> bigDecimal
                     myNumberTypesValid and NUMBER_FLOAT != 0 -> numberFloat
@@ -400,7 +400,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
             }
 
             return when {
-                myCurrentToken === CirJsonToken.VALUE_NUMBER_INT -> {
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_INT -> {
                     when {
                         myNumberTypesValid and NUMBER_INT != 0 -> NumberType.INT
                         myNumberTypesValid and NUMBER_LONG != 0 -> NumberType.LONG
