@@ -232,8 +232,9 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
         return if (surrogate2 in UTF8Writer.SURR2_FIRST..UTF8Writer.SURR2_LAST) {
             (surrogate1 shl 10) + surrogate2 + UTF8Writer.SURROGATE_BASE
         } else {
-            reportError(String.format(
-                    "Incomplete surrogate pair: first char 0x%04X, second 0x%04X", surrogate1, surrogate2))
+            reportError("Incomplete surrogate pair: first char 0x${
+                surrogate1.toString(16).uppercase().padStart(4, '0')
+            }, second 0x${surrogate2.toString(16).uppercase().padStart(4, '0')}")
         }
     }
 
