@@ -115,6 +115,15 @@ abstract class TokenStreamContext protected constructor(protected var myType: In
     val hasCurrentName
         get() = currentName != null
 
+    constructor() : this(0, 0)
+
+    /**
+     * Copy constructor used by subclasses for creating copies for buffering.
+     *
+     * @param base Context instance to copy type and index from
+     */
+    constructor(base: TokenStreamContext) : this(base.myType, base.myIndex)
+
     /**
      * Method for accessing currently active value being used by data-binding (as the source of streaming data to write,
      * or destination of data being read), at this level in hierarchy.
