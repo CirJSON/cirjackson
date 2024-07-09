@@ -3,7 +3,7 @@ package org.cirjson.cirjackson.core.symbols
 import org.cirjson.cirjackson.core.StreamReadConstraints
 import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.core.exception.StreamConstraintsException
-import org.cirjson.cirjackson.core.extentions.countNotNull
+import org.cirjson.cirjackson.core.extensions.countNotNull
 import org.cirjson.cirjackson.core.util.InternCache
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference

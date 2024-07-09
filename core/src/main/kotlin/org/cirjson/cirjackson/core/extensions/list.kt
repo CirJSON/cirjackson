@@ -1,4 +1,4 @@
-package org.cirjson.cirjackson.core.extentions
+package org.cirjson.cirjackson.core.extensions
 
 fun <T> List<T>.clone(): List<T> {
     return ArrayList(this)

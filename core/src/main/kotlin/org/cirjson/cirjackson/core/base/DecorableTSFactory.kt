@@ -1,7 +1,7 @@
 package org.cirjson.cirjackson.core.base
 
 import org.cirjson.cirjackson.core.*
-import org.cirjson.cirjackson.core.extentions.clone
+import org.cirjson.cirjackson.core.extensions.clone
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.io.InputDecorator
 import org.cirjson.cirjackson.core.io.OutputDecorator

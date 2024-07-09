@@ -5,7 +5,7 @@ import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.exception.StreamConstraintsException
 import org.cirjson.cirjackson.core.exception.StreamReadException
-import org.cirjson.cirjackson.core.extentions.growBy
+import org.cirjson.cirjackson.core.extensions.growBy
 import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.io.NumberInput

@@ -1,4 +1,4 @@
-package org.cirjson.cirjackson.core.extentions
+package org.cirjson.cirjackson.core.extensions
 
 fun IntArray?.growBy(toAdd: Int): IntArray {
     if (this == null) {

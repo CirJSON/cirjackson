@@ -2,7 +2,7 @@ package org.cirjson.cirjackson.core.io
 
 import ch.randelshofer.fastdoubleparser.JavaDoubleParser
 import ch.randelshofer.fastdoubleparser.JavaFloatParser
-import org.cirjson.cirjackson.core.extentions.pow
+import org.cirjson.cirjackson.core.extensions.pow
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.math.min
