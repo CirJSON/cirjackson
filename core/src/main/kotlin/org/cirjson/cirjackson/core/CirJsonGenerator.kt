@@ -1848,7 +1848,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
             }
 
             CirJsonTokenId.ID_PROPERTY_NAME -> {
-                writeName(parser.currentName()!!)
+                writeName(parser.currentName!!)
             }
 
             CirJsonTokenId.ID_STRING -> {
@@ -2049,7 +2049,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
         var id = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
 
         if (id == CirJsonTokenId.ID_PROPERTY_NAME) {
-            writeName(parser.currentName()!!)
+            writeName(parser.currentName!!)
             token = parser.nextToken()
             id = token?.id ?: CirJsonTokenId.ID_NOT_AVAILABLE
         }
@@ -2083,7 +2083,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
                 }
 
                 CirJsonTokenId.ID_PROPERTY_NAME -> {
-                    writeName(parser.currentName()!!)
+                    writeName(parser.currentName!!)
                 }
 
                 CirJsonTokenId.ID_START_ARRAY -> {

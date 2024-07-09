@@ -218,12 +218,12 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     @Throws(CirJacksonException::class)
     override fun nextName(): String? {
-        return if (nextToken() == CirJsonToken.PROPERTY_NAME) currentName() else null
+        return if (nextToken() == CirJsonToken.PROPERTY_NAME) currentName else null
     }
 
     @Throws(CirJacksonException::class)
     override fun nextName(string: SerializableString): Boolean {
-        return nextToken() == CirJsonToken.PROPERTY_NAME && string.value == currentName()
+        return nextToken() == CirJsonToken.PROPERTY_NAME && string.value == currentName
     }
 
     @Throws(CirJacksonException::class)
@@ -242,7 +242,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     @Throws(CirJacksonException::class)
     override fun currentNameMatch(matcher: PropertyNameMatcher): Int {
         return if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            matcher.matchName(currentName()!!)
+            matcher.matchName(currentName!!)
         } else if (myCurrentToken == CirJsonToken.END_OBJECT) {
             PropertyNameMatcher.MATCH_END_OBJECT
         } else {
@@ -499,7 +499,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         } else if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
             idName
         } else if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName()
+            currentName
         } else if (myCurrentToken == null || myCurrentToken == CirJsonToken.VALUE_NULL
                 || !myCurrentToken!!.isScalarValue) {
             defaultValue
