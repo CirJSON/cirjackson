@@ -287,7 +287,7 @@ class ByteQuadsCanonicalizer {
      * Number of symbol entries contained by this canonicalizer instance
      */
     val size
-        get() = myTableInfo?.get()?.size ?: myCount
+        get() = myTableInfo?.get()?.myCount ?: myCount
 
     /**
      * Accessor called to quickly check if a child symbol table may have gotten additional entries. Used for checking to
@@ -739,7 +739,7 @@ class ByteQuadsCanonicalizer {
             return
         }
 
-        if (myParent != null) {
+        if (myParent == null) {
             throw if (myCount == 0) {
                 IllegalStateException("Internal error: Cannot add names to Root symbol table")
             } else {
@@ -1255,7 +1255,7 @@ class ByteQuadsCanonicalizer {
             }
         }
 
-        private fun multiplyByFourFifths(number: Int): Int {
+        internal fun multiplyByFourFifths(number: Int): Int {
             return ((number * 3_435_973_837L) ushr 32).toInt()
         }
 

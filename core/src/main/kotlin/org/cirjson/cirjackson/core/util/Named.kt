@@ -33,6 +33,13 @@ interface Named {
 
     companion object {
 
+        fun fromString(name: String?): Named? {
+            return if (name != null) {
+                StringAsNamed(name)
+            } else {
+                null
+            }
+        }
 
     }
 
