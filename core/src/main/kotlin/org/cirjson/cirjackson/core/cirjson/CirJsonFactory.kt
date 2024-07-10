@@ -117,7 +117,11 @@ open class CirJsonFactory : TextualTSFactory {
         myRootCharSymbols = CharsToNameCanonicalizer.createRoot(this)
     }
 
-    override fun copy(): TokenStreamFactory {
+    override fun rebuild(): CirJsonFactoryBuilder {
+        return CirJsonFactoryBuilder(this)
+    }
+
+    override fun copy(): CirJsonFactory {
         return CirJsonFactory(this)
     }
 
@@ -125,16 +129,68 @@ open class CirJsonFactory : TextualTSFactory {
         return this
     }
 
+    /*
+     *******************************************************************************************************************
+     * Capability introspection
+     *******************************************************************************************************************
+     */
+
     override fun version(): Version {
-        TODO("Not yet implemented")
+        return PackageVersion.VERSION
     }
 
     override val isParsingAsyncPossible: Boolean
-        get() = TODO("Not yet implemented")
+        get() = true
 
-    override fun rebuild(): TSFBuilder<*, *> {
-        TODO("Not yet implemented")
+    /**
+     * Checked whether specified parser feature is enabled.
+     *
+     * @param feature Feature to check
+     *
+     * @return `true` if feature is enabled; `false` otherwise
+     */
+    fun isEnabled(feature: CirJsonReadFeature): Boolean {
+        return formatReadFeatures and feature.mask != 0
     }
+
+    /**
+     * Check whether specified generator feature is enabled.
+     *
+     * @param feature Feature to check
+     *
+     * @return `true` if feature is enabled; `false` otherwise
+     */
+    fun isEnabled(feature: CirJsonWriteFeature): Boolean {
+        return formatWriteFeatures and feature.mask != 0
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuration access
+     *******************************************************************************************************************
+     */
+
+    override fun canUseSchema(schema: FormatSchema): Boolean {
+        return false
+    }
+
+    override val formatName: String
+        get() = FORMAT_NAME_CIRJSON
+
+    override val formatReadFeatureType: Class<out FormatFeature>
+        get() = CirJsonReadFeature::class.java
+
+    override val formatWriteFeatureType: Class<out FormatFeature>
+        get() = CirJsonWriteFeature::class.java
+
+    /*
+     *******************************************************************************************************************
+     * Configuration access
+     *******************************************************************************************************************
+     */
+
+    val rootValueSeparator: String?
+        get() = myRootValueSeparator?.value
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
             len: Int): CirJsonParser {
@@ -168,13 +224,6 @@ open class CirJsonFactory : TextualTSFactory {
         TODO("Not yet implemented")
     }
 
-    override fun canUseSchema(schema: FormatSchema): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override val formatName: String
-        get() = TODO("Not yet implemented")
-
     companion object {
 
         /**
@@ -193,6 +242,15 @@ open class CirJsonFactory : TextualTSFactory {
         internal val DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS = CirJsonReadFeature.collectDefaults()
 
         const val DEFAULT_QUOTE_CHAR = '"'
+
+        /**
+         * Main factory method to use for constructing [CirJsonFactory] instances with different configuration.
+         *
+         * @return Builder instance to use
+         */
+        fun builder(): CirJsonFactoryBuilder {
+            return CirJsonFactoryBuilder()
+        }
 
     }
 
