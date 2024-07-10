@@ -265,4 +265,13 @@ open class DefaultPrettyPrinter protected constructor(protected var myArrayInden
 
     }
 
+    companion object {
+
+        /**
+         * Default String used for separating root values is single space.
+         */
+        internal val DEFAULT_ROOT_VALUE_SEPARATOR = SerializedString(" ")
+
+    }
+
 }

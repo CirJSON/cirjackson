@@ -145,7 +145,7 @@ abstract class DecorableTSFactory : TokenStreamFactory {
      * Since factory instances are immutable, a Builder class is needed for creating configurations for differently
      * configured factory instances.
      */
-    abstract inner class DecorableTSFBuilder<F : TokenStreamFactory, T : TSFBuilder<F, T>> : TSFBuilder<F, T> {
+    abstract class DecorableTSFBuilder<F : TokenStreamFactory, T : TSFBuilder<F, T>> : TSFBuilder<F, T> {
 
         /**
          * Optional helper object that may decorate input sources, to do additional processing on input during parsing.

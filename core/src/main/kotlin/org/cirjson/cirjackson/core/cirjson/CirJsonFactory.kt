@@ -2,7 +2,11 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.base.TextualTSFactory
+import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
+import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
+import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
 import java.io.*
 
 /**
@@ -20,6 +24,61 @@ import java.io.*
 open class CirJsonFactory : TextualTSFactory {
 
     /**
+     * Definition of custom character escapes to use for generators created by this factory, if any. If `null`, standard
+     * data format specific escapes are used.
+     */
+    val characterEscapes: CharacterEscapes?
+
+    /**
+     * Separator used between root-level values, if any; `null` indicates "do not add separator". Default separator is a
+     * single space character.
+     */
+    protected val myRootValueSeparator: SerializableString?
+
+    /**
+     * Internal accessor to [myRootValueSeparator].
+     */
+    internal val rootValueSeparatorInternal: SerializableString?
+        get() = myRootValueSeparator
+
+    /**
+     * Optional threshold used for automatically escaping character above certain character
+     * code value: either `0` to indicate that no threshold is specified, or value
+     * at or above 127 to indicate last character code that is NOT automatically escaped
+     * (but depends on other configuration rules for checking).
+     */
+    protected val myMaximumNonEscapedCharCode: Int
+
+    /**
+     * Internal accessor to [myMaximumNonEscapedCharCode].
+     */
+    internal val maximumNonEscapedCharCodeInternal: Int
+        get() = myMaximumNonEscapedCharCode
+
+    /**
+     * Character used for quoting property names (if property name quoting has not been disabled with
+     * [CirJsonWriteFeature.QUOTE_PROPERTY_NAMES]) and CirJSON String values.
+     */
+    protected val myQuoteChar: Char
+
+    /**
+     * Internal accessor to [myQuoteChar].
+     */
+    internal val quoteCharInternal: Char
+        get() = myQuoteChar
+
+    /**
+     * Each factory comes equipped with a shared root symbol table. It should not be linked back to the original
+     * blueprint, to avoid contents from leaking between factories.
+     */
+    protected val myRootCharSymbols: CharsToNameCanonicalizer
+
+    /**
+     * Alternative to the basic symbol table, some stream-based parsers use different name canonicalization method.
+     */
+    protected val myByteSymbolCanonicalizer = ByteQuadsCanonicalizer.createRoot()
+
+    /**
      * Default constructor used to create factory instances.
      *
      * Creation of a factory instance is a light-weight operation, but it is still a good idea to reuse limited number
@@ -29,9 +88,34 @@ open class CirJsonFactory : TextualTSFactory {
      */
     constructor() : super(StreamReadConstraints.defaults(), StreamWriteConstraints.defaults(),
             ErrorReportConfiguration.defaults(), DEFAULT_CIRJSON_PARSER_FEATURE_FLAGS,
-            DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS)
+            DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS) {
+        myRootValueSeparator = DefaultPrettyPrinter.DEFAULT_ROOT_VALUE_SEPARATOR
+        characterEscapes = null
+        myMaximumNonEscapedCharCode = 0
+        myQuoteChar = DEFAULT_QUOTE_CHAR
+        myRootCharSymbols = CharsToNameCanonicalizer.createRoot(this)
+    }
 
-    constructor(src: CirJsonFactory) : super(src)
+    /**
+     * Copy constructor.
+     *
+     * @param src Original factory to copy configuration from
+     */
+    constructor(src: CirJsonFactory) : super(src) {
+        myRootValueSeparator = src.myRootValueSeparator
+        characterEscapes = src.characterEscapes
+        myMaximumNonEscapedCharCode = src.myMaximumNonEscapedCharCode
+        myQuoteChar = src.myQuoteChar
+        myRootCharSymbols = CharsToNameCanonicalizer.createRoot(this)
+    }
+
+    constructor(builder: CirJsonFactoryBuilder) : super(builder) {
+        myRootValueSeparator = builder.rootValueSeparator
+        characterEscapes = builder.caracterEscapes
+        myMaximumNonEscapedCharCode = builder.highestNonEscapedCharCode
+        myQuoteChar = builder.quoteChar
+        myRootCharSymbols = CharsToNameCanonicalizer.createRoot(this)
+    }
 
     override fun copy(): TokenStreamFactory {
         return CirJsonFactory(this)
@@ -44,6 +128,9 @@ open class CirJsonFactory : TextualTSFactory {
     override fun version(): Version {
         TODO("Not yet implemented")
     }
+
+    override val isParsingAsyncPossible: Boolean
+        get() = TODO("Not yet implemented")
 
     override fun rebuild(): TSFBuilder<*, *> {
         TODO("Not yet implemented")
@@ -81,9 +168,6 @@ open class CirJsonFactory : TextualTSFactory {
         TODO("Not yet implemented")
     }
 
-    override val isParsingAsyncPossible: Boolean
-        get() = TODO("Not yet implemented")
-
     override fun canUseSchema(schema: FormatSchema): Boolean {
         TODO("Not yet implemented")
     }
@@ -108,6 +192,7 @@ open class CirJsonFactory : TextualTSFactory {
          */
         internal val DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS = CirJsonReadFeature.collectDefaults()
 
+        const val DEFAULT_QUOTE_CHAR = '"'
 
     }
 
