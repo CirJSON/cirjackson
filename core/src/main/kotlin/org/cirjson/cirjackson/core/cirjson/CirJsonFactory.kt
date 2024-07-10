@@ -111,7 +111,7 @@ open class CirJsonFactory : TextualTSFactory {
 
     constructor(builder: CirJsonFactoryBuilder) : super(builder) {
         myRootValueSeparator = builder.rootValueSeparator
-        characterEscapes = builder.caracterEscapes
+        characterEscapes = builder.characterEscapes
         myMaximumNonEscapedCharCode = builder.highestNonEscapedCharCode
         myQuoteChar = builder.quoteChar
         myRootCharSymbols = CharsToNameCanonicalizer.createRoot(this)

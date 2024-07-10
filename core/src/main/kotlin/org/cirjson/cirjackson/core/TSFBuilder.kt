@@ -73,13 +73,13 @@ abstract class TSFBuilder<F : TokenStreamFactory, B : TSFBuilder<F, B>> private 
      * Value for getting bit set of all format-specific parser features enabled.
      */
     var formatReadFeatures = formatReadFeatures
-        private set
+        protected set
 
     /**
      * Value for getting bit set of all format-specific generator features enabled.
      */
     var formatWriteFeatures = formatWriteFeatures
-        private set
+        protected set
 
     fun enable(feature: TokenStreamFactory.Feature): B {
         factoryFeatures = factoryFeatures or feature.mask
