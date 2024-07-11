@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.async.ByteArrayFeeder
+import org.cirjson.cirjackson.core.async.ByteBufferFeeder
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.io.ContentReference
@@ -508,8 +510,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
     abstract fun createParser(readContext: ObjectReadContext, url: URL): CirJsonParser
 
     /**
-     * Optional method for constructing parser for non-blocking parsing via
-     * [org.cirjson.cirjackson.core.async.ByteArrayFeeder] interface (accessed using
+     * Optional method for constructing parser for non-blocking parsing via [ByteArrayFeeder] interface (accessed using
      * [CirJsonParser.nonBlockingInputFeeder] from constructed instance).
      *
      * If this factory does not support non-blocking parsing (either at all, or from byte array), will throw
@@ -526,13 +527,13 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    open fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteArrayParser(readContext: ObjectReadContext): P {
+    open fun <P> createNonBlockingByteArrayParser(
+            readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteArrayFeeder {
         return unsupported("Non-blocking source not (yet?) supported for this format ($formatName)")
     }
 
     /**
-     * Optional method for constructing parser for non-blocking parsing via
-     * [org.cirjson.cirjackson.core.async.ByteBufferFeeder] interface (accessed using
+     * Optional method for constructing parser for non-blocking parsing via [ByteBufferFeeder] interface (accessed using
      * [CirJsonParser.nonBlockingInputFeeder] from constructed instance).
      *
      * If this factory does not support non-blocking parsing (either at all, or from byte array), will throw
@@ -549,7 +550,8 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    open fun <P : CirJsonParser, ByteArrayFeeder> createNonBlockingByteBufferParser(readContext: ObjectReadContext): P {
+    open fun <P> createNonBlockingByteBufferParser(
+            readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteBufferFeeder {
         return unsupported("Non-blocking source not (yet?) supported for this format ($formatName)")
     }
 

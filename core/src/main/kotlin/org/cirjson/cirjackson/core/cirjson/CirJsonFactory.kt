@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.async.ByteArrayFeeder
 import org.cirjson.cirjackson.core.base.TextualTSFactory
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.IOContext
@@ -191,6 +192,17 @@ open class CirJsonFactory : TextualTSFactory {
 
     val rootValueSeparator: String?
         get() = myRootValueSeparator?.value
+
+    /*
+     *******************************************************************************************************************
+     * Parser factories, non-blocking (async) sources
+     *******************************************************************************************************************
+     */
+
+    override fun <P> createNonBlockingByteArrayParser(
+            readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteArrayFeeder {
+        TODO()
+    }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
             len: Int): CirJsonParser {
