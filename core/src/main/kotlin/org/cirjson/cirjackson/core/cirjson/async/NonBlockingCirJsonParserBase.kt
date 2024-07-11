@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core.cirjson.async
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonParserBase
+import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
 import java.io.IOException
@@ -350,6 +351,273 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         return CirJsonToken.END_OBJECT.also { myCurrentToken = it }
     }
 
+    /*
+     *******************************************************************************************************************
+     * Internal methods, symbol (name) handling
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun findName(quad1: Int, lastQuadBytes: Int): String {
+        val q1 = padLastQuad(quad1, lastQuadBytes)
+        val name = mySymbols.findName(q1)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+
+        return addName(myQuadBuffer, 1, lastQuadBytes)
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun findName(q1: Int, quad2: Int, lastQuadBytes: Int): String {
+        val q2 = padLastQuad(quad2, lastQuadBytes)
+        val name = mySymbols.findName(q1, q2)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+
+        return addName(myQuadBuffer, 2, lastQuadBytes)
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun findName(q1: Int, q2: Int, quad3: Int, lastQuadBytes: Int): String {
+        val q3 = padLastQuad(quad3, lastQuadBytes)
+        val name = mySymbols.findName(q1, q2, q3)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+        myQuadBuffer[2] = q3
+
+        return addName(myQuadBuffer, 3, lastQuadBytes)
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun addName(quads: IntArray, quadsLength: Int, lastQuadBytes: Int): String {
+        val byteLength = (quadsLength shl 2) - 4 + lastQuadBytes
+        streamReadConstraints.validateNameLength(byteLength)
+
+        val lastQuad = if (lastQuadBytes < 4) {
+            val value = quads[quadsLength - 1]
+            quads[quadsLength - 1] = value shl (4 - lastQuadBytes shl 3)
+            value
+        } else {
+            0
+        }
+
+        var cbuf = myTextBuffer.emptyAndGetCurrentSegment()
+        var cix = 0
+        var ix = 0
+
+        while (ix < byteLength) {
+            var ch = quads[ix shr 2]
+            var byteIx = ix and 3
+            ch = ch shr (3 - byteIx shl 3) and 0xFF
+            ix++
+
+            if (ch > 127) {
+                val needed = when {
+                    (ch and 0xE0 == 0xC0) -> {
+                        ch = ch and 0x1F
+                        1
+                    }
+
+                    ch and 0xF0 == 0xE0 -> {
+                        ch = ch and 0x0F
+                        2
+                    }
+
+                    ch and 0xF8 == 0xF0 -> {
+                        ch = ch and 0x07
+                        3
+                    }
+
+                    else -> reportInvalidInitial(ch)
+                }
+
+                if (ix + needed > byteLength) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+
+                var ch2 = quads[ix shr 2]
+                byteIx = ix and 3
+                ch2 = ch2 shr (3 - byteIx shl 3)
+                ix++
+
+                if (ch2 and 0xC0 != 0x080) {
+                    return reportInvalidOther(ch2)
+                }
+
+                ch = ch shl 6 or (ch2 and 0x3F)
+
+                if (needed > 1) {
+                    ch2 = quads[ix shr 2]
+                    byteIx = ix and 3
+                    ch2 = ch2 shr (3 - byteIx shl 3)
+                    ix++
+
+                    if (ch2 and 0xC0 != 0x080) {
+                        return reportInvalidOther(ch2)
+                    }
+
+                    ch = ch shl 6 or (ch2 and 0x3F)
+
+                    if (needed > 2) {
+                        ch2 = quads[ix shr 2]
+                        byteIx = ix and 3
+                        ch2 = ch2 shr (3 - byteIx shl 3)
+                        ix++
+
+                        if (ch2 and 0xC0 != 0x080) {
+                            return reportInvalidOther(ch2)
+                        }
+
+                        ch = ch shl 6 or (ch2 and 0x3F)
+                    }
+                }
+
+                if (needed > 2) {
+                    ch -= 0x10000
+
+                    if (cix >= cbuf.size) {
+                        cbuf = myTextBuffer.expandCurrentSegment()
+                    }
+
+                    cbuf[cix++] = (0x0800 + (ch shr 10)).toChar()
+                    ch = ch and 0x03FF or 0xDC00
+                }
+            }
+
+            if (cix >= cbuf.size) {
+                cbuf = myTextBuffer.expandCurrentSegment()
+            }
+
+            cbuf[cix++] = ch.toChar()
+        }
+
+        val baseName = String(cbuf, 0, cix)
+
+        if (!mySymbols.isCanonicalizing) {
+            return baseName
+        }
+
+        if (lastQuadBytes < 4) {
+            quads[quadsLength - 1] = lastQuad
+        }
+
+        return mySymbols.addName(baseName, quads, quadsLength)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, state changes
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun eofAsNextToken(): CirJsonToken? {
+        myMajorState = MAJOR_CLOSED
+
+        if (!streamReadContext!!.isInRoot) {
+            handleEOF()
+        }
+
+        close()
+        return null.also { myCurrentToken = null }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun fieldComplete(name: String): CirJsonToken {
+        myMajorState = MAJOR_OBJECT_VALUE
+        streamReadContext!!.currentName = name
+        return CirJsonToken.PROPERTY_NAME.also { myCurrentToken = it }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun valueComplete(token: CirJsonToken): CirJsonToken {
+        myMajorState = myMajorStateAfterValue
+        return token.also { myCurrentToken = it }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun valueCompleteInt(value: Int, asText: String): CirJsonToken {
+        myTextBuffer.resetWithString(asText)
+        myIntLength = asText.length
+        myNumberTypesValid = NUMBER_INT
+        myNumberInt = value
+        myMajorState = myMajorStateAfterValue
+        return CirJsonToken.VALUE_NUMBER_INT.also { myCurrentToken = it }
+    }
+
+    protected fun nonStdToken(type: Int): String {
+        return NON_STD_TOKENS[type]
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, error reporting, related
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun valueNonStdNumberComplete(type: Int): CirJsonToken {
+        val tokenString = NON_STD_TOKENS[type]
+        myTextBuffer.resetWithString(tokenString)
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+            return reportError(
+                    "Non-standard token '$tokenString': enable `JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+        }
+
+        myIntLength = 0
+        myNumberTypesValid = NUMBER_DOUBLE
+        myNumberDouble = NON_STD_TOKEN_VALUES[type]
+        myMajorState = myMajorStateAfterValue
+        return CirJsonToken.VALUE_NUMBER_FLOAT.also { myCurrentToken = it }
+    }
+
+    protected fun updateTokenLocation() {
+        tokenLineNumber = max(myCurrentInputRow, myCurrentInputRowAlt)
+        val pointer = myInputPointer
+        myTokenInputColumn = pointer - myCurrentInputRowStart
+        tokenCharacterOffset = myCurrentInputProcessed + pointer - myCurrentBufferStart
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidChar(code: Int): T {
+        return if (code < CODE_SPACE) {
+            reportInvalidSpace(code)
+        } else {
+            reportInvalidInitial(code)
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidInitial(mask: Int): T {
+        return reportError("Invalid UTF-8 start byte 0x${mask.toString(16)}")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidOther(mask: Int, pointer: Int): T {
+        myInputPointer = pointer
+        return reportInvalidOther(mask)
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidOther(mask: Int): T {
+        return reportError("Invalid UTF-8 middle byte 0x${mask.toString(16)}")
+    }
+
     companion object {
 
         /*
@@ -517,6 +785,16 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
         val NON_STD_TOKEN_VALUES = doubleArrayOf(Double.NaN, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY,
                 Double.NEGATIVE_INFINITY)
+
+        /*
+         ***************************************************************************************************************
+         * Helper method
+         ***************************************************************************************************************
+         */
+
+        fun padLastQuad(quad: Int, lastQuadBytes: Int): Int {
+            return if (lastQuadBytes != 4) quad or (-1 shl (lastQuadBytes shl 3)) else quad
+        }
 
     }
 
