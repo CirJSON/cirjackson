@@ -89,6 +89,24 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
     /*
      *******************************************************************************************************************
+     * Internal/package methods: Context handling
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun createChildArrayContext(lineNumber: Int, columnNumber: Int) {
+        streamReadContext = streamReadContext!!.createChildArrayContext(lineNumber, columnNumber)
+        streamReadConstraints.validateIntegerLength(streamReadContext!!.nestingDepth)
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun createChildObjectContext(lineNumber: Int, columnNumber: Int) {
+        streamReadContext = streamReadContext!!.createChildObjectContext(lineNumber, columnNumber)
+        streamReadConstraints.validateIntegerLength(streamReadContext!!.nestingDepth)
+    }
+
+    /*
+     *******************************************************************************************************************
      * Numeric parsing method implementations
      *******************************************************************************************************************
      */

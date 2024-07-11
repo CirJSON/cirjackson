@@ -1,9 +1,13 @@
 package org.cirjson.cirjackson.core.cirjson.async
 
-import org.cirjson.cirjackson.core.ObjectReadContext
+import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonParserBase
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
+import java.io.IOException
+import java.io.OutputStream
+import java.io.Writer
+import kotlin.math.max
 
 /**
  * Intermediate base class for non-blocking CirJSON parsers.
@@ -15,6 +19,336 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         CirJsonParserBase(objectReadContext, ioContext, streamReadFeatures, formatReadFeatures) {
 
     protected var myQuadBuffer = IntArray(8)
+
+    protected var myQuadLength = 0
+
+    protected var myPending32 = 0
+
+    protected var myPending = 0
+
+    protected var myQuoted32 = 0
+
+    protected var myQuotedBytes = 0
+
+    /**
+     * Current main decoding state within logical tree
+     */
+    protected var myMajorState = 0
+
+    /**
+     * Value of {@link myMajorState} after completing a scalar value
+     */
+    protected var myMajorStateAfterValue = 0
+
+    /**
+     * Additional indicator within state; contextually relevant for just that state
+     */
+    protected var myMinorState = 0
+
+    /**
+     * Secondary minor state indicator used during decoding of escapes and/or multibyte Unicode characters
+     */
+    protected var myMinorStateAfter = 0
+
+    /**
+     * Flag that is sent when calling application indicates that there will be no more input to parse.
+     */
+    protected var myEndOfInput = false
+
+    /**
+     * When tokenizing non-standard ("odd") tokens, this is the type to consider; also works as index to actual textual
+     * representation.
+     */
+    protected var myNonStdTokenType = 0
+
+    /**
+     * Since we are fed content that may or may not start at zero offset, we need to keep track of the first byte within
+     * that buffer, to be able to calculate logical offset within input "stream"
+     */
+    protected var myCurrentBufferStart = 0
+
+    /**
+     * Alternate row tracker, used to keep track of position by `\r` marker (whereas `myCurrentInputRow` tracks `\n`).
+     * Used to simplify tracking of linefeeds, assuming that input typically uses various linefeed combinations (`\r`,
+     * `\n` or `\r\n`) consistently, in which case we can simply choose max of two row candidates.
+     */
+    protected var myCurrentInputRowAlt = 0
+
+    override val isParsingAsyncPossible: Boolean
+        get() = true
+
+    internal fun symbolTableForTests(): ByteQuadsCanonicalizer {
+        return mySymbols
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Overridden methods
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    abstract override fun releaseBuffered(output: OutputStream): Int
+
+    @Throws(CirJacksonException::class)
+    override fun releaseBuffers() {
+        super.releaseBuffers()
+        mySymbols.release()
+    }
+
+    override fun streamReadInputSource(): Any? {
+        return null
+    }
+
+    override fun closeInput() {
+        myCurrentBufferStart = 0
+        myInputEnd = 0
+    }
+
+    override val isTextCharactersAvailable: Boolean
+        get() = when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING -> myTextBuffer.isHavingTextAsCharacters
+            CirJsonToken.PROPERTY_NAME -> myIsNameCopied
+            else -> false
+        }
+
+    override fun currentLocation(): CirJsonLocation {
+        val column = myInputPointer - myCurrentInputRowStart
+        val row = max(myCurrentInputRow, myCurrentInputRowAlt)
+        return CirJsonLocation(contentReference(), myCurrentInputProcessed + myInputPointer + myCurrentBufferStart, -1L,
+                row, column)
+    }
+
+    override fun currentTokenLocation(): CirJsonLocation {
+        return CirJsonLocation(contentReference(), tokenCharacterOffset, -1L, tokenLineNumber, myTokenInputColumn)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, text
+     *******************************************************************************************************************
+     */
+
+    @get:Throws(CirJacksonException::class)
+    override val text: String?
+        get() = if (myCurrentToken == CirJsonToken.VALUE_STRING) {
+            myTextBuffer.contentsAsString()
+        } else {
+            getText(myCurrentToken)
+        }
+
+    @Throws(CirJacksonException::class)
+    protected fun getText(token: CirJsonToken?): String? {
+        token ?: return null
+        return when (token.id) {
+            CirJsonTokenId.ID_NOT_AVAILABLE -> null
+
+            CirJsonTokenId.ID_PROPERTY_NAME -> streamReadContext!!.currentName
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                myTextBuffer.contentsAsString()
+            }
+
+            else -> token.token
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun getText(writer: Writer): Int {
+        val token = myCurrentToken
+
+        return try {
+            when (token) {
+                null -> 0
+
+                CirJsonToken.VALUE_STRING -> myTextBuffer.contentsToWriter(writer)
+
+                CirJsonToken.PROPERTY_NAME -> {
+                    val name = streamReadContext!!.currentName
+                    writer.write(name!!)
+                    return name.length
+                }
+
+                else -> {
+                    if (token.isNumeric) {
+                        myTextBuffer.contentsToWriter(writer)
+                    } else if (token == CirJsonToken.NOT_AVAILABLE) {
+                        reportError("Current token not available: can not call this method")
+                    } else {
+                        val chars = token.token!!.toCharArray()
+                        writer.write(chars)
+                        chars.size
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val valueAsString: String?
+        get() = when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING -> myTextBuffer.contentsAsString()
+            CirJsonToken.PROPERTY_NAME -> currentName
+            else -> super.getValueAsString(null)
+        }
+
+    @Throws(CirJacksonException::class)
+    override fun getValueAsString(defaultValue: String?): String? {
+        return when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING -> myTextBuffer.contentsAsString()
+            CirJsonToken.PROPERTY_NAME -> currentName
+            else -> super.getValueAsString(null)
+        }
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val textCharacters: CharArray?
+        get() = when (myCurrentToken?.id) {
+            null -> null
+
+            CirJsonTokenId.ID_PROPERTY_NAME -> currentNameInBuffer()
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                myTextBuffer.textBuffer
+            }
+
+            else -> myCurrentToken!!.token!!.toCharArray()
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val textLength: Int
+        get() = when (myCurrentToken?.id) {
+            null -> 0
+
+            CirJsonTokenId.ID_PROPERTY_NAME -> streamReadContext!!.currentName!!.length
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                myTextBuffer.size
+            }
+
+            else -> myCurrentToken!!.token!!.toCharArray().size
+        }
+
+    @get:Throws(CirJacksonException::class)
+    override val textOffset: Int
+        get() = when (myCurrentToken?.id) {
+            null -> 0
+
+            CirJsonTokenId.ID_PROPERTY_NAME -> 0
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                myTextBuffer.textOffset
+            }
+
+            else -> 0
+        }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, access to token information, binary
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    override fun getBinaryValue(base64Variant: Base64Variant): ByteArray {
+        if (myCurrentToken != CirJsonToken.VALUE_STRING) {
+            return reportError(
+                    "Current token ($myCurrentToken) not VALUE_STRING or VALUE_EMBEDDED_OBJECT, can not access as binary")
+        }
+
+        if (myBinaryValue == null) {
+            val builder = byteArrayBuilder
+            decodeBase64(text!!, builder, base64Variant)
+            myBinaryValue = builder.toByteArray()
+        }
+
+        return myBinaryValue!!
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun readBinaryValue(base64Variant: Base64Variant, output: OutputStream): Int {
+        val bytes = getBinaryValue(base64Variant)
+
+        try {
+            output.write(bytes)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+
+        return bytes.size
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val embeddedObject: Any?
+        get() = if (myCurrentToken == CirJsonToken.VALUE_EMBEDDED_OBJECT) myBinaryValue else null
+
+    /*
+     *******************************************************************************************************************
+     * Handling of nested scope, state
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun startArrayScope(): CirJsonToken {
+        createChildArrayContext(-1, -1)
+        myMajorState = MAJOR_ARRAY_ELEMENT_FIRST
+        myMinorStateAfter = MAJOR_ARRAY_ELEMENT_NEXT
+        return CirJsonToken.START_ARRAY.also { myCurrentToken = it }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun startObjectScope(): CirJsonToken {
+        createChildObjectContext(-1, -1)
+        myMajorState = MAJOR_OBJECT_PROPERTY_FIRST
+        myMinorStateAfter = MAJOR_OBJECT_PROPERTY_NEXT
+        return CirJsonToken.START_OBJECT.also { myCurrentToken = it }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun closeArrayScope(): CirJsonToken {
+        if (!streamReadContext!!.isInArray) {
+            reportMismatchedEndMarker(']', '}')
+        }
+
+        val context = streamReadContext!!.parent!!
+        streamReadContext = context
+
+        val state = if (context.isInObject) {
+            MAJOR_OBJECT_PROPERTY_NEXT
+        } else if (context.isInArray) {
+            MAJOR_ARRAY_ELEMENT_NEXT
+        } else {
+            MAJOR_ROOT
+        }
+
+        myMajorState = state
+        myMinorStateAfter = state
+        return CirJsonToken.END_ARRAY.also { myCurrentToken = it }
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun closeObjectScope(): CirJsonToken {
+        if (!streamReadContext!!.isInObject) {
+            reportMismatchedEndMarker('}', ']')
+        }
+
+        val context = streamReadContext!!.parent!!
+        streamReadContext = context
+
+        val state = if (context.isInObject) {
+            MAJOR_OBJECT_PROPERTY_NEXT
+        } else if (context.isInArray) {
+            MAJOR_ARRAY_ELEMENT_NEXT
+        } else {
+            MAJOR_ROOT
+        }
+
+        myMajorState = state
+        myMinorStateAfter = state
+        return CirJsonToken.END_OBJECT.also { myCurrentToken = it }
+    }
 
     companion object {
 
@@ -164,6 +498,25 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         const val MINOR_COMMENT_CPP = 54
 
         const val MINOR_COMMENT_YAML = 55
+
+        /*
+         ***************************************************************************************************************
+         * Additional parsing state: non-standard tokens
+         ***************************************************************************************************************
+         */
+
+        const val NON_STD_TOKEN_NAN = 0
+
+        const val NON_STD_TOKEN_INFINITY = 1
+
+        const val NON_STD_TOKEN_PLUS_INFINITY = 2
+
+        const val NON_STD_TOKEN_MINUS_INFINITY = 3
+
+        val NON_STD_TOKENS = arrayOf("NaN", "Infinity", "+Infinity", "-Infinity")
+
+        val NON_STD_TOKEN_VALUES = doubleArrayOf(Double.NaN, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY,
+                Double.NEGATIVE_INFINITY)
 
     }
 

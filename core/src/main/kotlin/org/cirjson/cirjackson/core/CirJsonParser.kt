@@ -702,7 +702,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws StreamReadException for decoding problems
      */
     @get:Throws(CirJacksonException::class)
-    abstract val textCharacters: CharArray
+    abstract val textCharacters: CharArray?
 
     /**
      * Accessor used with [textCharacters], to know length of String stored in returned buffer.

@@ -40,13 +40,13 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     /**
      * Current row location of current point in input buffer, starting from 1, if available.
      */
-    protected var myCurrentInputRow = 1L
+    protected var myCurrentInputRow = 1
 
     /**
      * Current index of the first character of the current row in input buffer. Needed to calculate column position, if
      * necessary; benefit of not having column itself is that this only has to be updated once per line.
      */
-    protected var myCurrentInputRowStart = 0L
+    protected var myCurrentInputRowStart = 0
 
     /**
      * Total number of bytes/characters read before start of current token. For big (gigabyte-sized) sizes are possible,
