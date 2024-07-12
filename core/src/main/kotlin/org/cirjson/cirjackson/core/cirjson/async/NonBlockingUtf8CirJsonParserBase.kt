@@ -97,7 +97,13 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     protected fun finishCurrentToken(): CirJsonToken? {
-        TODO()
+        return when (myMinorState) {
+            MINOR_ROOT_BOM -> finishBOM(myPending32)
+            MINOR_PROPERTY_LEADING_WS -> startIdName(nextUnsignedByteFromBuffer)
+            MINOR_PROPERTY_LEADING_COMMA -> startNameAfterComma(nextUnsignedByteFromBuffer)
+            // TODO continue
+            else -> Other.throwInternalReturnAny()
+        }
     }
 
     /**
@@ -127,7 +133,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    private fun finishBOM(): CirJsonToken {
+    private fun finishBOM(bytesHandles: Int): CirJsonToken {
         TODO()
     }
 
