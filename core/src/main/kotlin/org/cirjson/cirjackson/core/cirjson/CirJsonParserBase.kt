@@ -17,6 +17,8 @@ import kotlin.math.max
 abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext: IOContext, streamReadFeatures: Int,
         protected var formatReadFeatures: Int) : ParserBase(objectReadContext, ioContext, streamReadFeatures) {
 
+    override val idName: String = ID_NAME
+
     override var streamReadContext: CirJsonReadContext? = CirJsonReadContext.createRootContext(
             if (StreamReadFeature.STRICT_DUPLICATE_DETECTION.isEnabledIn(streamReadFeatures)) {
                 DuplicateDetector.rootDetector(this)
@@ -347,6 +349,8 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
     companion object {
 
         private val NO_CHARS = charArrayOf()
+
+        private const val ID_NAME = "__cirJsonId__"
 
     }
 

@@ -25,15 +25,6 @@ enum class CirJsonReadFeature(override val isEnabledByDefault: Boolean) : CirJac
     ALLOW_YAML_COMMENTS(false),
 
     /**
-     * Feature that determines whether parser will allow use of unquoted field names (which is allowed by Javascript,
-     * but not by CirJSON specification).
-     *
-     * Since CirJSON specification requires use of double quotes for field names, this is a non-standard feature, and as
-     * such disabled by default.
-     */
-    ALLOW_UNQUOTED_FIELD_NAMES(false),
-
-    /**
      * Feature that determines whether parser will allow use of single quotes (apostrophe, character `\`) for quoting
      * Strings (names and String values). If so, this is in addition to other acceptable markers (but not by CirJSON
      * specification).
@@ -42,6 +33,15 @@ enum class CirJsonReadFeature(override val isEnabledByDefault: Boolean) : CirJac
      * such disabled by default.
      */
     ALLOW_SINGLE_QUOTES(false),
+
+    /**
+     * Feature that determines whether parser will allow use of unquoted field names (which is allowed by Javascript,
+     * but not by CirJSON specification).
+     *
+     * Since CirJSON specification requires use of double quotes for field names, this is a non-standard feature, and as
+     * such disabled by default.
+     */
+    ALLOW_UNQUOTED_PROPERTY_NAMES(false),
 
     /**
      * Feature that determines whether parser will allow CirJSON Strings to contain unescaped control characters (ASCII
