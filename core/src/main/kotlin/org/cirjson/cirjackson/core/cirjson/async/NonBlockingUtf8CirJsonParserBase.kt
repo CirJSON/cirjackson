@@ -86,10 +86,31 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     protected abstract fun getByteFromBuffer(pointer: Int): Byte
 
+    /**
+     * Method called when decoding of a token has been started, but not yet completed due to missing input; method is to
+     * continue decoding due to at least one more byte being made available to decode.
+     *
+     * @return Token decoded, if complete; [CirJsonToken.NOT_AVAILABLE] if not
+     *
+     * @throws CirJacksonException (generally [org.cirjson.cirjackson.core.exception.StreamReadException]) for decoding
+     * problems
+     */
+    @Throws(CirJacksonException::class)
     protected fun finishCurrentToken(): CirJsonToken? {
         TODO()
     }
 
+    /**
+     * Method similar to [finishCurrentToken], but called when no more input is available, and end-of-input has been
+     * detected. This is usually problem case, but not always: root-level values may be properly terminated by this, and
+     * similarly trailing white-space may have been skipped.
+     *
+     * @return Token decoded, if complete; [CirJsonToken.NOT_AVAILABLE] if not
+     *
+     * @throws CirJacksonException (generally [org.cirjson.cirjackson.core.exception.StreamReadException]) for decoding
+     * problems
+     */
+    @Throws(CirJacksonException::class)
     protected fun finishTokenWithEOF(): CirJsonToken? {
         TODO()
     }
@@ -116,6 +137,9 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that handles initial token type recognition for token that has to be either CIRJSON_ID_PROPERTY_NAME.
+     */
     @Throws(CirJacksonException::class)
     private fun startIdName(code: Int): CirJsonToken? {
         TODO()
@@ -137,16 +161,27 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         TODO()
     }
 
+    /**
+     * Helper method called to detect type of value token (at any level), and possibly decode it if contained in input
+     * buffer. Value may be preceded by leading white-space, but no separator (comma).
+     */
     @Throws(CirJacksonException::class)
     private fun startValue(code: Int): CirJsonToken? {
         TODO()
     }
 
+    /**
+     * Helper method called to parse token that is either a value token in array or end-array marker
+     */
     @Throws(CirJacksonException::class)
     private fun startValueExpectComma(code: Int): CirJsonToken? {
         TODO()
     }
 
+    /**
+     * Helper method called to detect type of value token (at any level), and possibly decode it if contained in input
+     * buffer. Value MUST be preceded by a semicolon (which may be surrounded by white-space)
+     */
     @Throws(CirJacksonException::class)
     private fun startValueExpectColon(code: Int): CirJsonToken? {
         TODO()
