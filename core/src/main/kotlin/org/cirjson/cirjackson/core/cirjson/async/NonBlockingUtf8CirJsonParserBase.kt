@@ -303,12 +303,75 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     private fun startDocument(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code and 0xFF
+
+        if (ch == 0xEF && myMinorState != MINOR_ROOT_BOM) {
+            return finishBOM(1)
+        }
+
+        while (ch <= 0x020) {
+            if (ch != CODE_SPACE) {
+                if (ch == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch == CODE_CR) {
+                    ++myCurrentInputRowAlt
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch != CODE_TAB) {
+                    return reportInvalidSpace(ch)
+                }
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_ROOT_GOT_SEPARATOR
+
+                return if (isClosed) {
+                    null
+                } else if (myEndOfInput) {
+                    eofAsNextToken()
+                } else {
+                    CirJsonToken.NOT_AVAILABLE
+                }
+            }
+
+            ch = nextUnsignedByteFromBuffer
+        }
+
+        return startValue(ch)
     }
 
     @Throws(CirJacksonException::class)
-    private fun finishBOM(bytesHandles: Int): CirJsonToken {
-        TODO()
+    private fun finishBOM(bytesHandles: Int): CirJsonToken? {
+        var realBytesHandles = bytesHandles
+
+        while (myInputPointer < myInputEnd) {
+            val ch = nextUnsignedByteFromBuffer
+
+            when (realBytesHandles) {
+                3 -> {
+                    myCurrentInputProcessed -= 3
+                    return startDocument(ch)
+                }
+
+                2 -> if (ch != 0xBF) {
+                    return reportError("Unexpected byte 0x${
+                        ch.toString(16).padStart(2, '0')
+                    } following 0xEF 0xBB; should get 0xBF as third byte of UTF-8 BOM")
+                }
+
+                1 -> if (ch != 0xBB) {
+                    return reportError("Unexpected byte 0x${
+                        ch.toString(16).padStart(2, '0')
+                    } following 0xEF; should get 0xBB as second byte UTF-8 BOM")
+                }
+            }
+
+            ++realBytesHandles
+        }
+
+        myPending32 = realBytesHandles
+        myMinorState = MINOR_ROOT_BOM
+        return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
     }
 
     /*
@@ -318,7 +381,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
 
     /**
-     * Method that handles initial token type recognition for token that has to be either CIRJSON_ID_PROPERTY_NAME.
+     * Method that handles initial token type recognition for token that has to be CIRJSON_ID_PROPERTY_NAME.
      */
     @Throws(CirJacksonException::class)
     private fun startIdName(code: Int): CirJsonToken? {
