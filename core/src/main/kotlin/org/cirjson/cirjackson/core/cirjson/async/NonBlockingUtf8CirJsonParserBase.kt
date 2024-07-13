@@ -238,7 +238,61 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     protected fun finishTokenWithEOF(): CirJsonToken? {
-        TODO()
+        return when (myMinorState) {
+            MINOR_ROOT_GOT_SEPARATOR -> eofAsNextToken()
+
+            MINOR_PROPERTY_LEADING_COMMA -> {
+                reportInvalidEOF(": expected an Object property name or END_ARRAY", CirJsonToken.NOT_AVAILABLE)
+            }
+
+            MINOR_VALUE_LEADING_WS -> eofAsNextToken()
+
+            MINOR_VALUE_EXPECTING_COMMA -> {
+                reportInvalidEOF(": expected a value token", CirJsonToken.NOT_AVAILABLE)
+            }
+
+            MINOR_VALUE_TOKEN_NULL -> finishKeywordTokenWithEOF("null", myPending32, CirJsonToken.VALUE_NULL)
+
+            MINOR_VALUE_TOKEN_TRUE -> finishKeywordTokenWithEOF("true", myPending32, CirJsonToken.VALUE_TRUE)
+
+            MINOR_VALUE_TOKEN_FALSE -> finishKeywordTokenWithEOF("false", myPending32, CirJsonToken.VALUE_FALSE)
+
+            MINOR_VALUE_TOKEN_NON_STD -> finishNonStdTokenWithEOF(myNonStdTokenType, myPending32)
+
+            MINOR_VALUE_TOKEN_ERROR -> finishErrorTokenWithEOF()
+
+            MINOR_NUMBER_ZERO, MINOR_NUMBER_MINUS_ZERO -> valueCompleteInt(0, "0")
+
+            MINOR_NUMBER_INTEGER_DIGITS -> {
+                var length = myTextBuffer.currentSegmentSize
+
+                if (myNumberNegative) {
+                    --length
+                }
+
+                myIntLength = length
+                valueComplete(CirJsonToken.VALUE_NUMBER_INT)
+            }
+
+            MINOR_NUMBER_FRACTION_DIGITS -> {
+                myExponentLength = 0
+                valueComplete(CirJsonToken.VALUE_NUMBER_FLOAT)
+            }
+
+            MINOR_NUMBER_EXPONENT_DIGITS -> valueComplete(CirJsonToken.VALUE_NUMBER_FLOAT)
+
+            MINOR_NUMBER_EXPONENT_MARKER -> {
+                reportInvalidEOF(": was expecting fraction after exponent marker", CirJsonToken.VALUE_NUMBER_FLOAT)
+            }
+
+            MINOR_COMMENT_CLOSING_ASTERISK, MINOR_COMMENT_C -> {
+                reportInvalidEOF(": was expecting closing '*/' for comment", CirJsonToken.NOT_AVAILABLE)
+            }
+
+            MINOR_COMMENT_CPP, MINOR_COMMENT_YAML -> eofAsNextToken()
+
+            else -> reportInvalidEOF(": was expecting rest of token (internal state: $myMinorState)", myCurrentToken)
+        }
     }
 
     /*
