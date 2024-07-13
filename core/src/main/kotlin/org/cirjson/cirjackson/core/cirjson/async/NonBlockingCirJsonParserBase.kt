@@ -25,11 +25,11 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
     protected var myPending32 = 0
 
-    protected var myPending = 0
+    protected var myPendingBytes = 0
 
     protected var myQuoted32 = 0
 
-    protected var myQuotedBytes = 0
+    protected var myQuotedDigits = 0
 
     /**
      * Current main decoding state within logical tree
@@ -49,7 +49,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     /**
      * Secondary minor state indicator used during decoding of escapes and/or multibyte Unicode characters
      */
-    protected var myMinorStateAfter = 0
+    protected var myMinorStateAfterSplit = 0
 
     /**
      * Flag that is sent when calling application indicates that there will be no more input to parse.
@@ -295,7 +295,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun startArrayScope(): CirJsonToken {
         createChildArrayContext(-1, -1)
         myMajorState = MAJOR_ARRAY_ELEMENT_FIRST
-        myMinorStateAfter = MAJOR_ARRAY_ELEMENT_NEXT
+        myMinorStateAfterSplit = MAJOR_ARRAY_ELEMENT_NEXT
         return CirJsonToken.START_ARRAY.also { myCurrentToken = it }
     }
 
@@ -303,7 +303,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun startObjectScope(): CirJsonToken {
         createChildObjectContext(-1, -1)
         myMajorState = MAJOR_OBJECT_PROPERTY_FIRST
-        myMinorStateAfter = MAJOR_OBJECT_PROPERTY_NEXT
+        myMinorStateAfterSplit = MAJOR_OBJECT_PROPERTY_NEXT
         return CirJsonToken.START_OBJECT.also { myCurrentToken = it }
     }
 
@@ -325,7 +325,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         }
 
         myMajorState = state
-        myMinorStateAfter = state
+        myMinorStateAfterSplit = state
         return CirJsonToken.END_ARRAY.also { myCurrentToken = it }
     }
 
@@ -347,7 +347,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         }
 
         myMajorState = state
-        myMinorStateAfter = state
+        myMinorStateAfterSplit = state
         return CirJsonToken.END_OBJECT.also { myCurrentToken = it }
     }
 

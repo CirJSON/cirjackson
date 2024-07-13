@@ -99,9 +99,129 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     protected fun finishCurrentToken(): CirJsonToken? {
         return when (myMinorState) {
             MINOR_ROOT_BOM -> finishBOM(myPending32)
+
             MINOR_PROPERTY_LEADING_WS -> startIdName(nextUnsignedByteFromBuffer)
+
             MINOR_PROPERTY_LEADING_COMMA -> startNameAfterComma(nextUnsignedByteFromBuffer)
-            // TODO continue
+
+            // Property name states
+
+            MINOR_PROPERTY_NAME -> parseEscapedName(myQuadLength, myPending32, myPendingBytes)
+
+            MINOR_PROPERTY_NAME_ESCAPE -> finishPropertyWithEscape()
+
+            MINOR_PROPERTY_APOS_NAME -> finishApostropheName(myQuadLength, myPending32, myPendingBytes)
+
+            MINOR_PROPERTY_UNQUOTED_NAME -> finishUnquotedName(myQuadLength, myPending32, myPendingBytes)
+
+            // Value states: base
+
+            MINOR_VALUE_LEADING_WS -> startValue(nextUnsignedByteFromBuffer)
+
+            MINOR_VALUE_WS_AFTER_COMMA -> startValue(nextUnsignedByteFromBuffer)
+
+            MINOR_VALUE_EXPECTING_COMMA -> startValueExpectComma(nextUnsignedByteFromBuffer)
+
+            MINOR_VALUE_EXPECTING_COLON -> startValueExpectColon(nextUnsignedByteFromBuffer)
+
+            // Value states: tokens
+
+            MINOR_VALUE_TOKEN_NULL -> finishKeywordToken("null", myPending32, CirJsonToken.VALUE_NULL)
+
+            MINOR_VALUE_TOKEN_TRUE -> finishKeywordToken("true", myPending32, CirJsonToken.VALUE_TRUE)
+
+            MINOR_VALUE_TOKEN_FALSE -> finishKeywordToken("false", myPending32, CirJsonToken.VALUE_FALSE)
+
+            MINOR_VALUE_TOKEN_NON_STD -> finishNonStdToken(myNonStdTokenType, myPending32)
+
+            // Value states: numbers
+
+            MINOR_NUMBER_PLUS -> finishNumberPlus(nextUnsignedByteFromBuffer)
+
+            MINOR_NUMBER_MINUS -> finishNumberMinus(nextUnsignedByteFromBuffer)
+
+            MINOR_NUMBER_ZERO -> finishNumberLeadingZero()
+
+            MINOR_NUMBER_MINUS_ZERO -> finishNumberLeadingNegZero()
+
+            MINOR_NUMBER_INTEGER_DIGITS -> {
+                finishNumberIntegralPart(myTextBuffer.bufferWithoutReset!!, myTextBuffer.currentSegmentSize)
+            }
+
+            MINOR_NUMBER_FRACTION_DIGITS -> finishFloatFraction()
+
+            MINOR_NUMBER_EXPONENT_MARKER -> finishFloatExponent(nextUnsignedByteFromBuffer, true)
+
+            MINOR_NUMBER_EXPONENT_DIGITS -> finishFloatExponent(nextUnsignedByteFromBuffer, false)
+
+            // Value states: strings
+
+            MINOR_VALUE_STRING -> finishRegularString()
+
+            MINOR_VALUE_STRING_UTF8_2 -> {
+                myTextBuffer.append(decodeUTF8V2(myPending32, nextUnsignedByteFromBuffer).toChar())
+
+                if (myMinorStateAfterSplit == MINOR_VALUE_APOS_STRING) {
+                    finishApostropheString()
+                } else {
+                    finishRegularString()
+                }
+            }
+
+            MINOR_VALUE_STRING_UTF8_3 -> {
+                if (!decodeSplitUTF8V3(myPending32, myPendingBytes, nextUnsignedByteFromBuffer)) {
+                    CirJsonToken.NOT_AVAILABLE
+                } else if (myMinorStateAfterSplit == MINOR_VALUE_APOS_STRING) {
+                    finishApostropheString()
+                } else {
+                    finishRegularString()
+                }
+            }
+
+            MINOR_VALUE_STRING_UTF8_4 -> {
+                if (!decodeSplitUTF8V4(myPending32, myPendingBytes, nextSignedByteFromBuffer.toInt())) {
+                    CirJsonToken.NOT_AVAILABLE
+                } else if (myMinorStateAfterSplit == MINOR_VALUE_APOS_STRING) {
+                    finishApostropheString()
+                } else {
+                    finishRegularString()
+                }
+            }
+
+            MINOR_VALUE_STRING_ESCAPE -> {
+                val c = decodeSplitEscaped(myQuoted32, myQuotedDigits)
+
+                if (c < 0) {
+                    CirJsonToken.NOT_AVAILABLE
+                } else {
+                    myTextBuffer.append(c.toChar())
+
+                    if (myMinorStateAfterSplit == MINOR_VALUE_APOS_STRING) {
+                        finishApostropheString()
+                    } else {
+                        finishRegularString()
+                    }
+                }
+            }
+
+            MINOR_VALUE_APOS_STRING -> finishApostropheString()
+
+            // Error
+
+            MINOR_VALUE_TOKEN_ERROR -> finishErrorToken()
+
+            // Comments
+
+            MINOR_COMMENT_LEADING_SLASH -> startSlashComment(myPending32)
+
+            MINOR_COMMENT_CLOSING_ASTERISK -> finishCComment(myPending32, true)
+
+            MINOR_COMMENT_C -> finishCComment(myPending32, false)
+
+            MINOR_COMMENT_CPP -> finishCppComment(myPending32)
+
+            MINOR_COMMENT_YAML -> finishHashComment(myPending32)
+
             else -> Other.throwInternalReturnAny()
         }
     }
@@ -193,6 +313,14 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         TODO()
     }
 
+    /**
+     * Method called when we have already gotten a comma (i.e. not the first value)
+     */
+    @Throws(CirJacksonException::class)
+    private fun startValueAfterComma(code: Int): CirJsonToken? {
+        TODO()
+    }
+
     @Throws(CirJacksonException::class)
     protected open fun startUnexpectedValue(code: Int, leadingComma: Boolean): CirJsonToken? {
         TODO()
@@ -225,7 +353,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    private fun finishCComment(fromMinorState: Int): CirJsonToken? {
+    private fun finishCComment(fromMinorState: Int, gotStar: Boolean): CirJsonToken? {
+        TODO()
+    }
+
+    @Throws(CirJacksonException::class)
+    private fun startAfterComment(fromMinorState: Int): CirJsonToken? {
         TODO()
     }
 
@@ -262,13 +395,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun finishNonStdToken(expectedToken: String, matched: Int, result: CirJsonToken): CirJsonToken? {
+    protected open fun finishNonStdToken(type: Int, matched: Int): CirJsonToken? {
         TODO()
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun finishNonStdTokenWithEOF(expectedToken: String, matched: Int,
-            result: CirJsonToken): CirJsonToken? {
+    protected open fun finishNonStdTokenWithEOF(type: Int, matched: Int): CirJsonToken? {
         TODO()
     }
 
@@ -339,17 +471,17 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun finishNumberPosLeadingZero(): CirJsonToken? {
+    protected open fun finishNumberLeadingPosZero(): CirJsonToken? {
         TODO()
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun finishNumberNegLeadingZero(): CirJsonToken? {
+    protected open fun finishNumberLeadingNegZero(): CirJsonToken? {
         TODO()
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun finishNumberPosNegLeadingZero(negative: Boolean): CirJsonToken? {
+    protected open fun finishNumberLeadingPosNegZero(negative: Boolean): CirJsonToken? {
         TODO()
     }
 
@@ -400,7 +532,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      * and hence is offlined to a separate method.
      */
     @Throws(CirJacksonException::class)
-    private fun parseEscapedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): String? {
+    private fun parseEscapedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
         TODO()
     }
 
