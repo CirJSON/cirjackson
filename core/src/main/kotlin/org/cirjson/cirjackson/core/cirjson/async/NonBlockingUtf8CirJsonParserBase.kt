@@ -850,32 +850,179 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespace(code: Int): Int {
-        TODO()
+        var ch = code
+
+        do {
+            if (ch != CODE_SPACE) {
+                if (ch == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch == CODE_CR) {
+                    ++myCurrentInputRowAlt
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch != CODE_TAB) {
+                    return reportInvalidSpace(ch)
+                }
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                myCurrentToken = CirJsonToken.NOT_AVAILABLE
+                return 0
+            }
+
+            ch = nextUnsignedByteFromBuffer
+        } while (ch <= 0x0020)
+
+        return ch
     }
 
     @Throws(CirJacksonException::class)
     private fun startSlashComment(fromMinorState: Int): CirJsonToken? {
-        TODO()
+        if (formatReadFeatures and FEAT_MASK_ALLOW_JAVA_COMMENTS == 0) {
+            return reportUnexpectedChar('/',
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_COMMENTS' not enabled for parser)")
+        }
+
+        if (myInputPointer >= myInputEnd) {
+            myPending32 = fromMinorState
+            myMinorState = MINOR_COMMENT_LEADING_SLASH
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        return when (val ch = nextSignedByteFromBuffer.toInt()) {
+            CODE_ASTERISK -> finishCComment(fromMinorState, false)
+
+            CODE_SLASH -> finishCppComment(fromMinorState)
+
+            else -> reportUnexpectedChar((ch and 0xFF).toChar(), "was expecting either '*' or '/' for a comment")
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun finishHashComment(fromMinorState: Int): CirJsonToken? {
-        TODO()
+        if (formatReadFeatures and FEAT_MASK_ALLOW_YAML_COMMENTS == 0) {
+            return reportUnexpectedChar('#',
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_YAML_COMMENTS' not enabled for parser)")
+        }
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myPending32 = fromMinorState
+                myMinorState = MINOR_COMMENT_YAML
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = nextUnsignedByteFromBuffer
+
+            if (ch < 0x020) {
+                if (ch == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                    break
+                } else if (ch == CODE_CR) {
+                    ++myCurrentInputRowAlt
+                    myCurrentInputRowStart = myInputPointer
+                    break
+                } else if (ch != CODE_TAB) {
+                    return reportInvalidSpace(ch)
+                }
+            }
+        }
+
+        return startAfterComment(fromMinorState)
     }
 
     @Throws(CirJacksonException::class)
     private fun finishCppComment(fromMinorState: Int): CirJsonToken? {
-        TODO()
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myPending32 = fromMinorState
+                myMinorState = MINOR_COMMENT_CPP
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = nextUnsignedByteFromBuffer
+
+            if (ch < 0x020) {
+                if (ch == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                    break
+                } else if (ch == CODE_CR) {
+                    ++myCurrentInputRowAlt
+                    myCurrentInputRowStart = myInputPointer
+                    break
+                } else if (ch != CODE_TAB) {
+                    return reportInvalidSpace(ch)
+                }
+            }
+        }
+
+        return startAfterComment(fromMinorState)
     }
 
     @Throws(CirJacksonException::class)
     private fun finishCComment(fromMinorState: Int, gotStar: Boolean): CirJsonToken? {
-        TODO()
+        var realGotStar = gotStar
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myPending32 = fromMinorState
+                myMinorState = if (realGotStar) MINOR_COMMENT_CLOSING_ASTERISK else MINOR_COMMENT_C
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = nextUnsignedByteFromBuffer
+
+            if (ch < 0x020) {
+                if (ch == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch == CODE_CR) {
+                    ++myCurrentInputRowAlt
+                    myCurrentInputRowStart = myInputPointer
+                } else if (ch != CODE_TAB) {
+                    return reportInvalidSpace(ch)
+                }
+            } else if (ch == CODE_ASTERISK) {
+                realGotStar = true
+                continue
+            } else if (ch == CODE_SLASH) {
+                if (realGotStar) {
+                    break
+                }
+            }
+
+            realGotStar = false
+        }
+
+        return startAfterComment(fromMinorState)
     }
 
     @Throws(CirJacksonException::class)
     private fun startAfterComment(fromMinorState: Int): CirJsonToken? {
-        TODO()
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = fromMinorState
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        val ch = nextUnsignedByteFromBuffer
+
+        return when (fromMinorState) {
+            MINOR_PROPERTY_LEADING_WS -> startIdName(ch)
+
+            MINOR_PROPERTY_LEADING_COMMA -> startNameAfterComma(ch)
+
+            MINOR_VALUE_LEADING_WS -> startValue(ch)
+
+            MINOR_VALUE_EXPECTING_COMMA -> startValueExpectComma(ch)
+
+            MINOR_VALUE_EXPECTING_COLON -> startValueExpectColon(ch)
+
+            MINOR_VALUE_WS_AFTER_COMMA -> startValueAfterComma(ch)
+
+            else -> Other.throwInternalReturnAny()
+        }
     }
 
     /*
