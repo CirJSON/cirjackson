@@ -118,7 +118,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             MINOR_VALUE_LEADING_WS -> startValue(nextUnsignedByteFromBuffer)
 
-            MINOR_VALUE_WS_AFTER_COMMA -> startValue(nextUnsignedByteFromBuffer)
+            MINOR_VALUE_WS_AFTER_COMMA -> startValueAfterComma(nextUnsignedByteFromBuffer)
 
             MINOR_VALUE_EXPECTING_COMMA -> startValueExpectComma(nextUnsignedByteFromBuffer)
 
@@ -501,7 +501,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         updateTokenLocation()
-        TODO()
+
+        return if (ch == CODE_QUOTE) {
+            startString()
+        } else {
+            reportUnexpectedChar(ch.toChar(), "was expecting array's ID")
+        }
     }
 
     /**
@@ -510,7 +515,60 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun startValue(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        streamReadContext!!.isExpectingComma
+
+        if (ch == CODE_QUOTE) {
+            return startString()
+        }
+
+        return when (ch.toChar()) {
+            '#' -> finishHashComment(MINOR_VALUE_LEADING_WS)
+
+            '+' -> startPositiveNumber()
+
+            '-' -> startNegativeNumber()
+
+            '/' -> startSlashComment(MINOR_VALUE_LEADING_WS)
+
+            '.' -> if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                startFloatThatStartsWithPeriod()
+            } else {
+                startUnexpectedValue(ch, false)
+            }
+
+            '0' -> startNumberLeadingZero()
+
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+
+            'f' -> startFalseToken()
+
+            'n' -> startNullToken()
+
+            't' -> startTrueToken()
+
+            '[' -> startArrayScope()
+
+            CODE_R_BRACKET.toChar() -> closeArrayScope()
+
+            '{' -> startObjectScope()
+
+            CODE_R_CURLY.toChar() -> closeObjectScope()
+
+            else -> startUnexpectedValue(ch, false)
+        }
     }
 
     /**
@@ -518,7 +576,102 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun startValueExpectComma(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_EXPECTING_COMMA
+                return myCurrentToken
+            }
+        }
+
+        if (ch != CODE_COMMA) {
+            return when (ch) {
+                CODE_R_BRACKET -> closeArrayScope()
+
+                CODE_R_CURLY -> closeObjectScope()
+
+                CODE_SLASH -> startSlashComment(MINOR_VALUE_EXPECTING_COMMA)
+
+                CODE_HASH -> finishHashComment(MINOR_VALUE_EXPECTING_COMMA)
+
+                else -> reportUnexpectedChar(ch.toChar(),
+                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+            }
+        }
+
+        streamReadContext!!.isExpectingComma
+
+        val pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            myMinorState = MINOR_VALUE_WS_AFTER_COMMA
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        ch = getByteFromBuffer(pointer).toInt()
+        myInputPointer = pointer + 1
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_WS_AFTER_COMMA
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch == CODE_QUOTE) {
+            return startString()
+        }
+
+        return when (ch.toChar()) {
+            '#' -> finishHashComment(MINOR_VALUE_WS_AFTER_COMMA)
+
+            '+' -> startPositiveNumber()
+
+            '-' -> startNegativeNumber()
+
+            '/' -> startSlashComment(MINOR_VALUE_WS_AFTER_COMMA)
+
+            '.' -> if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                startFloatThatStartsWithPeriod()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
+            '0' -> startNumberLeadingZero()
+
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+
+            'f' -> startFalseToken()
+
+            'n' -> startNullToken()
+
+            't' -> startTrueToken()
+
+            '[' -> startArrayScope()
+
+            CODE_R_BRACKET.toChar() -> if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                closeArrayScope()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
+            '{' -> startObjectScope()
+
+            CODE_R_CURLY.toChar() -> if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                closeObjectScope()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
+            else -> startUnexpectedValue(ch, true)
+        }
     }
 
     /**
@@ -527,7 +680,89 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun startValueExpectColon(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_EXPECTING_COLON
+                return myCurrentToken
+            }
+        }
+
+        if (ch != CODE_COLON) {
+            return when (ch) {
+                CODE_SLASH -> startSlashComment(MINOR_VALUE_EXPECTING_COLON)
+
+                CODE_HASH -> finishHashComment(MINOR_VALUE_EXPECTING_COLON)
+
+                else -> reportUnexpectedChar(ch.toChar(), "was expecting a colon to separate field name and value")
+            }
+        }
+
+        val pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            myMinorState = MINOR_VALUE_LEADING_WS
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        ch = getByteFromBuffer(pointer).toInt()
+        myInputPointer = pointer + 1
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch == CODE_QUOTE) {
+            return startString()
+        }
+
+        return when (ch.toChar()) {
+            '#' -> finishHashComment(MINOR_VALUE_LEADING_WS)
+
+            '+' -> startPositiveNumber()
+
+            '-' -> startNegativeNumber()
+
+            '/' -> startSlashComment(MINOR_VALUE_LEADING_WS)
+
+            '0' -> startNumberLeadingZero()
+
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+
+            'f' -> startFalseToken()
+
+            'n' -> startNullToken()
+
+            't' -> startTrueToken()
+
+            '[' -> startArrayScope()
+
+            CODE_R_BRACKET.toChar() -> if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                closeArrayScope()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
+            '{' -> startObjectScope()
+
+            CODE_R_CURLY.toChar() -> if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                closeObjectScope()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
+            else -> startUnexpectedValue(ch, false)
+        }
     }
 
     /**
@@ -535,12 +770,76 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun startValueAfterComma(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_WS_AFTER_COMMA
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch == CODE_QUOTE) {
+            return startString()
+        }
+
+        return when (ch.toChar()) {
+            '#' -> finishHashComment(MINOR_VALUE_WS_AFTER_COMMA)
+
+            '+' -> startPositiveNumber()
+
+            '-' -> startNegativeNumber()
+
+            '/' -> startSlashComment(MINOR_VALUE_WS_AFTER_COMMA)
+
+            '0' -> startNumberLeadingZero()
+
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+
+            'f' -> startFalseToken()
+
+            'n' -> startNullToken()
+
+            't' -> startTrueToken()
+
+            '[' -> startArrayScope()
+
+            '{' -> startObjectScope()
+
+            else -> startUnexpectedValue(ch, true)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startUnexpectedValue(code: Int, leadingComma: Boolean): CirJsonToken? {
-        TODO()
+        if (code == CODE_R_BRACKET && streamReadContext!!.isInArray || code == CODE_COMMA) {
+            if (streamReadContext!!.isInRoot) {
+                if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
+                    --myInputPointer
+                    return valueComplete(CirJsonToken.VALUE_NULL)
+                }
+            }
+        }
+
+        return when (code.toChar()) {
+            '\'' -> if (formatReadFeatures and FEAT_MASK_ALLOW_SINGLE_QUOTES != 0) {
+                startApostropheString()
+            } else {
+                reportUnexpectedChar(code.toChar(), "expected a valid value ${validCirJsonValueList()}")
+            }
+
+            '+' -> finishNonStdToken(NON_STD_TOKEN_PLUS_INFINITY, 1)
+
+            'N' -> finishNonStdToken(NON_STD_TOKEN_NAN, 1)
+
+            'I' -> finishNonStdToken(NON_STD_TOKEN_INFINITY, 1)
+
+            else -> reportUnexpectedChar(code.toChar(), "expected a valid value ${validCirJsonValueList()}")
+        }
     }
 
     /*
