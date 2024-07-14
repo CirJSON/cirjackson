@@ -1033,48 +1033,181 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     protected open fun startFalseToken(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+
+        if (pointer + 4 < myInputEnd) {
+            if (getByteFromBuffer(pointer++) == 'a'.code.toByte() && getByteFromBuffer(pointer++) == 'l'.code.toByte()
+                    && getByteFromBuffer(pointer++) == 's'.code.toByte()
+                    && getByteFromBuffer(pointer++) == 'e'.code.toByte()) {
+                val ch = getByteFromBuffer(pointer).toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputEnd = pointer
+                    return valueComplete(CirJsonToken.VALUE_FALSE)
+                }
+            }
+        }
+
+        myMinorState = MINOR_VALUE_TOKEN_FALSE
+        return finishKeywordToken("false", 1, CirJsonToken.VALUE_FALSE)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startTrueToken(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            if (getByteFromBuffer(pointer++) == 'r'.code.toByte() && getByteFromBuffer(pointer++) == 'u'.code.toByte()
+                    && getByteFromBuffer(pointer++) == 'e'.code.toByte()) {
+                val ch = getByteFromBuffer(pointer).toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputEnd = pointer
+                    return valueComplete(CirJsonToken.VALUE_TRUE)
+                }
+            }
+        }
+
+        myMinorState = MINOR_VALUE_TOKEN_FALSE
+        return finishKeywordToken("true", 1, CirJsonToken.VALUE_TRUE)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startNullToken(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            if (getByteFromBuffer(pointer++) == 'u'.code.toByte() && getByteFromBuffer(pointer++) == 'l'.code.toByte()
+                    && getByteFromBuffer(pointer++) == 'l'.code.toByte()) {
+                val ch = getByteFromBuffer(pointer).toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputEnd = pointer
+                    return valueComplete(CirJsonToken.VALUE_NULL)
+                }
+            }
+        }
+
+        myMinorState = MINOR_VALUE_TOKEN_FALSE
+        return finishKeywordToken("true", 1, CirJsonToken.VALUE_NULL)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishKeywordToken(expectedToken: String, matched: Int, result: CirJsonToken): CirJsonToken? {
-        TODO()
+        var realMatched = matched
+        val end = expectedToken.length
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myPending32 = realMatched
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = getByteFromBuffer(myInputPointer).toInt()
+
+            if (realMatched == end) {
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    return valueComplete(result)
+                }
+
+                break
+            }
+
+            if (ch != expectedToken[realMatched].code) {
+                break
+            }
+
+            ++realMatched
+            ++myInputPointer
+        }
+
+        myMinorState = MINOR_VALUE_TOKEN_ERROR
+        myTextBuffer.resetWithCopy(expectedToken, 0, realMatched)
+        return finishErrorToken()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishKeywordTokenWithEOF(expectedToken: String, matched: Int,
             result: CirJsonToken): CirJsonToken? {
-        TODO()
+        if (matched == expectedToken.length) {
+            return result.also { myCurrentToken = it }
+        }
+
+        myTextBuffer.resetWithCopy(expectedToken, 0, matched)
+        return finishErrorTokenWithEOF()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNonStdToken(type: Int, matched: Int): CirJsonToken? {
-        TODO()
+        var realMatched = matched
+        val expectedToken = nonStdToken(type)
+        val end = expectedToken.length
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myNonStdTokenType = type
+                myPending32 = realMatched
+                myMinorState = MINOR_VALUE_TOKEN_NON_STD
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = getByteFromBuffer(myInputPointer).toInt()
+
+            if (realMatched == end) {
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    return valueNonStdNumberComplete(type)
+                }
+
+                break
+            }
+
+            if (ch != expectedToken[realMatched].code) {
+                break
+            }
+
+            ++realMatched
+            ++myInputPointer
+        }
+
+        myMinorState = MINOR_VALUE_TOKEN_ERROR
+        myTextBuffer.resetWithCopy(expectedToken, 0, realMatched)
+        return finishErrorToken()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNonStdTokenWithEOF(type: Int, matched: Int): CirJsonToken? {
-        TODO()
+        val expectedToken = nonStdToken(type)
+
+        if (matched == expectedToken.length) {
+            return valueNonStdNumberComplete(type)
+        }
+
+        myTextBuffer.resetWithCopy(expectedToken, 0, matched)
+        return finishErrorTokenWithEOF()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishErrorToken(): CirJsonToken {
-        TODO()
+        while (myInputPointer < myInputEnd) {
+            val ch = nextSignedByteFromBuffer.toInt().toChar()
+
+            if (ch.isJavaIdentifierPart()) {
+                myTextBuffer.append(ch)
+
+                if (myTextBuffer.size < myIOContext!!.errorReportConfiguration.maxErrorTokenLength) {
+                    continue
+                }
+            }
+
+            return reportErrorToken(myTextBuffer.contentsAsString())
+        }
+
+        return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishErrorTokenWithEOF(): CirJsonToken {
-        TODO()
+        return reportErrorToken(myTextBuffer.contentsAsString())
     }
 
     @Throws(CirJacksonException::class)
