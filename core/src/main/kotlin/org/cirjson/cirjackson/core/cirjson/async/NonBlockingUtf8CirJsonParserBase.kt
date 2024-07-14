@@ -385,12 +385,100 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun startIdName(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_PROPERTY_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch != CODE_QUOTE) {
+            return handleOddName(ch)
+        }
+
+        if (myInputPointer + 13 <= myInputEnd) {
+            val n = fastParseName()
+
+            if (n != null) {
+                return fieldComplete(n)
+            }
+        }
+
+        return parseEscapedName(0, 0, 0)
     }
 
     @Throws(CirJacksonException::class)
     private fun startNameAfterComma(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_PROPERTY_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        if (ch != CODE_COMMA) {
+            return when (ch) {
+                CODE_R_CURLY -> closeObjectScope()
+
+                CODE_HASH -> finishHashComment(MINOR_PROPERTY_LEADING_COMMA)
+
+                CODE_SLASH -> startSlashComment(MINOR_PROPERTY_LEADING_COMMA)
+
+                else -> reportUnexpectedChar(ch.toChar(),
+                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+            }
+        }
+
+        val pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            myMinorState = MINOR_PROPERTY_LEADING_WS
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        ch = getByteFromBuffer(pointer).toInt()
+        myInputPointer = pointer + 1
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_PROPERTY_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch != CODE_QUOTE) {
+            if (ch == CODE_R_CURLY) {
+                if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                    return closeObjectScope()
+                }
+            }
+
+            return handleOddName(ch)
+        }
+
+        if (myInputPointer + 13 <= myInputEnd) {
+            val n = fastParseName()
+
+            if (n != null) {
+                return fieldComplete(n)
+            }
+        }
+
+        return parseEscapedName(0, 0, 0)
     }
 
     /*
@@ -401,6 +489,18 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     private fun startArrayId(code: Int): CirJsonToken? {
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_VALUE_LEADING_WS
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
         TODO()
     }
 
@@ -450,7 +550,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
 
     @Throws(CirJacksonException::class)
-    private fun skipWhitespace(code: Int): CirJsonToken? {
+    private fun skipWhitespace(code: Int): Int {
         TODO()
     }
 
