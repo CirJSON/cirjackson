@@ -23,6 +23,8 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
     protected var myQuadLength = 0
 
+    protected var myQuad1 = 0
+
     protected var myPending32 = 0
 
     protected var myPendingBytes = 0

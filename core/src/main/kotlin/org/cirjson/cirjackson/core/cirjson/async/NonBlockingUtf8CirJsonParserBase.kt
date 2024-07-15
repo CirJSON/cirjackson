@@ -1934,17 +1934,163 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     private fun fastParseName(): String? {
-        TODO()
+        val codes = INPUT_CODE_LATIN1
+        var pointer = myInputPointer
+
+        val q0 = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+        return if (codes[q0] == 0) {
+            var i = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+            if (codes[i] == 0) {
+                var q = q0 shl 8 or i
+                i = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+                if (codes[i] == 0) {
+                    q = q shl 8 or i
+                    i = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        q = q shl 8 or i
+                        i = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+                        if (codes[i] == 0) {
+                            myQuad1 = q
+                            parseMediumName(pointer, i)
+                        } else if (i == CODE_QUOTE) {
+                            myInputPointer = pointer
+                            findName(q, 4)
+                        } else {
+                            null
+                        }
+                    } else if (i == CODE_QUOTE) {
+                        myInputPointer = pointer
+                        findName(q, 3)
+                    } else {
+                        null
+                    }
+                } else if (i == CODE_QUOTE) {
+                    myInputPointer = pointer
+                    findName(q, 2)
+                } else {
+                    null
+                }
+            } else if (i == CODE_QUOTE) {
+                myInputPointer = pointer
+                findName(q0, 1)
+            } else {
+                null
+            }
+        } else if (q0 == CODE_QUOTE) {
+            myInputPointer = pointer
+            ""
+        } else {
+            null
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun parseMediumName(pointer: Int, quad2: Int): String? {
-        TODO()
+        var realPointer = pointer
+        var q2 = quad2
+        val codes = INPUT_CODE_LATIN1
+
+        var i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+        return if (codes[i] == 0) {
+            q2 = q2 shl 8 or i
+            i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+            if (codes[i] == 0) {
+                q2 = q2 shl 8 or i
+                i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+                if (codes[i] == 0) {
+                    q2 = q2 shl 8 or i
+                    i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        parseMediumName(realPointer, i, q2)
+                    } else if (i == CODE_QUOTE) {
+                        myInputPointer = realPointer
+                        findName(myQuad1, q2, 4)
+                    } else {
+                        null
+                    }
+                } else if (i == CODE_QUOTE) {
+                    myInputPointer = realPointer
+                    findName(myQuad1, q2, 3)
+                } else {
+                    null
+                }
+            } else if (i == CODE_QUOTE) {
+                myInputPointer = realPointer
+                findName(myQuad1, q2, 2)
+            } else {
+                null
+            }
+        } else if (i == CODE_QUOTE) {
+            myInputPointer = realPointer
+            findName(myQuad1, q2, 1)
+        } else {
+            null
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun parseMediumName(pointer: Int, quad3: Int, q2: Int): String? {
-        TODO()
+        var realPointer = pointer
+        var q3 = quad3
+        val codes = INPUT_CODE_LATIN1
+
+        var i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                myInputPointer = realPointer
+                findName(myQuad1, q2, q3, 1)
+            } else {
+                null
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                myInputPointer = realPointer
+                findName(myQuad1, q2, q3, 2)
+            } else {
+                null
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                myInputPointer = realPointer
+                findName(myQuad1, q2, q3, 3)
+            } else {
+                null
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = getByteFromBuffer(realPointer++).toInt() and 0xFF
+
+        return if (codes[i] != 0) {
+            if (i == CODE_QUOTE) {
+                myInputPointer = realPointer
+                findName(myQuad1, q2, q3, 4)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
     }
 
     /**
