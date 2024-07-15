@@ -646,7 +646,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '0' -> startNumberLeadingZero()
 
-            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber(ch)
 
             'f' -> startFalseToken()
 
@@ -737,7 +737,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '0' -> startNumberLeadingZero()
 
-            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber(ch)
 
             'f' -> startFalseToken()
 
@@ -798,7 +798,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '0' -> startNumberLeadingZero()
 
-            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber(ch)
 
             'f' -> startFalseToken()
 
@@ -1223,82 +1223,707 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     protected open fun startFloatThatStartsWithPeriod(): CirJsonToken? {
-        TODO()
+        myNumberNegative = false
+        myIntLength = 0
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        return startFloat(outputBuffer, 0, CODE_PERIOD)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startPositiveNumber(code: Int): CirJsonToken? {
-        TODO()
+        var ch = code
+        myNumberNegative = false
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        outputBuffer[0] = ch.toChar()
+
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+            myTextBuffer.currentSegmentSize = 1
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        var outputPointer = 1
+
+        ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+
+        while (true) {
+            if (ch < CODE_0) {
+                if (ch == CODE_PERIOD) {
+                    myIntLength = outputPointer
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (ch > CODE_9) {
+                if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    myIntLength = outputPointer
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            outputBuffer[outputPointer++] = ch.toChar()
+
+            if (++myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+                myTextBuffer.currentSegmentSize = outputPointer
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+        }
+
+        myIntLength = outputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startNegativeNumber(): CirJsonToken? {
-        TODO()
+        myNumberNegative = true
+
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_MINUS
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        var ch = nextUnsignedByteFromBuffer
+
+        if (ch <= CODE_0) {
+            return if (ch == CODE_0) {
+                finishNumberLeadingNegZero()
+            } else {
+                reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
+            }
+        } else if (ch > CODE_9) {
+            return if (ch == 'I'.code) {
+                finishNonStdToken(NON_STD_TOKEN_MINUS_INFINITY, 2)
+            } else {
+                reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
+            }
+        }
+
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        outputBuffer[0] = '-'
+        outputBuffer[1] = ch.toChar()
+
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+            myTextBuffer.currentSegmentSize = 2
+            myIntLength = 1
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+        var outputPointer = 2
+
+        while (true) {
+            if (ch < CODE_0) {
+                if (ch == CODE_PERIOD) {
+                    myIntLength = outputPointer - 1
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (ch > CODE_9) {
+                if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    myIntLength = outputPointer - 1
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            outputBuffer[outputPointer++] = ch.toChar()
+
+            if (++myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+                myTextBuffer.currentSegmentSize = outputPointer
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+        }
+
+        myIntLength = outputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startPositiveNumber(): CirJsonToken? {
-        TODO()
+        myNumberNegative = false
+
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_PLUS
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        var ch = nextUnsignedByteFromBuffer
+
+        if (ch <= CODE_0) {
+            return if (ch == CODE_0) {
+                if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    finishNumberLeadingPosZero()
+                } else {
+                    reportUnexpectedNumberChar('+',
+                            "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+                }
+            } else {
+                reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
+            }
+        } else if (ch > CODE_9) {
+            return if (ch == 'I'.code) {
+                finishNonStdToken(NON_STD_TOKEN_PLUS_INFINITY, 2)
+            } else {
+                reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
+            }
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+            return reportUnexpectedNumberChar('+',
+                    "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+        }
+
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        outputBuffer[0] = '+'
+        outputBuffer[1] = ch.toChar()
+
+        if (myInputPointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+            myTextBuffer.currentSegmentSize = 2
+            myIntLength = 1
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+        var outputPointer = 2
+
+        while (true) {
+            if (ch < CODE_0) {
+                if (ch == CODE_PERIOD) {
+                    myIntLength = outputPointer - 1
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (ch > CODE_9) {
+                if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    myIntLength = outputPointer - 1
+                    ++myInputPointer
+                    return startFloat(outputBuffer, outputPointer, ch)
+                }
+
+                break
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            outputBuffer[outputPointer++] = ch.toChar()
+
+            if (++myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+                myTextBuffer.currentSegmentSize = outputPointer
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+        }
+
+        myIntLength = outputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startNumberLeadingZero(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            myMinorState = MINOR_NUMBER_ZERO
+            return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+        }
+
+        val ch = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+        if (ch !in CODE_0..CODE_9) {
+            if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                myInputPointer = pointer
+                myIntLength = 1
+                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                outputBuffer[0] = '0'
+                return startFloat(outputBuffer, 1, ch)
+            }
+
+            if (ch or 0x20 != CODE_R_CURLY) {
+                return reportUnexpectedChar(ch.toChar(),
+                        "expected digit (0-9) to follow minus sign, for valid numeric value")
+            }
+        } else {
+            return finishNumberLeadingZero()
+        }
+
+        return valueCompleteInt(0, "0")
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberPlus(code: Int): CirJsonToken? {
-        TODO()
+        return finishNumberPlusMinus(code, false)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberMinus(code: Int): CirJsonToken? {
-        TODO()
+        return finishNumberPlusMinus(code, true)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberPlusMinus(code: Int, negative: Boolean): CirJsonToken? {
-        TODO()
+        return if (code <= CODE_0) {
+            if (code == CODE_0) {
+                if (negative) {
+                    finishNumberLeadingNegZero()
+                } else if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    finishNumberLeadingPosZero()
+                } else {
+                    reportUnexpectedNumberChar('+',
+                            "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+                }
+            } else if (code == CODE_PERIOD && isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                if (negative) {
+                    myInputPointer--
+                    finishNumberLeadingNegZero()
+                } else if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    myInputPointer--
+                    finishNumberLeadingPosZero()
+                } else {
+                    reportUnexpectedNumberChar('+',
+                            "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+                }
+            } else {
+                val message = if (negative) {
+                    "expected digit (0-9) to follow minus sign, for valid numeric value"
+                } else {
+                    "expected digit (0-9) for valid numeric value"
+                }
+                reportUnexpectedNumberChar(code.toChar(), message)
+            }
+        } else if (code > CODE_9) {
+            if (code == 'I'.code) {
+                val token = if (negative) NON_STD_TOKEN_MINUS_INFINITY else NON_STD_TOKEN_PLUS_INFINITY
+                finishNonStdToken(token, 2)
+            } else {
+                val message = if (negative) {
+                    "expected digit (0-9) to follow minus sign, for valid numeric value"
+                } else {
+                    "expected digit (0-9) for valid numeric value"
+                }
+                reportUnexpectedNumberChar(code.toChar(), message)
+            }
+        } else if (!negative && !isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+            reportUnexpectedNumberChar('+',
+                    "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+        } else {
+            val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+            outputBuffer[0] = if (negative) '-' else '+'
+            outputBuffer[1] = code.toChar()
+            myIntLength = 1
+            finishNumberIntegralPart(outputBuffer, 2)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberLeadingZero(): CirJsonToken? {
-        TODO()
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_ZERO
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = nextUnsignedByteFromBuffer
+
+            if (ch !in CODE_0..CODE_9) {
+                if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    myIntLength = 1
+                    val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                    outputBuffer[0] = '0'
+                    return startFloat(outputBuffer, 1, ch)
+                }
+
+                if (ch or 0x20 != CODE_R_CURLY) {
+                    return reportUnexpectedChar(ch.toChar(),
+                            "expected digit (0-9) to follow minus sign, for valid numeric value")
+                }
+            } else {
+                if (formatReadFeatures and FEAT_MASK_LEADING_ZEROS == 0) {
+                    return reportInvalidNumber("Leading zeroes not allowed")
+                }
+
+                if (ch == CODE_0) {
+                    continue
+                }
+
+                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                outputBuffer[0] = ch.toChar()
+                myIntLength = 1
+                finishNumberIntegralPart(outputBuffer, 1)
+            }
+
+            --myInputPointer
+            return valueCompleteInt(0, "0")
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberLeadingPosZero(): CirJsonToken? {
-        TODO()
+        return finishNumberLeadingPosNegZero(false)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberLeadingNegZero(): CirJsonToken? {
-        TODO()
+        return finishNumberLeadingPosNegZero(true)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberLeadingPosNegZero(negative: Boolean): CirJsonToken? {
-        TODO()
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = if (negative) MINOR_NUMBER_MINUS_ZERO else MINOR_NUMBER_ZERO
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = nextUnsignedByteFromBuffer
+
+            if (ch !in CODE_0..CODE_9) {
+                if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                    outputBuffer[0] = if (negative) '-' else '+'
+                    outputBuffer[1] = ch.toChar()
+                    myIntLength = 1
+                    return startFloat(outputBuffer, 2, ch)
+                }
+
+                if (ch or 0x20 != CODE_R_CURLY) {
+                    return reportUnexpectedChar(ch.toChar(),
+                            "expected digit (0-9) to follow minus sign, for valid numeric value")
+                }
+            } else {
+                if (formatReadFeatures and FEAT_MASK_LEADING_ZEROS == 0) {
+                    return reportInvalidNumber("Leading zeroes not allowed")
+                }
+
+                if (ch == CODE_0) {
+                    continue
+                }
+
+                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                outputBuffer[0] = if (negative) '-' else '+'
+                outputBuffer[1] = ch.toChar()
+                myIntLength = 1
+                finishNumberIntegralPart(outputBuffer, 2)
+            }
+
+            --myInputPointer
+            return valueCompleteInt(0, "0")
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishNumberIntegralPart(outputBuffer: CharArray, outputPointer: Int): CirJsonToken? {
-        TODO()
+        var realOutputBuffer = outputBuffer
+        var realOutputPointer = outputPointer
+        val negMod = if (myNumberNegative) -1 else 0
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_INTEGER_DIGITS
+                myTextBuffer.currentSegmentSize = realOutputPointer
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+
+            if (ch !in CODE_0..CODE_9) {
+                if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+                    myIntLength = realOutputPointer + negMod
+                    ++myInputPointer
+                    return startFloat(outputBuffer, 2, ch)
+                }
+
+                break
+            }
+
+            ++myInputPointer
+
+            if (realOutputPointer >= realOutputBuffer.size) {
+                realOutputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            realOutputBuffer[realOutputPointer++] = ch.toChar()
+        }
+
+        myIntLength = realOutputPointer + negMod
+        myTextBuffer.currentSegmentSize = realOutputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startFloat(outputBuffer: CharArray, outputPointer: Int, code: Int): CirJsonToken? {
-        TODO()
+        var realOutputBuffer = outputBuffer
+        var realOutputPointer = outputPointer
+        var ch = code
+        var fractionLength = 0
+
+        if (ch == CODE_PERIOD) {
+            if (realOutputPointer >= realOutputBuffer.size) {
+                realOutputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            realOutputBuffer[realOutputPointer++] = '.'
+
+            while (true) {
+                if (myInputPointer >= myInputEnd) {
+                    myMinorState = MINOR_NUMBER_FRACTION_DIGITS
+                    myTextBuffer.currentSegmentSize = realOutputPointer
+                    myFractionLength = fractionLength
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+
+                ch = nextUnsignedByteFromBuffer
+
+                if (ch !in CODE_0..CODE_9) {
+                    ch = ch and 0xFF
+
+                    if (fractionLength == 0) {
+                        if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                            return reportUnexpectedChar(ch.toChar(), "Decimal point not followed by a digit")
+                        }
+                    }
+
+                    break
+                }
+
+                if (realOutputPointer >= realOutputBuffer.size) {
+                    realOutputBuffer = myTextBuffer.expandCurrentSegment()
+                }
+
+                realOutputBuffer[realOutputPointer++] = ch.toChar()
+                ++fractionLength
+            }
+        }
+
+        myFractionLength = fractionLength
+        var exponentLength = 0
+
+        if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+            if (realOutputPointer >= realOutputBuffer.size) {
+                realOutputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            realOutputBuffer[realOutputPointer++] = ch.toChar()
+
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_NUMBER_EXPONENT_MARKER
+                myTextBuffer.currentSegmentSize = realOutputPointer
+                myExponentLength = 0
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            ch = nextSignedByteFromBuffer.toInt()
+
+            if (ch == CODE_MINUS || ch == CODE_PLUS) {
+                if (realOutputPointer >= realOutputBuffer.size) {
+                    realOutputBuffer = myTextBuffer.expandCurrentSegment()
+                }
+
+                realOutputBuffer[realOutputPointer++] = ch.toChar()
+
+                if (myInputPointer >= myInputEnd) {
+                    myMinorState = MINOR_NUMBER_EXPONENT_DIGITS
+                    myTextBuffer.currentSegmentSize = realOutputPointer
+                    myExponentLength = 0
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+
+                ch = nextSignedByteFromBuffer.toInt()
+            }
+
+            while (ch in CODE_0..CODE_9) {
+                exponentLength++
+
+                if (realOutputPointer >= realOutputBuffer.size) {
+                    realOutputBuffer = myTextBuffer.expandCurrentSegment()
+                }
+
+                realOutputBuffer[realOutputPointer++] = ch.toChar()
+
+                if (myInputPointer >= myInputEnd) {
+                    myMinorState = MINOR_NUMBER_EXPONENT_DIGITS
+                    myTextBuffer.currentSegmentSize = realOutputPointer
+                    myExponentLength = exponentLength
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+
+                ch = nextSignedByteFromBuffer.toInt()
+            }
+
+            ch = ch and 0xFF
+
+            if (exponentLength == 0) {
+                return reportUnexpectedChar(ch.toChar(), "Exponent indicator not followed by a digit")
+            }
+        }
+
+        --myInputPointer
+        myExponentLength = exponentLength
+        myTextBuffer.currentSegmentSize = realOutputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_FLOAT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishFloatFraction(): CirJsonToken? {
-        TODO()
+        var fractionLength = myFractionLength
+        var outputBuffer = myTextBuffer.bufferWithoutReset!!
+        var outputPointer = myTextBuffer.currentSegmentSize
+
+        var ch = nextSignedByteFromBuffer.toInt()
+        var loop = true
+
+        while (loop) {
+            when {
+                ch in CODE_0..CODE_9 -> {
+                    ++fractionLength
+
+                    if (outputPointer >= outputBuffer.size) {
+                        outputBuffer = myTextBuffer.expandCurrentSegment()
+                    }
+
+                    outputBuffer[outputPointer++] = ch.toChar()
+
+                    if (myInputPointer >= myInputEnd) {
+                        myTextBuffer.currentSegmentSize = outputPointer
+                        myFractionLength = fractionLength
+                        return CirJsonToken.NOT_AVAILABLE
+                    }
+
+                    ch = nextSignedByteFromBuffer.toInt()
+                }
+
+                ch or 0x22 == 'f'.code -> {
+                    return reportUnexpectedChar(ch.toChar(),
+                            "CirJSON does not support parsing numbers that have 'F', 'f', 'G', or 'd' suffixes")
+                }
+
+                ch == CODE_PERIOD -> {
+                    return reportUnexpectedChar(ch.toChar(), "Cannot parse number with more than one decimal point")
+                }
+
+                else -> {
+                    loop = false
+                }
+            }
+        }
+
+        if (fractionLength == 0) {
+            if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                return reportUnexpectedChar(ch.toChar(), "Decimal point not followed by a digit")
+            }
+        }
+
+        myFractionLength = fractionLength
+        myTextBuffer.currentSegmentSize = outputPointer
+
+        if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
+            myTextBuffer.append(ch.toChar())
+            myExponentLength = 0
+
+            return if (myInputPointer < myInputEnd) {
+                myMinorState = MINOR_NUMBER_EXPONENT_DIGITS
+                finishFloatExponent(nextUnsignedByteFromBuffer, true)
+            } else {
+                myMinorState = MINOR_NUMBER_EXPONENT_MARKER
+                CirJsonToken.NOT_AVAILABLE
+            }
+        }
+
+        --myInputPointer
+        myExponentLength = 0
+        myTextBuffer.currentSegmentSize = outputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_FLOAT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishFloatExponent(code: Int, checkSign: Boolean): CirJsonToken? {
-        TODO()
+        var ch = code
+
+        if (checkSign) {
+            myMinorState = MINOR_NUMBER_EXPONENT_DIGITS
+
+            if (ch == CODE_MINUS || ch == CODE_PLUS) {
+                myTextBuffer.append(ch.toChar())
+
+                if (myInputPointer >= myInputEnd) {
+                    myMinorState = MINOR_NUMBER_EXPONENT_DIGITS
+                    myExponentLength = 0
+                    return CirJsonToken.NOT_AVAILABLE
+                }
+
+                ch = nextSignedByteFromBuffer.toInt()
+            }
+        }
+
+        var outputBuffer = myTextBuffer.bufferWithoutReset!!
+        var outputPointer = myTextBuffer.currentSegmentSize
+        var exponentLength = myExponentLength
+
+        while (ch in CODE_0..CODE_9) {
+            ++exponentLength
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            outputBuffer[outputPointer++] = ch.toChar()
+
+            if (myInputPointer >= myInputEnd) {
+                myTextBuffer.currentSegmentSize = outputPointer
+                myExponentLength = exponentLength
+                return CirJsonToken.NOT_AVAILABLE
+            }
+
+            ch = nextSignedByteFromBuffer.toInt()
+        }
+
+        ch = ch and 0xFF
+
+        if (exponentLength == 0) {
+            return reportUnexpectedChar(ch.toChar(), "Exponent indicator not followed by a digit")
+        }
+
+        --myInputPointer
+        myExponentLength = exponentLength
+        myTextBuffer.currentSegmentSize = outputPointer
+        return valueComplete(CirJsonToken.VALUE_NUMBER_FLOAT)
     }
 
     /*

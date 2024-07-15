@@ -610,6 +610,24 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *******************************************************************************************************************
      */
 
+    /**
+     * Method called to throw an exception for input token that looks like a number based on first character(s), but is
+     * not valid according to rules of format. In case of CirJSON this also includes invalid forms like positive sign
+     * and leading zeroes.
+     *
+     * @param T Nominal type parameter for bogus return value
+     *
+     * @param message Base exception message to use
+     *
+     * @return Nothing: never returns; declared so caller can use fake return to keep compiler happy
+     *
+     * @throws StreamReadException Exception that describes problem with number validity
+     */
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidNumber(message: String): T {
+        return reportError("Invalid numeric value: $message")
+    }
+
     @Throws(InputCoercionException::class)
     protected fun reportOverflowByte(numDesc: String, inputType: CirJsonToken) {
         throw constructInputCoercion(
