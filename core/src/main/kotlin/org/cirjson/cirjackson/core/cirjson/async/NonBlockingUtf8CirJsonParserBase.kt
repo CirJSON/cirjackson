@@ -2100,7 +2100,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      * and hence is offlined to a separate method.
      */
     @Throws(CirJacksonException::class)
-    private fun parseEscapedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
+    private fun parseEscapedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken {
         var realQuadLength = quadLength
         var realCurrentQuad = currentQuad
         var realCurrentQuadBytes = currentQuadBytes
@@ -2258,7 +2258,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      * surrounding them. Unlike other
      */
     @Throws(CirJacksonException::class)
-    private fun finishUnquotedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
+    private fun finishUnquotedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken {
         var realQuadLength = quadLength
         var realCurrentQuad = currentQuad
         var realCurrentQuadBytes = currentQuadBytes
@@ -2311,7 +2311,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    private fun finishApostropheName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
+    private fun finishApostropheName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken {
         var realQuadLength = quadLength
         var realCurrentQuad = currentQuad
         var realCurrentQuadBytes = currentQuadBytes
@@ -2406,7 +2406,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     }
 
     @Throws(CirJacksonException::class)
-    private fun finishPropertyWithEscape(): CirJsonToken? {
+    private fun finishPropertyWithEscape(): CirJsonToken {
         var ch = decodeSplitEscaped(myQuoted32, myQuotedDigits)
 
         if (ch < 0) {
@@ -2478,11 +2478,11 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
         if (realBytesRead == -1) {
             when (c) {
-                'b'.code -> '\b'.code
-                't'.code -> '\t'.code
-                'n'.code -> '\n'.code
-                'r'.code -> '\r'.code
-                'f'.code -> '\u000c'.code
+                'b'.code -> return '\b'.code
+                't'.code -> return '\t'.code
+                'n'.code -> return '\n'.code
+                'r'.code -> return '\r'.code
+                'f'.code -> return '\u000c'.code
                 '"'.code, '/'.code, '\\'.code -> return c
                 'u'.code -> {}
                 else -> return handleUnrecognizedCharacterEscape(c.toChar()).code
@@ -2563,7 +2563,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     private fun finishRegularString(): CirJsonToken? {
         val codes = INPUT_CODE_UTF8
 
-        var c = -1
+        var c: Int
 
         var pointer = myInputPointer
         var outputPointer = myTextBuffer.currentSegmentSize
@@ -2697,7 +2697,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     private fun finishApostropheString(): CirJsonToken? {
         val codes = INPUT_CODE_UTF8
 
-        var c = -1
+        var c: Int
 
         var pointer = myInputPointer
         var outputPointer = myTextBuffer.currentSegmentSize
@@ -2954,27 +2954,103 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     private fun decodeCharEscape(): Int {
-        TODO()
+        val left = myInputEnd - myInputPointer
+
+        return if (left < 5) {
+            decodeSplitEscaped(0, -1)
+        } else {
+            decodeFastCharEscape()
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeFastCharEscape(): Int {
-        TODO()
+        when (val c = nextSignedByteFromBuffer.toInt()) {
+            'b'.code -> return '\b'.code
+            't'.code -> return '\t'.code
+            'n'.code -> return '\n'.code
+            'r'.code -> return '\r'.code
+            'f'.code -> return '\u000c'.code
+            '"'.code, '/'.code, '\\'.code -> return c
+            'u'.code -> {}
+            else -> return handleUnrecognizedCharacterEscape(c.toChar()).code
+        }
+
+        var ch = nextSignedByteFromBuffer.toInt()
+        var digit = CharTypes.charToHex(ch.toChar())
+        var result = digit
+
+        if (digit >= 0) {
+            ch = nextSignedByteFromBuffer.toInt()
+            digit = CharTypes.charToHex(ch.toChar())
+
+            if (digit >= 0) {
+                result = result shl 4 or digit
+                ch = nextSignedByteFromBuffer.toInt()
+                digit = CharTypes.charToHex(ch.toChar())
+
+                if (digit >= 0) {
+                    result = result shl 4 or digit
+                    ch = nextSignedByteFromBuffer.toInt()
+                    digit = CharTypes.charToHex(ch.toChar())
+
+                    if (digit >= 0) {
+                        return result shl 4 or digit
+                    }
+                }
+            }
+        }
+
+        return reportUnexpectedChar((ch and 0xFF).toChar(), "expected a hex-digit for character escape sequence")
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeUTF8V2(c: Int, d: Int): Int {
-        TODO()
+        return if (d and 0xC0 != 0x080) {
+            reportInvalidOther(d and 0xFF, myInputPointer)
+        } else {
+            c and 0x1F shl 6 or (d and 0x3F)
+        }
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun decodeUTF8V3(c: Int, d: Int, e: Int): Int {
-        TODO()
+        var c = c and 0x0F
+
+        return if (d and 0xC0 != 0x080) {
+            reportInvalidOther(d and 0xFF, myInputPointer)
+        } else {
+            c = c shl 6 or (d and 0x3F)
+
+            if (e and 0xC0 != 0x080) {
+                reportInvalidOther(e and 0xFF, myInputPointer)
+            } else {
+                c shl 6 or (e and 0x3F)
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun decodeUTF8V4(c: Int, d: Int, e: Int, f: Int): Int {
-        TODO()
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        var c = c and 0x07 shl 6 or (d and 0x3F)
+
+        if (e and 0xC0 != 0x080) {
+            return reportInvalidOther(e and 0xFF, myInputPointer)
+        }
+
+        c = c shl 6 or (e and 0x3F)
+
+        if (f and 0xC0 != 0x080) {
+            return reportInvalidOther(f and 0xFF, myInputPointer)
+        }
+
+        return (c shl 6 or (f and 0x3F)) - 0x10000
     }
 
     companion object {
