@@ -2100,7 +2100,114 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun parseEscapedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
-        TODO()
+        var realQuadLength = quadLength
+        var realCurrentQuad = currentQuad
+        var realCurrentQuadBytes = currentQuadBytes
+        var quads = myQuadBuffer
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myQuadLength = realQuadLength
+                myPending32 = realCurrentQuad
+                myPendingBytes = realCurrentQuadBytes
+                myMinorState = MINOR_PROPERTY_NAME
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            var ch = nextUnsignedByteFromBuffer
+
+            if (INPUT_CODE_LATIN1[ch] == 0) {
+                if (realCurrentQuadBytes < 4) {
+                    ++realCurrentQuadBytes
+                    realCurrentQuad = realCurrentQuad shl 8 or ch
+                } else {
+                    if (realQuadLength >= quads.size) {
+                        quads = growNameDecodeBuffer(quads, quads.size)
+                        myQuadBuffer = quads
+                    }
+
+                    quads[realQuadLength++] = realCurrentQuad
+                    realCurrentQuadBytes = 1
+                }
+
+                continue
+            }
+
+            if (ch == CODE_QUOTE) {
+                break
+            }
+
+            if (ch != CODE_BACKSLASH) {
+                throwUnquotedSpace(ch, "name")
+            } else {
+                ch = decodeCharEscape()
+
+                if (ch < 0) {
+                    myMinorState = MINOR_PROPERTY_NAME_ESCAPE
+                    myMinorStateAfterSplit = MINOR_PROPERTY_NAME
+                    myQuadLength = realQuadLength
+                    myPending32 = realCurrentQuad
+                    myPendingBytes = realCurrentQuadBytes
+                    myMinorState = MINOR_PROPERTY_NAME
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+            }
+
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            if (ch > 127) {
+                if (realCurrentQuadBytes >= 4) {
+                    quads[realQuadLength++] = realCurrentQuad
+                    realCurrentQuad = 0
+                    realCurrentQuadBytes = 0
+                }
+
+                realCurrentQuad = if (ch < 0x800) {
+                    realCurrentQuad shl 8 or (0xC0 or (ch shr 6))
+                } else {
+                    realCurrentQuad = realCurrentQuad shl 8 or (0xE0 or (ch shr 12))
+                    ++realCurrentQuadBytes
+
+                    if (realCurrentQuadBytes >= 4) {
+                        quads[realQuadLength++] = realCurrentQuad
+                        realCurrentQuad = 0
+                        realCurrentQuadBytes = 0
+                    }
+
+                    realCurrentQuad shl 8 or (0x80 or (ch shr 6 and 0x3F))
+                }
+
+                ++realCurrentQuadBytes
+                ch = 0x80 or (ch and 0x3F)
+            }
+
+            if (realCurrentQuadBytes < 4) {
+                ++realCurrentQuadBytes
+                realCurrentQuad = realCurrentQuad shl 8 or ch
+                continue
+            }
+
+            quads[realQuadLength++] = realCurrentQuad
+            realCurrentQuad = ch
+            realCurrentQuadBytes = 1
+        }
+
+        if (currentQuadBytes > 0) {
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[realQuadLength++] = padLastQuad(realCurrentQuad, realCurrentQuadBytes)
+        } else if (realQuadLength == 0) {
+            return fieldComplete("")
+        }
+
+        val name = mySymbols.findName(quads, realQuadLength) ?: addName(quads, realQuadLength, realCurrentQuadBytes)
+        return fieldComplete(name)
     }
 
     /**
@@ -2109,7 +2216,40 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun handleOddName(code: Int): CirJsonToken? {
-        TODO()
+        when (code) {
+            '#'.code -> {
+                if (formatReadFeatures and FEAT_MASK_ALLOW_YAML_COMMENTS != 0) {
+                    return finishHashComment(MINOR_PROPERTY_LEADING_WS)
+                }
+            }
+
+            '/'.code -> {
+                return startSlashComment(MINOR_PROPERTY_LEADING_WS)
+            }
+
+            '\''.code -> {
+                if (formatReadFeatures and FEAT_MASK_ALLOW_SINGLE_QUOTES != 0) {
+                    return finishApostropheName(0, 0, 0)
+                }
+            }
+
+            CODE_R_BRACKET -> {
+                return closeArrayScope()
+            }
+        }
+
+        if (formatReadFeatures and FEAT_MASK_ALLOW_UNQUOTED_NAMES != 0) {
+            return reportUnexpectedChar(code.toChar(), "was expecting double-quote to start field name")
+        }
+
+        val codes = CharTypes.inputCodeUtf8JsNames
+
+        if (codes[code] != 0) {
+            return reportUnexpectedChar(code.toChar(),
+                    "was expecting either valid name character (for unquoted name) or double-quote (for quoted) to start field name")
+        }
+
+        return finishUnquotedName(0, code, 1)
     }
 
     /**
@@ -2118,22 +2258,268 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
      */
     @Throws(CirJacksonException::class)
     private fun finishUnquotedName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
-        TODO()
+        var realQuadLength = quadLength
+        var realCurrentQuad = currentQuad
+        var realCurrentQuadBytes = currentQuadBytes
+        var quads = myQuadBuffer
+        val codes = CharTypes.inputCodeUtf8JsNames
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myQuadLength = realQuadLength
+                myPending32 = realCurrentQuad
+                myPendingBytes = realCurrentQuadBytes
+                myMinorState = MINOR_PROPERTY_UNQUOTED_NAME
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            val ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
+
+            if (codes[ch] != 0) {
+                break
+            }
+
+            ++myInputPointer
+
+            if (realCurrentQuadBytes < 4) {
+                ++realCurrentQuadBytes
+                realCurrentQuad = realCurrentQuad shl 8 or ch
+            } else {
+                if (realQuadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[realQuadLength++] = realCurrentQuad
+                realCurrentQuad = ch
+                realCurrentQuadBytes = 1
+            }
+        }
+
+        if (currentQuadBytes > 0) {
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[realQuadLength++] = realCurrentQuad
+        }
+
+        val name = mySymbols.findName(quads, realQuadLength) ?: addName(quads, realQuadLength, realCurrentQuadBytes)
+        return fieldComplete(name)
     }
 
     @Throws(CirJacksonException::class)
     private fun finishApostropheName(quadLength: Int, currentQuad: Int, currentQuadBytes: Int): CirJsonToken? {
-        TODO()
+        var realQuadLength = quadLength
+        var realCurrentQuad = currentQuad
+        var realCurrentQuadBytes = currentQuadBytes
+        var quads = myQuadBuffer
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                myQuadLength = realQuadLength
+                myPending32 = realCurrentQuad
+                myPendingBytes = realCurrentQuadBytes
+                myMinorState = MINOR_PROPERTY_NAME
+                return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+            }
+
+            var ch = nextUnsignedByteFromBuffer
+
+            if (ch == CODE_APOSTROPHE) {
+                break
+            }
+
+            if (ch != CODE_QUOTE && INPUT_CODE_LATIN1[ch] != 0) {
+                throwUnquotedSpace(ch, "name")
+            } else {
+                ch = decodeCharEscape()
+
+                if (ch < 0) {
+                    myMinorState = MINOR_PROPERTY_NAME_ESCAPE
+                    myMinorStateAfterSplit = MINOR_PROPERTY_NAME
+                    myQuadLength = realQuadLength
+                    myPending32 = realCurrentQuad
+                    myPendingBytes = realCurrentQuadBytes
+                    myMinorState = MINOR_PROPERTY_NAME
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+            }
+
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            if (ch > 127) {
+                if (realCurrentQuadBytes >= 4) {
+                    quads[realQuadLength++] = realCurrentQuad
+                    realCurrentQuad = 0
+                    realCurrentQuadBytes = 0
+                }
+
+                realCurrentQuad = if (ch < 0x800) {
+                    realCurrentQuad shl 8 or (0xC0 or (ch shr 6))
+                } else {
+                    realCurrentQuad = realCurrentQuad shl 8 or (0xE0 or (ch shr 12))
+                    ++realCurrentQuadBytes
+
+                    if (realCurrentQuadBytes >= 4) {
+                        quads[realQuadLength++] = realCurrentQuad
+                        realCurrentQuad = 0
+                        realCurrentQuadBytes = 0
+                    }
+
+                    realCurrentQuad shl 8 or (0x80 or (ch shr 6 and 0x3F))
+                }
+
+                ++realCurrentQuadBytes
+                ch = 0x80 or (ch and 0x3F)
+            }
+
+            if (realCurrentQuadBytes < 4) {
+                ++realCurrentQuadBytes
+                realCurrentQuad = realCurrentQuad shl 8 or ch
+                continue
+            }
+
+            quads[realQuadLength++] = realCurrentQuad
+            realCurrentQuad = ch
+            realCurrentQuadBytes = 1
+        }
+
+        if (currentQuadBytes > 0) {
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[realQuadLength++] = padLastQuad(realCurrentQuad, realCurrentQuadBytes)
+        } else if (realQuadLength == 0) {
+            return fieldComplete("")
+        }
+
+        val name = mySymbols.findName(quads, realQuadLength) ?: addName(quads, realQuadLength, realCurrentQuadBytes)
+        return fieldComplete(name)
     }
 
     @Throws(CirJacksonException::class)
     private fun finishPropertyWithEscape(): CirJsonToken? {
-        TODO()
+        var ch = decodeSplitEscaped(myQuoted32, myQuotedDigits)
+
+        if (ch < 0) {
+            myMinorState = MINOR_PROPERTY_NAME_ESCAPE
+            return CirJsonToken.NOT_AVAILABLE
+        }
+
+        if (myQuadLength >= myQuadBuffer.size) {
+            myQuadBuffer = growNameDecodeBuffer(myQuadBuffer, 32)
+        }
+
+        var currentQuad = myPending32
+        var currentQuadBytes = myPendingBytes
+
+        if (ch > 127) {
+            if (currentQuadBytes >= 4) {
+                myQuadBuffer[myQuadLength++] = currentQuad
+                currentQuad = 0
+                currentQuadBytes = 0
+            }
+
+            currentQuad = if (ch < 0x800) {
+                currentQuad shl 8 or (0xC0 or (ch shr 6))
+            } else {
+                currentQuad = currentQuad shl 8 or (0xE0 or (ch shr 12))
+                ++currentQuadBytes
+
+                if (currentQuadBytes >= 4) {
+                    myQuadBuffer[myQuadLength++] = currentQuad
+                    currentQuad = 0
+                    currentQuadBytes = 0
+                }
+
+                currentQuad shl 8 or (0x80 or (ch shr 6 and 0x3F))
+            }
+
+            ++currentQuadBytes
+            ch = 0x80 or (ch and 0x3F)
+        }
+
+        if (currentQuadBytes < 4) {
+            ++currentQuadBytes
+            currentQuad = currentQuad shl 8 or ch
+        } else {
+            myQuadBuffer[myQuadLength++] = currentQuad
+            currentQuad = ch
+            currentQuadBytes = 1
+        }
+
+        return if (myMinorStateAfterSplit == MINOR_PROPERTY_APOS_NAME) {
+            finishApostropheName(myQuadLength, currentQuad, currentQuadBytes)
+        } else {
+            parseEscapedName(myQuadLength, currentQuad, currentQuadBytes)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeSplitEscaped(value: Int, bytesRead: Int): Int {
-        TODO()
+        var realValue = value
+        var realBytesRead = bytesRead
+
+        if (myInputPointer >= myInputEnd) {
+            myQuoted32 = realValue
+            myQuotedDigits = realBytesRead
+            return -1
+        }
+
+        var c = nextSignedByteFromBuffer.toInt()
+
+        if (realBytesRead == -1) {
+            when (c) {
+                'b'.code -> '\b'.code
+                't'.code -> '\t'.code
+                'n'.code -> '\n'.code
+                'r'.code -> '\r'.code
+                'f'.code -> '\u000c'.code
+                '"'.code, '/'.code, '\\'.code -> return c
+                'u'.code -> {}
+                else -> return handleUnrecognizedCharacterEscape(c.toChar()).code
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                myQuoted32 = 0
+                myQuotedDigits = 0
+                return -1
+            }
+
+            c = nextSignedByteFromBuffer.toInt()
+            realBytesRead = 0
+        }
+
+        c = c and 0xFF
+
+        while (true) {
+            val digit = CharTypes.charToHex(c.toChar())
+
+            if (digit < 0) {
+                return reportUnexpectedChar((c and 0xFF).toChar(), "expected a hex-digit for character escape sequence")
+            }
+
+            realValue = realValue shl 4 or digit
+
+            if (++realBytesRead == 4) {
+                return realValue
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                myQuoted32 = realValue
+                myQuotedDigits = realBytesRead
+                return -1
+            }
+
+            c = nextSignedByteFromBuffer.toInt()
+        }
     }
 
     /*
