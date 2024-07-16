@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
 import org.cirjson.cirjackson.core.util.Other
+import kotlin.math.min
 
 abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext: IOContext,
         streamReadFeatures: Int, formatReadFeatures: Int, symbols: ByteQuadsCanonicalizer) :
@@ -2530,37 +2531,419 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     protected open fun startString(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+        var outputPointer = 0
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        val max = min(myInputEnd, pointer + outputBuffer.size)
+
+        while (pointer < max) {
+            val c = getByteFromBuffer(pointer).toInt() and 0xFF
+
+            if (INPUT_CODE_UTF8[c] != 0) {
+                if (c == CODE_QUOTE) {
+                    myInputPointer = pointer + 1
+                    myTextBuffer.currentSegmentSize = outputPointer
+                    return valueComplete(CirJsonToken.VALUE_STRING)
+                }
+
+                break
+            }
+
+            ++pointer
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myInputPointer = pointer + 1
+        myTextBuffer.currentSegmentSize = outputPointer
+        return finishRegularString()
     }
 
     @Throws(CirJacksonException::class)
     private fun finishRegularString(): CirJsonToken? {
-        TODO()
+        val codes = INPUT_CODE_UTF8
+
+        var c = -1
+
+        var pointer = myInputPointer
+        var outputPointer = myTextBuffer.currentSegmentSize
+        var outputBuffer = myTextBuffer.bufferWithoutReset!!
+        val safeEnd = myInputEnd - 5
+
+        while (true) {
+            asciiLoop@ while (true) {
+                if (pointer >= myInputEnd) {
+                    myInputPointer = pointer
+                    myMinorState = MINOR_VALUE_STRING
+                    myTextBuffer.currentSegmentSize = outputPointer
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                val max = min(myInputEnd, pointer + outputBuffer.size - outputPointer)
+
+                while (pointer < max) {
+                    c = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+                    if (codes[c] != 0) {
+                        break@asciiLoop
+                    }
+
+                    outputBuffer[outputPointer++] = c.toChar()
+                }
+            }
+
+            if (c == CODE_QUOTE) {
+                myInputPointer = pointer
+                myTextBuffer.currentSegmentSize = outputPointer
+                return valueComplete(CirJsonToken.VALUE_STRING)
+            }
+
+            if (pointer >= safeEnd) {
+                myInputPointer = pointer
+                myTextBuffer.currentSegmentSize = outputPointer
+
+                if (!decodeSplitMultiByte(c, codes[c], pointer < myInputEnd)) {
+                    myMinorStateAfterSplit = MINOR_VALUE_STRING
+                }
+
+                outputBuffer = myTextBuffer.bufferWithoutReset!!
+                outputPointer = myTextBuffer.currentSegmentSize
+                pointer = myInputPointer
+                continue
+            }
+
+            when (codes[c]) {
+                1 -> {
+                    myInputPointer = pointer
+                    c = decodeFastCharEscape()
+                    pointer = myInputPointer
+                }
+
+                2 -> {
+                    c = decodeUTF8V2(c, getByteFromBuffer(pointer++).toInt())
+                }
+
+                3 -> {
+                    c = decodeUTF8V3(c, getByteFromBuffer(pointer++).toInt(), getByteFromBuffer(pointer++).toInt())
+                }
+
+                4 -> {
+                    c = decodeUTF8V4(c, getByteFromBuffer(pointer++).toInt(), getByteFromBuffer(pointer++).toInt(),
+                            getByteFromBuffer(pointer++).toInt())
+                    outputBuffer[outputPointer++] = (c shr 10 or 0xD800).toChar()
+
+                    if (outputPointer >= outputBuffer.size) {
+                        outputBuffer = myTextBuffer.finishCurrentSegment()
+                        outputPointer = 0
+                    }
+
+                    c = c and 0x3FF or 0xDC00
+                }
+
+                else -> {
+                    if (c < CODE_SPACE) {
+                        throwUnquotedSpace(c, "string value")
+                    } else {
+                        return reportInvalidChar(c)
+                    }
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startApostropheString(): CirJsonToken? {
-        TODO()
+        var pointer = myInputPointer
+        var outputPointer = 0
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        val max = min(myInputEnd, pointer + outputBuffer.size)
+
+        while (pointer < max) {
+            val c = getByteFromBuffer(pointer).toInt() and 0xFF
+
+            if (c == CODE_APOSTROPHE) {
+                myInputPointer = pointer + 1
+                myTextBuffer.currentSegmentSize = outputPointer
+                return valueComplete(CirJsonToken.VALUE_STRING)
+            }
+
+            if (INPUT_CODE_UTF8[c] != 0) {
+                break
+            }
+
+            ++pointer
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myInputPointer = pointer + 1
+        myTextBuffer.currentSegmentSize = outputPointer
+        return finishApostropheString()
     }
 
     @Throws(CirJacksonException::class)
     private fun finishApostropheString(): CirJsonToken? {
-        TODO()
+        val codes = INPUT_CODE_UTF8
+
+        var c = -1
+
+        var pointer = myInputPointer
+        var outputPointer = myTextBuffer.currentSegmentSize
+        var outputBuffer = myTextBuffer.bufferWithoutReset!!
+        val safeEnd = myInputEnd - 5
+
+        while (true) {
+            asciiLoop@ while (true) {
+                if (pointer >= myInputEnd) {
+                    myInputPointer = pointer
+                    myMinorState = MINOR_VALUE_APOS_STRING
+                    myTextBuffer.currentSegmentSize = outputPointer
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                }
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                val max = min(myInputEnd, pointer + outputBuffer.size - outputPointer)
+
+                while (pointer < max) {
+                    c = getByteFromBuffer(pointer++).toInt() and 0xFF
+
+                    if (codes[c] != 0 && c != CODE_APOSTROPHE) {
+                        break@asciiLoop
+                    }
+
+                    if (c == CODE_APOSTROPHE) {
+                        myInputPointer = pointer
+                        myTextBuffer.currentSegmentSize = outputPointer
+                        return valueComplete(CirJsonToken.VALUE_STRING)
+                    }
+
+                    outputBuffer[outputPointer++] = c.toChar()
+                }
+            }
+
+            if (pointer >= safeEnd) {
+                myInputPointer = pointer
+                myTextBuffer.currentSegmentSize = outputPointer
+
+                if (!decodeSplitMultiByte(c, codes[c], pointer < myInputEnd)) {
+                    myMinorStateAfterSplit = MINOR_VALUE_APOS_STRING
+                }
+
+                outputBuffer = myTextBuffer.bufferWithoutReset!!
+                outputPointer = myTextBuffer.currentSegmentSize
+                pointer = myInputPointer
+                continue
+            }
+
+            when (codes[c]) {
+                1 -> {
+                    myInputPointer = pointer
+                    c = decodeFastCharEscape()
+                    pointer = myInputPointer
+                }
+
+                2 -> {
+                    c = decodeUTF8V2(c, getByteFromBuffer(pointer++).toInt())
+                }
+
+                3 -> {
+                    c = decodeUTF8V3(c, getByteFromBuffer(pointer++).toInt(), getByteFromBuffer(pointer++).toInt())
+                }
+
+                4 -> {
+                    c = decodeUTF8V4(c, getByteFromBuffer(pointer++).toInt(), getByteFromBuffer(pointer++).toInt(),
+                            getByteFromBuffer(pointer++).toInt())
+                    outputBuffer[outputPointer++] = (c shr 10 or 0xD800).toChar()
+
+                    if (outputPointer >= outputBuffer.size) {
+                        outputBuffer = myTextBuffer.finishCurrentSegment()
+                        outputPointer = 0
+                    }
+
+                    c = c and 0x3FF or 0xDC00
+                }
+
+                else -> {
+                    if (c < CODE_SPACE) {
+                        throwUnquotedSpace(c, "string value")
+                    } else {
+                        return reportInvalidChar(c)
+                    }
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeSplitMultiByte(code: Int, type: Int, gotNext: Boolean): Boolean {
-        TODO()
+        var c = code
+
+        return when (type) {
+            1 -> {
+                c = decodeSplitEscaped(0, -1)
+
+                if (c < 0) {
+                    myMinorState = MINOR_VALUE_STRING_ESCAPE
+                    false
+                } else {
+                    myTextBuffer.append(c.toChar())
+                    true
+                }
+            }
+
+            2 -> {
+                if (gotNext) {
+                    c = decodeUTF8V2(c, nextSignedByteFromBuffer.toInt())
+                    myTextBuffer.append(c.toChar())
+                    true
+                } else {
+                    myMinorState = MINOR_VALUE_STRING_UTF8_2
+                    myPending32 = c
+                    false
+                }
+            }
+
+            3 -> {
+                c = c and 0x0F
+
+                if (gotNext) {
+                    decodeSplitUTF8V3(c, 1, nextSignedByteFromBuffer.toInt())
+                } else {
+                    myMinorState = MINOR_VALUE_STRING_UTF8_3
+                    myPending32 = c
+                    myPendingBytes = 1
+                    false
+                }
+            }
+
+            4 -> {
+                c = c and 0x07
+
+                if (gotNext) {
+                    decodeSplitUTF8V4(c, 1, nextSignedByteFromBuffer.toInt())
+                } else {
+                    myMinorState = MINOR_VALUE_STRING_UTF8_4
+                    myPending32 = c
+                    myPendingBytes = 1
+                    false
+                }
+            }
+
+            else -> {
+                if (c < CODE_SPACE) {
+                    throwUnquotedSpace(c, "string value")
+                    myTextBuffer.append(c.toChar())
+                    true
+                } else {
+                    reportInvalidChar(c)
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeSplitUTF8V3(previous: Int, previousCount: Int, next: Int): Boolean {
-        TODO()
+        var realPrevious = previous
+        var realNext = next
+
+        if (previousCount == 1) {
+            if (realNext and 0xC0 != 0x080) {
+                return reportInvalidOther(realNext and 0xFF, myInputPointer)
+            }
+
+            realPrevious = realPrevious shl 6 or (realNext and 0x3F)
+
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_VALUE_STRING_UTF8_3
+                myPending32 = realPrevious
+                myPendingBytes = 2
+                return false
+            }
+
+            realNext = nextSignedByteFromBuffer.toInt()
+        }
+
+        if (realNext and 0xC0 != 0x080) {
+            return reportInvalidOther(realNext and 0xFF, myInputPointer)
+        }
+
+        myTextBuffer.append((realPrevious shl 6 or (realNext and 0x3F)).toChar())
+        return true
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeSplitUTF8V4(previous: Int, previousCount: Int, next: Int): Boolean {
-        TODO()
+        var realPrevious = previous
+        var realPreviousCount = previousCount
+        var realNext = next
+
+        if (realPreviousCount == 1) {
+            if (realNext and 0xC0 != 0x080) {
+                return reportInvalidOther(realNext and 0xFF, myInputPointer)
+            }
+
+            realPrevious = realPrevious shl 6 or (realNext and 0x3F)
+
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_VALUE_STRING_UTF8_3
+                myPending32 = realPrevious
+                myPendingBytes = 2
+                return false
+            }
+
+            realPreviousCount = 2
+            realNext = nextSignedByteFromBuffer.toInt()
+        }
+
+        if (realPreviousCount == 2) {
+            if (realNext and 0xC0 != 0x080) {
+                return reportInvalidOther(realNext and 0xFF, myInputPointer)
+            }
+
+            realPrevious = realPrevious shl 6 or (realNext and 0x3F)
+
+            if (myInputPointer >= myInputEnd) {
+                myMinorState = MINOR_VALUE_STRING_UTF8_3
+                myPending32 = realPrevious
+                myPendingBytes = 2
+                return false
+            }
+
+            realNext = nextSignedByteFromBuffer.toInt()
+        }
+
+        if (realNext and 0xC0 != 0x080) {
+            return reportInvalidOther(realNext and 0xFF, myInputPointer)
+        }
+
+        var c = (realPrevious shl 6 or (realNext and 0x3F)) - 0x10000
+        myTextBuffer.append((c shr 10 or 0xD800).toChar())
+        c = c and 0x3FF or 0xDC00
+        myTextBuffer.append(c.toChar())
+        return true
     }
 
     /*
