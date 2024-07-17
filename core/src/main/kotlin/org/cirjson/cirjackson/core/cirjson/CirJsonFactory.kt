@@ -2,8 +2,11 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.async.ByteArrayFeeder
+import org.cirjson.cirjackson.core.async.ByteBufferFeeder
 import org.cirjson.cirjackson.core.base.TextualTSFactory
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteArrayJsonParser
 import org.cirjson.cirjackson.core.io.CharacterEscapes
+import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
 import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
@@ -199,9 +202,29 @@ open class CirJsonFactory : TextualTSFactory {
      *******************************************************************************************************************
      */
 
+    @Suppress("UNCHECKED_CAST")
     override fun <P> createNonBlockingByteArrayParser(
             readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteArrayFeeder {
-        TODO()
+        val ioContext = createNonBlockingContext(null)
+        val canonicalizer = myByteSymbolCanonicalizer.makeChildOrPlaceholder(factoryFeatures)
+        return NonBlockingByteArrayJsonParser(readContext, ioContext,
+                readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), canonicalizer) as P
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <P> createNonBlockingByteBufferParser(
+            readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteBufferFeeder {
+        val ioContext = createNonBlockingContext(null)
+        val canonicalizer = myByteSymbolCanonicalizer.makeChildOrPlaceholder(factoryFeatures)
+        return NonBlockingByteArrayJsonParser(readContext, ioContext,
+                readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), canonicalizer) as P
+    }
+
+    protected fun createNonBlockingContext(srcRef: Any?): IOContext {
+        return IOContext(streamReadConstraints, streamWriteConstraints, errorReportConfiguration, bufferRecycler,
+                ContentReference.rawReference(srcRef), false, CirJsonEncoding.UTF8)
     }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,

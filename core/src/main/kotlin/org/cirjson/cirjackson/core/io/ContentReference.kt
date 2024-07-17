@@ -231,6 +231,37 @@ open class ContentReference protected constructor(val isContentTextual: Boolean,
             return ContentReference(isContentTextual, rawContent, errorReportConfiguration)
         }
 
+        /**
+         * Factory method for legacy code to use for constructing instances to content about which only minimal amount
+         * of information is available. Assumed not to contain textual content (no snippet displayed).
+         *
+         * @param isContentTextual Is raw content assumed to have textual content (`true`) or binary (`false`)
+         *
+         * @param rawContent Underlying raw content access
+         *
+         * @return Instance with minimal information about content (basically just raw content reference without offsets
+         */
+        fun rawReference(isContentTextual: Boolean, rawContent: Any?): ContentReference {
+            return if (rawContent is ContentReference) {
+                rawContent
+            } else {
+                ContentReference(isContentTextual, rawContent, ErrorReportConfiguration.defaults())
+            }
+        }
+
+        /**
+         * Factory method for legacy code to use for constructing instances to content about which only minimal amount
+         * of information is available. Assumed not to contain textual content (no snippet displayed). Raw content is
+         * assumed to have textual content.
+         *
+         * @param rawContent Underlying raw content access
+         *
+         * @return Instance with minimal information about content (basically just raw content reference without offsets
+         */
+        fun rawReference(rawContent: Any?): ContentReference {
+            return rawReference(false, rawContent)
+        }
+
     }
 
 }
