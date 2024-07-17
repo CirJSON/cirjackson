@@ -1,14 +1,15 @@
 package org.cirjson.cirjackson.core.cirjson
 
-import org.cirjson.cirjackson.core.CirJacksonException
-import org.cirjson.cirjackson.core.CirJsonEncoding
+import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.io.MergedStream
+import org.cirjson.cirjackson.core.io.UTF32Reader
+import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
+import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
 import org.cirjson.cirjackson.core.util.Other
-import java.io.DataInput
-import java.io.IOException
-import java.io.InputStream
-import java.io.Reader
+import java.io.*
+import java.nio.charset.Charset
 
 /**
  * This class is used to determine the encoding of byte stream that is to contain CirJSON content. Rules are fairly
@@ -121,7 +122,70 @@ class ByteSourceCirJsonBootstrapper {
     fun constructReader(): Reader {
         val encoding = myContext.encoding!!
 
-        TODO()
+        return when (encoding.bits) {
+            8, 16 -> {
+                var input = myInput
+
+                if (input == null) {
+                    val length = myInputEnd - myInputPointer
+
+                    if (length <= STRING_READER_BYTE_ARRAY_LENGTH_LIMIT) {
+                        return try {
+                            StringReader(
+                                    String(myInputBuffer, myInputPointer, length, Charset.forName(encoding.javaName)))
+                        } catch (e: IOException) {
+                            throw wrapIOFailure(e)
+                        }
+                    }
+
+                    input = ByteArrayInputStream(myInputBuffer, myInputPointer, myInputEnd)
+                } else {
+                    if (myInputPointer < myInputEnd) {
+                        input = MergedStream(myContext, input, myInputBuffer, myInputPointer, myInputEnd)
+                    }
+                }
+
+                try {
+                    InputStreamReader(input, encoding.javaName)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            32 -> {
+                UTF32Reader(myContext, myInput, true, myInputBuffer, myInputPointer, myInputEnd,
+                        myContext.encoding!!.isBigEndian)
+            }
+
+            else -> {
+                Other.throwInternalReturnAny()
+            }
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    fun constructParser(objectReadContext: ObjectReadContext, streamReadFeatures: Int, formatReadFeatures: Int,
+            rootByteSymbols: ByteQuadsCanonicalizer, rootCharSymbols: CharsToNameCanonicalizer,
+            factoryFeatures: Int): CirJsonParser {
+        val previousInputPointer = myInputPointer
+        val encoding = if (TokenStreamFactory.Feature.CHARSET_DETECTION.isEnabledIn(factoryFeatures)) {
+            detectEncoding()
+        } else {
+            CirJsonEncoding.UTF8
+        }
+        val bytesProcessed = myInputPointer - previousInputPointer
+
+        if (encoding == CirJsonEncoding.UTF8) {
+            if (TokenStreamFactory.Feature.CANONICALIZE_PROPERTY_NAMES.isEnabledIn(factoryFeatures)) {
+                val canonicalizer = rootByteSymbols.makeChild(factoryFeatures)
+                return UTF8StreamCirJsonParser(objectReadContext, myContext, streamReadFeatures, formatReadFeatures,
+                        myInput, canonicalizer, myInputBuffer, myInputPointer, myInputEnd, bytesProcessed,
+                        myIsBufferRecyclable)
+            }
+        }
+
+        return ReaderBasedCirJsonParser(objectReadContext, myContext, streamReadFeatures, formatReadFeatures,
+                constructReader(), rootCharSymbols.makeChild())
     }
 
     /*
