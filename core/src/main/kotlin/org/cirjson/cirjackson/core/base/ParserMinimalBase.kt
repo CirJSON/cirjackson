@@ -578,7 +578,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *
      * @return Same as [currentLocation] except offset by `-1`
      */
-    protected fun currentLocationMinusOne(): CirJsonLocation {
+    protected open fun currentLocationMinusOne(): CirJsonLocation {
         return currentLocation()
     }
 
