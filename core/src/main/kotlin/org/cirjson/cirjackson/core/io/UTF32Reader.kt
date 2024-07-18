@@ -53,14 +53,95 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
         freeBuffers()
     }
 
+    /**
+     * Although this method is implemented by the base class, AND it should never be called by main code, let's still
+     * implement it a bit more efficiently just in case.
+     */
     @Throws(IOException::class)
     override fun read(): Int {
-        TODO()
+        if (myTempBuffer == null) {
+            myTempBuffer = CharArray(1)
+        }
+
+        if (read(myTempBuffer!!, 0, 1) < 1) {
+            return -1
+        }
+
+        return myTempBuffer!![0].code
     }
 
     @Throws(IOException::class)
     override fun read(cbuf: CharArray, off: Int, len: Int): Int {
-        TODO("Not yet implemented")
+        val buffer = myBuffer ?: return -1
+
+        if (len < 1) {
+            return len
+        }
+
+        if (off < 0 || off + len > cbuf.size) {
+            reportBounds(cbuf, off, len)
+        }
+
+        var outputPointer = off
+        val outputEnd = len + off
+
+        if (mySurrogate != NO_CHAR) {
+            cbuf[outputPointer++] = mySurrogate
+            mySurrogate = NO_CHAR
+        } else {
+            val left = myLength - myPointer
+
+            if (left < 4) {
+                if (!loadMore(left)) {
+                    if (left == 0) {
+                        return -1
+                    }
+
+                    reportUnexpectedEOF(myLength + myPointer, 4)
+                }
+            }
+        }
+
+        val lastValidInputStart = myLength - 4
+
+        while (outputPointer < outputEnd && myPointer <= lastValidInputStart) {
+            val pointer = myPointer
+
+            var (high, low) = if (myIsBigEndian) {
+                buffer[pointer].toInt() shl 8 or (buffer[pointer + 1].toInt() and 0xFF) to
+                        (buffer[pointer + 2].toInt() and 0xFF shl 8 or (buffer[pointer + 3].toInt() and 0xFF))
+            } else {
+                buffer[pointer].toInt() and 0xFF or (buffer[pointer + 1].toInt() and 0xFF shl 8) to
+                        (buffer[pointer + 2].toInt() and 0xFF or (buffer[pointer + 3].toInt() shl 8))
+            }
+
+            myPointer += 4
+
+            if (high != 0) {
+                high = high and 0xFFFF
+                val ch = high - 1 shl 16 or low
+
+                if (high > 0x10) {
+                    reportInvalid(ch, outputPointer - off,
+                            "(above 0x${LAST_VALID_UNICODE_CHAR.toString(16).uppercase().padStart(8, '0')})")
+                }
+
+                cbuf[outputPointer++] = ((ch shr 10) + 0xD800).toChar()
+
+                low = ch and 0x03FF or 0xDC00
+
+                if (outputPointer >= outputEnd) {
+                    mySurrogate = ch.toChar()
+                    break
+                }
+            }
+
+            cbuf[outputPointer++] = low.toChar()
+        }
+
+        val actualLength = outputEnd - off
+        myCharCount += actualLength
+        return actualLength
     }
 
     /*
@@ -151,6 +232,7 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
      */
 
     @Throws(IOException::class)
+    @Suppress("SameParameterValue")
     private fun reportUnexpectedEOF(gotBytes: Int, needed: Int) {
         val bytePosition = myByteCount + gotBytes
         val charPosition = myCharCount
@@ -164,8 +246,8 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
         val bytePosition = myByteCount + myPointer - 1
         val charPosition = myCharCount + offset
 
-        throw CharConversionException(
-                "Invalid UTF-32 character 0x${value.toString(16)}$message at char #$charPosition, byte #$bytePosition)")
+        throw CharConversionException("Invalid UTF-32 character 0x${value.toString(16)} $message at char " +
+                "#$charPosition, byte #$bytePosition)")
     }
 
     private fun reportBounds(charBuffer: CharArray, start: Int, length: Int) {
@@ -178,6 +260,12 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
     }
 
     companion object {
+
+        /**
+         * CirJSON actually limits available Unicode range in the high end to the same as xml (to basically limit UTF-8
+         * max byte sequence length to 4)
+         */
+        const val LAST_VALID_UNICODE_CHAR = 0x10FFFF
 
         val NO_CHAR = '\u0000'
 
