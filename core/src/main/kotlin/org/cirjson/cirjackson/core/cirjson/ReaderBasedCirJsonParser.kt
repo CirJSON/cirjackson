@@ -1,9 +1,11 @@
 package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
+import java.io.IOException
 import java.io.OutputStream
 import java.io.Reader
 import java.io.Writer
@@ -52,6 +54,8 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     protected var myNameStartRow = 0
 
     protected var myNameStartColumn = 0
+
+    protected var myIsBufferReleased = false
 
     /**
      * Constructor called when caller wants to provide input buffer directly (or needs to, in case of bootstrapping
@@ -127,7 +131,22 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     override fun releaseBuffered(writer: Writer): Int {
-        TODO("Not yet implemented")
+        val count = myInputEnd - myInputPointer
+
+        if (count < 1) {
+            return 0
+        }
+
+        val originalPointer = myInputPointer
+        myInputPointer += count
+
+        try {
+            writer.write(myInputBuffer, originalPointer, count)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+
+        return count
     }
 
     override fun streamReadInputSource(): Any? {
@@ -136,11 +155,27 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun getNextChar(eofMessage: String, forToken: CirJsonToken): Char {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF(eofMessage, forToken)
+            }
+        }
+
+        return myInputBuffer[myInputPointer++]
     }
 
     override fun closeInput() {
-        TODO("Not yet implemented")
+        if (myReader != null) {
+            if (myIOContext!!.isResourceManaged || isEnabled(StreamReadFeature.AUTO_CLOSE_SOURCE)) {
+                try {
+                    myReader!!.close()
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            myReader = null
+        }
     }
 
     /**
@@ -148,7 +183,18 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      * (for example, when explicitly closing this reader instance), or separately (if need be).
      */
     override fun releaseBuffers() {
-        TODO("Not yet implemented")
+        super.releaseBuffers()
+
+        mySymbols.release()
+
+        if (myIsBufferRecyclable) {
+            val buffer = myInputBuffer
+
+            if (!myIsBufferReleased) {
+                myInputBuffer = CharArray(0)
+                myIOContext!!.releaseTokenBuffer(buffer)
+            }
+        }
     }
 
     /*
@@ -159,7 +205,9 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun loadMoreGuaranteed() {
-        TODO("Not yet implemented")
+        if (!loadMore()) {
+            return reportInvalidEOF()
+        }
     }
 
     @Throws(CirJacksonException::class)
@@ -640,10 +688,10 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     }
 
     override val objectId: Any?
-        get() = TODO("Not yet implemented")
+        get() = null
 
     override val typeId: Any?
-        get() = TODO("Not yet implemented")
+        get() = null
 
     /*
      *******************************************************************************************************************
