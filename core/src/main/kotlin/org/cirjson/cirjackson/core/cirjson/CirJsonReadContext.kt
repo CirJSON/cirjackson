@@ -92,6 +92,24 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         return this
     }
 
+    /*
+     *******************************************************************************************************************
+     * Extended API
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be used to both clear the accumulated references (specifically value set with
+     * [assignCurrentValue]) that should not be retained, and returns parent (as would [parent] do). Typically called
+     * when closing the active context when encountering [CirJsonToken.END_ARRAY] or [CirJsonToken.END_OBJECT].
+     *
+     * @return Parent context of this context node, if any; `null` for root context
+     */
+    fun clearAndGetParent(): CirJsonReadContext? {
+        myCurrentValue = null
+        return parent
+    }
+
     val isExpectingComma: Boolean
         get() = myType != TYPE_ROOT && ++myIndex > 0
 

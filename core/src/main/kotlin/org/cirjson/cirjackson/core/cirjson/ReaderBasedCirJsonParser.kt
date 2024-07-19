@@ -191,6 +191,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             val buffer = myInputBuffer
 
             if (!myIsBufferReleased) {
+                myIsBufferReleased = true
                 myInputBuffer = CharArray(0)
                 myIOContext!!.releaseTokenBuffer(buffer)
             }
@@ -212,7 +213,37 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun loadMore(): Boolean {
-        TODO("Not yet implemented")
+        if (myReader == null) {
+            return false
+        }
+
+        val count = try {
+            myReader!!.read(myInputBuffer, 0, myInputBuffer.size)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+
+        val bufferSize = myInputEnd
+        myCurrentInputProcessed += bufferSize
+        myCurrentInputRowStart -= bufferSize
+        streamReadConstraints.validateDocumentLength(myCurrentInputProcessed)
+
+        myInputPointer = 0
+
+        if (count > 0) {
+            myNameStartOffset -= bufferSize
+            myInputEnd = count
+            return true
+        }
+
+        myInputEnd = 0
+        closeInput()
+
+        if (count == 0) {
+            return reportBadReader(myInputBuffer.size)
+        }
+
+        return false
     }
 
     /*
@@ -223,7 +254,16 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @get:Throws(CirJacksonException::class)
     final override val text: String?
-        get() = TODO("Not yet implemented")
+        get() = if (myCurrentToken == CirJsonToken.VALUE_STRING) {
+            if (myIsTokenIncomplete) {
+                myIsTokenIncomplete = false
+                finishString()
+            }
+
+            myTextBuffer.contentsAsString()
+        } else {
+            getText(myCurrentToken)
+        }
 
     @Throws(CirJacksonException::class)
     override fun getText(writer: Writer): Int {
@@ -701,7 +741,29 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(StreamReadException::class)
     private fun closeScope(i: Int) {
-        TODO("Not yet implemented")
+        if (i == CODE_R_BRACKET) {
+            updateLocation()
+
+            if (!streamReadContext!!.isInArray) {
+                reportMismatchedEndMarker(i.toChar(), '}')
+            }
+
+            streamReadContext = streamReadContext!!.clearAndGetParent()
+            myCurrentToken = CirJsonToken.END_ARRAY
+        }
+
+        if (i != CODE_R_CURLY) {
+            return
+        }
+
+        updateLocation()
+
+        if (!streamReadContext!!.isInObject) {
+            reportMismatchedEndMarker(i.toChar(), ']')
+        }
+
+        streamReadContext = streamReadContext!!.clearAndGetParent()
+        myCurrentToken = CirJsonToken.END_OBJECT
     }
 
     /*
@@ -711,13 +773,30 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
 
     @Throws(CirJacksonException::class)
-    protected fun reportInvalidToken(matchedPart: String) {
-        TODO("Not yet implemented")
+    protected fun <T> reportInvalidToken(matchedPart: String): T {
+        return reportInvalidToken(matchedPart, validCirJsonTokenList())
     }
 
     @Throws(CirJacksonException::class)
-    protected fun reportInvalidToken(matchedPart: String, message: String) {
-        TODO("Not yet implemented")
+    protected fun <T> reportInvalidToken(matchedPart: String, message: String): T {
+        val stringBuilder = StringBuilder(matchedPart)
+
+        while (myInputPointer < myInputEnd) {
+            val c = myInputBuffer[myInputPointer++]
+
+            if (!c.isJavaIdentifierPart()) {
+                break
+            }
+
+            stringBuilder.append(c)
+
+            if (stringBuilder.length >= myIOContext!!.errorReportConfiguration.maxErrorTokenLength) {
+                stringBuilder.append("...")
+                break
+            }
+        }
+
+        throw constructReadException("Unrecognized token '$stringBuilder': was expecting $message")
     }
 
 }
