@@ -1,8 +1,10 @@
 package org.cirjson.cirjackson.core.cirjson
 
+import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
 import org.cirjson.cirjackson.core.TokenStreamContext
 import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.io.ContentReference
 
 /**
  * Extension of [TokenStreamContext], which implements core methods needed, and also exposes more complete API to parser
@@ -49,6 +51,12 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         this.nestingDepth = nestingDepth
     }
 
+    /*
+     *******************************************************************************************************************
+     * Config, reuse
+     *******************************************************************************************************************
+     */
+
     /**
      * Internal method to allow instance reuse: DO NOT USE unless you absolutely know what you are doing. Clears up
      * state (including "current value"), changes type to one specified; resets current duplicate-detection state (if
@@ -73,6 +81,25 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         return this
     }
 
+    fun withDuplicateDetector(duplicateDetector: DuplicateDetector?): CirJsonReadContext {
+        myDuplicateDetector = duplicateDetector
+        return this
+    }
+
+    override fun currentValue(): Any? {
+        return myCurrentValue
+    }
+
+    override fun assignCurrentValue(value: Any?) {
+        myCurrentValue = value
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Factory methods
+     *******************************************************************************************************************
+     */
+
     fun createChildArrayContext(lineNumber: Int, columnNumber: Int): CirJsonReadContext {
         val context = myChild ?: CirJsonReadContext(this, nestingDepth + 1, myDuplicateDetector?.child(), TYPE_ARRAY,
                 lineNumber, columnNumber).also { myChild = it }
@@ -87,9 +114,17 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         return context
     }
 
-    fun withDuplicateDetector(duplicateDetector: DuplicateDetector?): CirJsonReadContext {
-        myDuplicateDetector = duplicateDetector
-        return this
+    /*
+     *******************************************************************************************************************
+     * Abstract method implementations, overrides
+     *******************************************************************************************************************
+     */
+
+    override val hasCurrentName: Boolean
+        get() = myCurrentName != null
+
+    override fun startLocation(reference: ContentReference): CirJsonLocation {
+        return CirJsonLocation(ContentReference.rawReference(reference), -1L, myLineNumber, myColumnNumber)
     }
 
     /*

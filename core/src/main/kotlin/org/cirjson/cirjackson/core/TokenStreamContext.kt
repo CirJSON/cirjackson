@@ -112,7 +112,7 @@ abstract class TokenStreamContext protected constructor(protected var myType: In
      */
     abstract val currentName: String?
 
-    val hasCurrentName
+    open val hasCurrentName
         get() = currentName != null
 
     constructor() : this(0, 0)
