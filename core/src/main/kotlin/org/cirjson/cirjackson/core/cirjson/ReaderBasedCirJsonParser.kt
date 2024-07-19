@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.core.cirjson
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
 import java.io.IOException
@@ -641,17 +642,150 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     override fun nextToken(): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || myCurrentToken == CirJsonToken.PROPERTY_NAME) {
+            return nextAfterName()
+        }
+
+        myNumberTypesValid = NUMBER_UNKNOWN
+
+        if (myIsTokenIncomplete) {
+            skipString()
+        }
+
+        var i = skipWhitespaceOrEnd()
+
+        if (i < 0) {
+            close()
+            myCurrentToken = null
+            return null
+        }
+
+        myBinaryValue = null
+
+        if (i or 0x20 == CODE_R_CURLY) {
+            closeScope(i)
+            return myCurrentToken
+        }
+
+        if (streamReadContext!!.isExpectingComma) {
+            i = skipComma(i)
+
+            if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                if (i or 0x20 == CODE_R_CURLY) {
+                    closeScope(i)
+                    return myCurrentToken
+                }
+            }
+        }
+
+        val isInObject = streamReadContext!!.isInObject
+
+        if (isInObject) {
+            updateNameLocation()
+            val name = if (i == CODE_QUOTE) parseName() else handleOddName(i)
+            streamReadContext!!.currentName = name
+            myCurrentToken = CirJsonToken.PROPERTY_NAME
+            i = skipColon()
+        }
+
+        updateLocation()
+
+        val token = when (i) {
+            '"'.code -> {
+                myIsTokenIncomplete = true
+                CirJsonToken.VALUE_STRING
+            }
+
+            '['.code -> {
+                if (!isInObject) {
+                    createChildArrayContext(tokenLineNumber, myTokenInputColumn)
+                }
+
+                CirJsonToken.START_ARRAY
+            }
+
+            '{'.code -> {
+                if (!isInObject) {
+                    createChildObjectContext(tokenLineNumber, myTokenInputColumn)
+                }
+
+                CirJsonToken.START_OBJECT
+            }
+
+            '}'.code -> {
+                reportUnexpectedChar(i.toChar(), "expected a value")
+            }
+
+            't'.code -> {
+                matchTrue()
+                CirJsonToken.VALUE_TRUE
+            }
+
+            'f'.code -> {
+                matchFalse()
+                CirJsonToken.VALUE_FALSE
+            }
+
+            'n'.code -> {
+                matchNull()
+                CirJsonToken.VALUE_NULL
+            }
+
+            '-'.code -> {
+                parseSignedNumber(true)
+            }
+
+            '+'.code -> {
+                if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    parseSignedNumber(false)
+                } else {
+                    handleOddValue(i)
+                }
+            }
+
+            '.'.code -> {
+                parseFloatThatStartsWithPeriod(false)
+            }
+
+            '0'.code, '1'.code, '2'.code, '3'.code, '4'.code, '5'.code, '6'.code, '7'.code, '8'.code, '9'.code -> {
+                parseUnsignedNumber(i)
+            }
+
+            else -> {
+                handleOddValue(i)
+            }
+        }
+
+        return if (isInObject) {
+            myNextToken = token
+            myCurrentToken
+        } else {
+            myCurrentToken = token
+            token
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun nextAfterName(): CirJsonToken? {
-        TODO("Not yet implemented")
+        myIsNameCopied = false
+        val token = myNextToken
+        myNextToken = null
+
+        if (token == CirJsonToken.START_ARRAY) {
+            createChildArrayContext(tokenLineNumber, myTokenInputColumn)
+        } else if (token == CirJsonToken.START_OBJECT) {
+            createChildObjectContext(tokenLineNumber, myTokenInputColumn)
+        }
+
+        return token.also { myCurrentToken = it }
     }
 
     @Throws(CirJacksonException::class)
     override fun finishToken() {
-        TODO("Not yet implemented")
+        if (myIsTokenIncomplete) {
+            myIsTokenIncomplete = false
+            finishString()
+        }
     }
 
     /*
@@ -1119,6 +1253,20 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         }
 
         throw constructReadException("Unrecognized token '$stringBuilder': was expecting $message")
+    }
+
+    companion object {
+
+        private val FEAT_MASK_TRAILING_COMMA = CirJsonReadFeature.ALLOW_TRAILING_COMMA.mask
+
+        private val FEAT_MASK_ALLOW_MISSING = CirJsonReadFeature.ALLOW_MISSING_VALUES.mask
+
+        /**
+         * Latin1 encoding is not supported, but we do use 8-bit subset for pre-processing task, to simplify first pass,
+         * keep it fast.
+         */
+        private val INPUT_CODE_LATIN1 = CharTypes.inputCodeLatin1
+
     }
 
 }
