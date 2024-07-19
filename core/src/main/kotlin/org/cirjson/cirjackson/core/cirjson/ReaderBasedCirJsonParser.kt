@@ -1285,7 +1285,17 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun parseFloatThatStartsWithPeriod(neg: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+            return handleOddValue('.'.code)
+        }
+
+        var startPointer = myInputPointer - 1
+
+        if (neg) {
+            --startPointer
+        }
+
+        return parseFloat(CODE_PERIOD, startPointer, myInputPointer, neg, 0)
     }
 
     /**
@@ -1308,13 +1318,124 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun parseUnsignedNumber(code: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var ch = code
+        var pointer = myInputPointer
+        val startPointer = pointer - 1
+        val inputLength = myInputEnd
+
+        if (ch == CODE_0) {
+            return parseNumber(false, startPointer)
+        }
+
+        var integralLength = 1
+
+        while (true) {
+            if (pointer >= inputLength) {
+                myInputPointer = startPointer
+                return parseNumber(false, startPointer)
+            }
+
+            ch = myInputBuffer[pointer++].code
+
+            if (ch !in CODE_0..CODE_9) {
+                break
+            }
+
+            ++integralLength
+        }
+
+        if (ch == CODE_PERIOD || ch or 0x20 == CODE_E_LOWERCASE) {
+            myInputPointer = pointer
+            return parseFloat(ch, startPointer, pointer, false, integralLength)
+        }
+
+        --pointer
+        myInputPointer = pointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(ch)
+        }
+
+        val length = pointer - startPointer
+        myTextBuffer.resetWithShared(myInputBuffer, startPointer, length)
+        return resetInt(false, integralLength)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun parseFloat(code: Int, startPointer: Int, pointer: Int, neg: Boolean,
             integralLength: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var ch = code
+        var pointer = pointer
+        val inputLength = myInputEnd
+        var fractionLength = 0
+
+        if (ch == '.'.code) {
+            while (true) {
+                if (pointer >= inputLength) {
+                    return parseNumber(neg, startPointer)
+                }
+
+                ch = myInputBuffer[pointer++].code
+
+                if (ch !in CODE_0..CODE_9) {
+                    break
+                }
+
+                ++fractionLength
+            }
+
+            if (fractionLength == 0) {
+                if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                    return reportUnexpectedNumberChar(ch.toChar(), "Decimal point not followed by a digit")
+                }
+            }
+        }
+
+        var exponentLength = 0
+
+        if (ch or 0x20 == CODE_E_LOWERCASE) {
+            if (pointer >= inputLength) {
+                myInputPointer = startPointer
+                return parseNumber(neg, startPointer)
+            }
+
+            ch = myInputBuffer[pointer++].code
+
+            if (ch == CODE_MINUS || ch == CODE_PLUS) {
+                if (pointer >= inputLength) {
+                    myInputPointer = startPointer
+                    return parseNumber(neg, startPointer)
+                }
+
+                ch = myInputBuffer[pointer++].code
+            }
+
+            while (ch in CODE_0..CODE_9) {
+                ++exponentLength
+
+                if (pointer >= inputLength) {
+                    myInputPointer = startPointer
+                    return parseNumber(neg, startPointer)
+                }
+
+                ch = myInputBuffer[pointer++].code
+            }
+
+            if (fractionLength == 0) {
+                return reportUnexpectedNumberChar(ch.toChar(), "Exponent indicator not followed by a digit")
+            }
+        }
+
+        myInputPointer = --pointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(ch)
+        }
+
+        val length = pointer - startPointer
+        myTextBuffer.resetWithShared(myInputBuffer, startPointer, length)
+        return resetFloat(false, integralLength, fractionLength, exponentLength)
     }
 
     @Throws(CirJacksonException::class)
