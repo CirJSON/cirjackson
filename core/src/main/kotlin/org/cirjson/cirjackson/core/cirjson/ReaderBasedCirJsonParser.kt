@@ -2549,67 +2549,353 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespaceOrEnd(): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return eofAsNextChar()
+            }
+        }
+
+        var i = myInputBuffer[myInputPointer++].code
+
+        if (i > CODE_SPACE) {
+            if (i == CODE_SLASH || i == CODE_HASH) {
+                --myInputPointer
+                return skipWhitespaceOrEnd2()
+            }
+
+            return i
+        }
+
+        if (i != CODE_SPACE) {
+            if (i == CODE_LF) {
+                ++myCurrentInputRow
+                myCurrentInputRowStart = myInputPointer
+            } else if (i == CODE_CR) {
+                skipCR()
+            } else if (i != CODE_TAB) {
+                return reportInvalidSpace(i)
+            }
+        }
+
+        while (myInputPointer < myInputEnd) {
+            i = myInputBuffer[myInputPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH || i == CODE_HASH) {
+                    --myInputPointer
+                    return skipWhitespaceOrEnd2()
+                }
+
+                return i
+            }
+
+            if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return skipWhitespaceOrEnd2()
     }
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespaceOrEnd2(): Int {
-        TODO("Not yet implemented")
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return eofAsNextChar()
+                }
+            }
+
+            val i = myInputBuffer[myInputPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                return i
+            }
+
+            if (i < CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipComment(): Int {
-        TODO("Not yet implemented")
+    private fun skipComment() {
+        if (!isEnabled(CirJsonReadFeature.ALLOW_JAVA_COMMENTS)) {
+            return reportUnexpectedChar('/',
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_JAVA_COMMENTS' not enabled for parser)")
+        }
+
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return reportInvalidEOF("in a comment", null)
+        }
+
+        when (val c = myInputBuffer[myInputPointer++]) {
+            '/' -> {
+                skipLine()
+            }
+
+            '*' -> {
+                skipCComment()
+            }
+
+            else -> {
+                return reportUnexpectedChar(c, "was expecting either '*' or '/' for a comment")
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipCComment(): Int {
-        TODO("Not yet implemented")
+    private fun skipCComment() {
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].code
+
+            if (i <= CODE_ASTERISK) {
+                if (i == CODE_ASTERISK) {
+                    if (myInputPointer >= myInputEnd && !loadMore()) {
+                        break
+                    }
+
+                    if (myInputBuffer[myInputPointer] == '/') {
+                        ++myInputPointer
+                        return
+                    }
+
+                    continue
+                }
+
+                if (i < CODE_SPACE) {
+                    if (i == CODE_LF) {
+                        ++myCurrentInputRow
+                        myCurrentInputRowStart = myInputPointer
+                    } else if (i == CODE_CR) {
+                        skipCR()
+                    } else if (i != CODE_TAB) {
+                        return reportInvalidSpace(i)
+                    }
+                }
+            }
+        }
+
+        return reportInvalidEOF("in a comment", null)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipYAMLComment(): Boolean {
-        TODO("Not yet implemented")
+        return if (isEnabled(CirJsonReadFeature.ALLOW_YAML_COMMENTS)) {
+            skipLine()
+            true
+        } else {
+            false
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun skipLine() {
-        TODO("Not yet implemented")
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].code
+
+            if (i < CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun decodeEscaped(): Char {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+            }
+        }
+
+        when (val c = myInputBuffer[myInputPointer++]) {
+            'b' -> return '\b'
+            't' -> return '\t'
+            'n' -> return '\n'
+            'r' -> return '\r'
+            'f' -> return '\u000c'
+            '"', '/', '\\' -> return c
+            'u' -> {}
+            else -> return handleUnrecognizedCharacterEscape(c)
+        }
+
+        var ch = myInputBuffer[myInputPointer++]
+        var digit = CharTypes.charToHex(ch)
+        var result = digit
+
+        if (digit >= 0) {
+            ch = myInputBuffer[myInputPointer++]
+            digit = CharTypes.charToHex(ch)
+
+            if (digit >= 0) {
+                result = result shl 4 or digit
+                ch = myInputBuffer[myInputPointer++]
+                digit = CharTypes.charToHex(ch)
+
+                if (digit >= 0) {
+                    result = result shl 4 or digit
+                    ch = myInputBuffer[myInputPointer++]
+                    digit = CharTypes.charToHex(ch)
+
+                    if (digit >= 0) {
+                        return (result shl 4 or digit).toChar()
+                    }
+                }
+            }
+        }
+
+        return reportUnexpectedChar(ch, "expected a hex-digit for character escape sequence")
     }
 
     @Throws(CirJacksonException::class)
     private fun matchTrue() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer] == 'r' && buffer[++pointer] == 'u' && buffer[++pointer] == 'e') {
+                val c = buffer[++pointer]
+
+                if (c < '0' || c == ']' || c == '}') {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken("true", 1)
     }
 
     @Throws(CirJacksonException::class)
     private fun matchFalse() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 4 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer] == 'a' && buffer[++pointer] == 'l' && buffer[++pointer] == 's' &&
+                    buffer[++pointer] == 'e') {
+                val c = buffer[++pointer]
+
+                if (c < '0' || c == ']' || c == '}') {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken("true", 1)
     }
 
     @Throws(CirJacksonException::class)
     private fun matchNull() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer] == 'u' && buffer[++pointer] == 'l' && buffer[++pointer] == 'l') {
+                val c = buffer[++pointer]
+
+                if (c < '0' || c == ']' || c == '}') {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken("null", 1)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchToken(matchString: String, i: Int) {
-        TODO()
+        var i = i
+        val length = matchString.length
+
+        if (myInputPointer + length >= myInputEnd) {
+            matchToken2(matchString, i)
+            return
+        }
+
+        do {
+            if (myInputBuffer[myInputPointer] != matchString[i]) {
+                return reportInvalidToken(matchString.substring(0, i))
+            }
+
+            ++myInputPointer
+        } while (++i < length)
+
+        val c = myInputBuffer[myInputPointer].code
+
+        if (c >= '0'.code && c != ']'.code && c != '}'.code) {
+            checkMatchEnd(matchString, i, c)
+        }
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun matchToken2(matchString: String, i: Int) {
-        TODO()
+        var i = i
+        val length = matchString.length
+
+        do {
+            if (myInputPointer >= myInputEnd && !loadMore() || myInputBuffer[myInputPointer] != matchString[i]) {
+                return reportInvalidToken(matchString.substring(0, i))
+            }
+
+            ++myInputPointer
+        } while (++i < length)
+
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return
+        }
+
+        val c = myInputBuffer[myInputPointer].code
+
+        if (c >= '0'.code && c != ']'.code && c != '}'.code) {
+            checkMatchEnd(matchString, i, c)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun checkMatchEnd(matchString: String, i: Int, c: Int) {
-        TODO()
+        if (c.toChar().isJavaIdentifierPart()) {
+            return reportInvalidToken(matchString.substring(0, i))
+        }
     }
 
     /*
