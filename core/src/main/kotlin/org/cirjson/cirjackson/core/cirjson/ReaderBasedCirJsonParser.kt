@@ -2291,32 +2291,260 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun skipCR() {
-        TODO("Not yet implemented")
+        if (myInputPointer < myInputEnd || loadMore()) {
+            ++myInputPointer
+        }
+
+        ++myCurrentInputRow
+        myCurrentInputRowStart = myInputPointer
     }
 
     @Throws(CirJacksonException::class)
     private fun skipColon(): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer + 4 >= myInputEnd) {
+            return skipColon(false)
+        }
+
+        var c = myInputBuffer[myInputPointer]
+
+        if (c == ':') {
+            var i = myInputBuffer[++myInputPointer].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH || i == CODE_HASH) {
+                    return skipColon(true)
+                }
+
+                ++myInputPointer
+                return i
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[++myInputPointer].code
+
+                if (i > CODE_SPACE) {
+                    if (i == CODE_SLASH || i == CODE_HASH) {
+                        return skipColon(true)
+                    }
+
+                    ++myInputPointer
+                    return i
+                }
+            }
+
+            return skipColon(true)
+        }
+
+        if (c == ' ' || c == '\t') {
+            c = myInputBuffer[++myInputPointer]
+        }
+
+        if (c == ':') {
+            var i = myInputBuffer[++myInputPointer].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH || i == CODE_HASH) {
+                    return skipColon(true)
+                }
+
+                ++myInputPointer
+                return i
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[++myInputPointer].code
+
+                if (i > CODE_SPACE) {
+                    if (i == CODE_SLASH || i == CODE_HASH) {
+                        return skipColon(true)
+                    }
+
+                    ++myInputPointer
+                    return i
+                }
+            }
+
+            return skipColon(true)
+        }
+
+        return skipColon(false)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipColon(gotColon: Boolean): Int {
-        TODO("Not yet implemented")
+        var realGotColon = gotColon
+
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                if (realGotColon) {
+                    return i
+                }
+
+                if (i != CODE_COLON) {
+                    return reportUnexpectedChar(i.toChar(), "was expecting a colon to separate property name and value")
+                }
+
+                realGotColon = true
+                continue
+            }
+
+            if (i < CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return reportInvalidEOF("within/between ${streamReadContext!!.typeDescription} entries", null)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipColonFast(pointer: Int): Int {
-        TODO("Not yet implemented")
+        var realPointer = pointer
+        var i = myInputBuffer[realPointer++].code
+
+        if (i == CODE_COLON) {
+            i = myInputBuffer[realPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i != CODE_SLASH && i != CODE_HASH) {
+                    myInputPointer = realPointer
+                    return i
+                }
+            } else if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[realPointer++].code
+
+                if (i > CODE_SPACE) {
+                    if (i != CODE_SLASH && i != CODE_HASH) {
+                        myInputPointer = realPointer
+                        return i
+                    }
+                }
+            }
+
+            myInputPointer = realPointer - 1
+            return skipColon(true)
+        }
+
+        if (i == CODE_SPACE || i == CODE_TAB) {
+            i = myInputBuffer[realPointer++].code
+        }
+
+        val gotColon = i == CODE_COLON
+
+        if (gotColon) {
+            i = myInputBuffer[realPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i != CODE_SLASH && i != CODE_HASH) {
+                    myInputPointer = realPointer
+                    return i
+                }
+            } else if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[realPointer++].code
+
+                if (i > CODE_SPACE) {
+                    if (i != CODE_SLASH && i != CODE_HASH) {
+                        myInputPointer = realPointer
+                        return i
+                    }
+                }
+            }
+        }
+
+        myInputPointer = realPointer - 1
+        return skipColon(gotColon)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun skipComma(i: Int): Int {
-        TODO("Not yet implemented")
+        var i = i
+
+        if (i != CODE_COMMA) {
+            return reportUnexpectedChar(i.toChar(),
+                    "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+        }
+
+        while (myInputPointer < myInputEnd) {
+            i = myInputBuffer[myInputPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH || i == CODE_HASH) {
+                    --myInputPointer
+                    return skipAfterComma()
+                }
+
+                return i
+            }
+
+            if (i < CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return skipAfterComma()
     }
 
     @Throws(CirJacksonException::class)
     private fun skipAfterComma(): Int {
-        TODO("Not yet implemented")
+        while (myInputPointer < myInputEnd) {
+            val i = myInputBuffer[myInputPointer++].code
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                return i
+            }
+
+            if (i < CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        throw constructReadException(
+                "Unexpected end-of-input within/between ${streamReadContext!!.typeDescription} entries")
     }
 
     @Throws(CirJacksonException::class)
@@ -2340,7 +2568,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipYAMLComment(): Int {
+    private fun skipYAMLComment(): Boolean {
         TODO("Not yet implemented")
     }
 
