@@ -1826,12 +1826,81 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun parseName(): String? {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+        var hash = myHashSeed
+        val codes = INPUT_CODE_LATIN1
+
+        while (pointer < myInputEnd) {
+            val ch = myInputBuffer[pointer].code
+
+            if (ch < codes.size && codes[ch] != 0) {
+                if (ch == '"'.code) {
+                    val start = myInputPointer
+                    myInputPointer = pointer + 1
+                    return mySymbols.findSymbol(myInputBuffer, start, pointer - start, hash)
+                }
+
+                break
+            }
+
+            hash = hash * CharsToNameCanonicalizer.HASH_MULT + ch
+            ++pointer
+        }
+
+        val start = myInputPointer
+        myInputPointer = pointer
+        return parseName(start, hash, CODE_QUOTE)
     }
 
     @Throws(CirJacksonException::class)
     protected fun parseName(startPointer: Int, hash: Int, endChar: Int): String? {
-        TODO("Not yet implemented")
+        var realHash = hash
+
+        myTextBuffer.resetWithShared(myInputBuffer, startPointer, myInputPointer - startPointer)
+
+        var outputBuffer = myTextBuffer.currentSegment
+        var outputPointer = myTextBuffer.currentSegmentSize
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+            }
+
+            var c = myInputBuffer[myInputPointer++]
+            val code = c.code
+
+            if (code <= CODE_BACKSLASH) {
+                if (code == CODE_BACKSLASH) {
+                    c = decodeEscaped()
+                } else if (code <= endChar) {
+                    if (code == endChar) {
+                        break
+                    }
+
+                    if (code < CODE_SPACE) {
+                        throwUnquotedSpace(code, "name")
+                    }
+                }
+            }
+
+            realHash = realHash * CharsToNameCanonicalizer.HASH_MULT + code
+
+            outputBuffer[outputPointer++] = c
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        val textBuffer = myTextBuffer
+        val buffer = textBuffer.textBuffer
+        val start = textBuffer.textOffset
+        val length = textBuffer.size
+        return mySymbols.findSymbol(buffer, start, length, realHash)
     }
 
     /**
@@ -1848,12 +1917,83 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun handleOddName(i: Int): String? {
-        TODO("Not yet implemented")
+        if (i == '\''.code && isEnabled(CirJsonReadFeature.ALLOW_SINGLE_QUOTES)) {
+            return parseApostropheName()
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_UNQUOTED_PROPERTY_NAMES)) {
+            return reportUnexpectedChar(i.toChar(), "was expecting double-quote to start property name")
+        }
+
+        val codes = INPUT_CODE_LATIN1_JS_NAMES
+        val maxCode = codes.size
+
+        val firstOk = if (i < maxCode) {
+            codes[i] == 0
+        } else {
+            i.toChar().isJavaIdentifierPart()
+        }
+
+        if (!firstOk) {
+            return reportUnexpectedChar(i.toChar(),
+                    "was expecting either valid name character (for unquoted name) or double-quote (for quoted) to start property name")
+        }
+
+        var pointer = myInputPointer
+        var hash = myHashSeed
+        val inputLength = myInputEnd
+
+        if (pointer < inputLength) {
+            do {
+                val c = myInputBuffer[pointer]
+                val ch = c.code
+
+                if (ch < maxCode && codes[ch] != 0 || !c.isJavaIdentifierPart()) {
+                    val start = myInputPointer - 1
+                    myInputPointer = pointer
+                    return mySymbols.findSymbol(myInputBuffer, start, pointer - start, hash)
+                }
+
+                hash = hash * CharsToNameCanonicalizer.HASH_MULT + ch
+                ++pointer
+            } while (pointer < inputLength)
+        }
+
+        val start = myInputPointer - 1
+        myInputPointer = pointer
+        return handleOddName(start, hash, codes)
     }
 
     @Throws(CirJacksonException::class)
     protected fun parseApostropheName(): String? {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+        var hash = myHashSeed
+        val inputLength = myInputEnd
+        val codes = INPUT_CODE_LATIN1
+        val maxCode = codes.size
+
+        if (pointer < inputLength) {
+            do {
+                val ch = myInputBuffer[pointer].code
+
+                if (ch == CODE_APOSTROPHE) {
+                    val start = myInputPointer
+                    myInputPointer = pointer + 1
+                    return mySymbols.findSymbol(myInputBuffer, start, pointer - start, hash)
+                }
+
+                if (ch < maxCode && codes[ch] != 0) {
+                    break
+                }
+
+                hash = hash * CharsToNameCanonicalizer.HASH_MULT + ch
+                ++pointer
+            } while (pointer < inputLength)
+        }
+
+        val start = myInputPointer
+        myInputPointer = pointer
+        return parseName(start, hash, '\''.code)
     }
 
     /**
@@ -1870,26 +2010,225 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun handleOddValue(i: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        return when (i) {
+            CODE_APOSTROPHE -> {
+                if (isEnabled(CirJsonReadFeature.ALLOW_SINGLE_QUOTES)) {
+                    handleApostrophe()
+                } else if (i.toChar().isJavaIdentifierPart()) {
+                    reportInvalidToken(i.toChar().toString(), validCirJsonTokenList())
+                } else {
+                    reportUnexpectedChar(i.toChar(), "expected a valid value ${validCirJsonValueList()}")
+                }
+            }
+
+            CODE_R_BRACKET, CODE_COMMA -> {
+                if (i == CODE_COMMA || streamReadContext!!.isInArray) {
+                    if (!streamReadContext!!.isInRoot) {
+                        if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
+                            --myInputPointer
+                            return CirJsonToken.VALUE_NULL
+                        }
+                    }
+                }
+
+                if (i.toChar().isJavaIdentifierPart()) {
+                    reportInvalidToken(i.toChar().toString(), validCirJsonTokenList())
+                } else {
+                    reportUnexpectedChar(i.toChar(), "expected a valid value ${validCirJsonValueList()}")
+                }
+            }
+
+            'N'.code -> {
+                matchToken("NaN", 1)
+
+                if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN("NaN", Double.NaN)
+                } else {
+                    reportError(
+                            "Non-standard token 'NaN': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            }
+
+            'I'.code -> {
+                matchToken("Infinity", 1)
+
+                if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN("Infinity", Double.POSITIVE_INFINITY)
+                } else {
+                    reportError(
+                            "Non-standard token 'Infinity': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            }
+
+            '+'.code -> {
+                if (myInputPointer >= myInputEnd) {
+                    if (!loadMore()) {
+                        return reportInvalidEOFInValue(CirJsonToken.PROPERTY_NAME)
+                    }
+                }
+
+                handleInvalidNumberStart(myInputBuffer[myInputPointer++].code, negative = false, hasSign = true)
+            }
+
+            else -> {
+                if (i.toChar().isJavaIdentifierPart()) {
+                    reportInvalidToken(i.toChar().toString(), validCirJsonTokenList())
+                } else {
+                    reportUnexpectedChar(i.toChar(), "expected a valid value ${validCirJsonValueList()}")
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun handleApostrophe(): CirJsonToken? {
-        TODO("Not yet implemented")
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = myTextBuffer.currentSegmentSize
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF(": was expecting closing quote for a string value",
+                            CirJsonToken.VALUE_STRING)
+                }
+            }
+
+            var c = myInputBuffer[myInputPointer++]
+            val ch = c.code
+
+            if (ch <= CODE_BACKSLASH) {
+                if (ch == CODE_BACKSLASH) {
+                    c = decodeEscaped()
+                } else if (ch <= CODE_APOSTROPHE) {
+                    if (ch == CODE_APOSTROPHE) {
+                        break
+                    }
+
+                    if (ch < CODE_SPACE) {
+                        throwUnquotedSpace(ch, "string value")
+                    }
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        return CirJsonToken.VALUE_STRING
     }
 
-    private fun handleOddName(startPointer: Int, hash: Int, codes: IntArray): String? {
-        TODO("Not yet implemented")
+    private fun handleOddName(startPointer: Int, hash: Int, codes: IntArray): String {
+        var realHash = hash
+
+        myTextBuffer.resetWithShared(myInputBuffer, startPointer, myInputPointer - startPointer)
+
+        var outputBuffer = myTextBuffer.currentSegment
+        var outputPointer = myTextBuffer.currentSegmentSize
+        val maxCode = codes.size
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    break
+                }
+            }
+
+            val c = myInputBuffer[myInputPointer]
+            val ch = c.code
+
+            if (ch < maxCode && codes[ch] != 0 || !c.isJavaIdentifierPart()) {
+                break
+            }
+
+            ++myInputPointer
+            realHash = realHash * CharsToNameCanonicalizer.HASH_MULT + ch
+
+            outputBuffer[outputPointer++] = c
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        val textBuffer = myTextBuffer
+        val buffer = textBuffer.textBuffer
+        val start = textBuffer.textOffset
+        val length = textBuffer.size
+        return mySymbols.findSymbol(buffer, start, length, realHash)
     }
 
     @Throws(CirJacksonException::class)
     protected fun finishString() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+        val inputLength = myInputEnd
+        val codes = INPUT_CODE_LATIN1
+        val maxCode = codes.size
+
+        if (pointer < inputLength) {
+            do {
+                val ch = myInputBuffer[pointer].code
+
+                if (ch < maxCode && codes[ch] != 0) {
+                    if (ch == CODE_QUOTE) {
+                        myTextBuffer.resetWithShared(myInputBuffer, myInputPointer, pointer - myInputPointer)
+                    }
+
+                    break
+                }
+
+                ++pointer
+            } while (pointer < inputLength)
+        }
+
+        myTextBuffer.resetWithCopy(myInputBuffer, myInputPointer, pointer - myInputPointer)
+        myInputPointer = pointer
+        finishString2()
     }
 
     @Throws(CirJacksonException::class)
     protected fun finishString2() {
-        TODO("Not yet implemented")
+        var outputBuffer = myTextBuffer.currentSegment
+        var outputPointer = myTextBuffer.currentSegmentSize
+        val codes = INPUT_CODE_LATIN1
+        val maxCode = codes.size
+
+        while (true) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF(": was expecting closing quote for a string value",
+                            CirJsonToken.VALUE_STRING)
+                }
+            }
+
+            var c = myInputBuffer[myInputPointer++]
+            val ch = c.code
+
+            if (ch < maxCode && codes[ch] != 0) {
+                if (ch == CODE_BACKSLASH) {
+                    c = decodeEscaped()
+                } else if (ch == CODE_QUOTE) {
+                    break
+                } else if (ch < CODE_SPACE) {
+                    throwUnquotedSpace(ch, "string value")
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
     }
 
     /**
@@ -1902,7 +2241,46 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun skipString() {
-        TODO("Not yet implemented")
+        myIsTokenIncomplete = false
+
+        var inputPointer = myInputPointer
+        var inputLength = myInputEnd
+        val inputBuffer = myInputBuffer
+
+        while (true) {
+            if (inputPointer >= inputLength) {
+                myInputPointer = inputPointer
+
+                if (!loadMore()) {
+                    return reportInvalidEOF(": was expecting closing quote for a string value",
+                            CirJsonToken.VALUE_STRING)
+                }
+
+                inputPointer = myInputPointer
+                inputLength = myInputEnd
+            }
+
+            val ch = inputBuffer[inputPointer++].code
+
+            if (ch <= CODE_BACKSLASH) {
+                if (ch == CODE_BACKSLASH) {
+                    myInputPointer = inputPointer
+                    decodeEscaped()
+                    inputPointer = myInputPointer
+                    inputLength = myInputEnd
+                } else if (ch <= CODE_APOSTROPHE) {
+                    if (ch == CODE_QUOTE) {
+                        myInputPointer = inputPointer
+                        break
+                    }
+
+                    if (ch < CODE_SPACE) {
+                        myInputPointer = inputPointer
+                        throwUnquotedSpace(ch, "string value")
+                    }
+                }
+            }
+        }
     }
 
     /*
@@ -2137,6 +2515,8 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
          * keep it fast.
          */
         private val INPUT_CODE_LATIN1 = CharTypes.inputCodeLatin1
+
+        private val INPUT_CODE_LATIN1_JS_NAMES = CharTypes.inputCodeLatin1JsNames
 
     }
 
