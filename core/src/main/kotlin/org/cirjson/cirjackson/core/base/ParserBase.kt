@@ -144,7 +144,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     /**
      * Length of integer part of the number, in characters
      */
-    protected var myIntLength = 0
+    protected var myIntegralLength = 0
 
     /**
      * Length of the fractional part (not including decimal point or exponent), in characters. Not used for pure integer
@@ -254,20 +254,21 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
 
     @Throws(CirJacksonException::class)
-    protected fun reset(negative: Boolean, intLength: Int, fractionLength: Int, exponentLength: Int): CirJsonToken {
+    protected fun reset(negative: Boolean, integralLength: Int, fractionLength: Int,
+            exponentLength: Int): CirJsonToken {
         return if (fractionLength < 1 && exponentLength < 1) {
-            resetInt(negative, intLength)
+            resetInt(negative, integralLength)
         } else {
-            resetFloat(negative, intLength, fractionLength, exponentLength)
+            resetFloat(negative, integralLength, fractionLength, exponentLength)
         }
     }
 
     @Throws(CirJacksonException::class)
-    protected fun resetInt(negative: Boolean, intLength: Int): CirJsonToken {
-        streamReadConstraints.validateIntegerLength(intLength)
+    protected fun resetInt(negative: Boolean, integralLength: Int): CirJsonToken {
+        streamReadConstraints.validateIntegerLength(integralLength)
         myNumberNegative = negative
         myNumberIsNaN = false
-        myIntLength = intLength
+        myIntegralLength = integralLength
         myFractionLength = 0
         myExponentLength = 0
         myNumberTypesValid = NUMBER_UNKNOWN
@@ -275,11 +276,11 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     }
 
     @Throws(CirJacksonException::class)
-    protected fun resetFloat(negative: Boolean, intLength: Int, fractionLength: Int,
+    protected fun resetFloat(negative: Boolean, integralLength: Int, fractionLength: Int,
             exponentLength: Int): CirJsonToken {
-        streamReadConstraints.validateFloatingPointLength(intLength + fractionLength + exponentLength)
+        streamReadConstraints.validateFloatingPointLength(integralLength + fractionLength + exponentLength)
         myNumberNegative = negative
-        myIntLength = intLength
+        myIntegralLength = integralLength
         myFractionLength = fractionLength
         myExponentLength = exponentLength
         myNumberIsNaN = false

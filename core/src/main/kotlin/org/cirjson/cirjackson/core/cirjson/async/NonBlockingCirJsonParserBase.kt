@@ -554,7 +554,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     @Throws(CirJacksonException::class)
     protected fun valueCompleteInt(value: Int, asText: String): CirJsonToken {
         myTextBuffer.resetWithString(asText)
-        myIntLength = asText.length
+        myIntegralLength = asText.length
         myNumberTypesValid = NUMBER_INT
         myNumberInt = value
         myMajorState = myMajorStateAfterValue
@@ -581,7 +581,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
                     "Non-standard token '$tokenString': enable `JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
         }
 
-        myIntLength = 0
+        myIntegralLength = 0
         myNumberTypesValid = NUMBER_DOUBLE
         myNumberDouble = NON_STD_TOKEN_VALUES[type]
         myMajorState = myMajorStateAfterValue

@@ -124,7 +124,7 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
             throw constructNotNumericType(myCurrentToken!!, numericType)
         }
 
-        val length = myIntLength
+        val length = myIntegralLength
 
         if (length <= 9) {
             myNumberInt = myTextBuffer.contentAsInt(myNumberNegative)
@@ -220,7 +220,7 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
     @Throws(CirJacksonException::class)
     override fun parseIntValue(): Int {
         if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT) {
-            if (myIntLength <= 9) {
+            if (myIntegralLength <= 9) {
                 val i = myTextBuffer.contentAsInt(myNumberNegative)
                 myNumberInt = i
                 myNumberTypesValid = NUMBER_INT

@@ -271,7 +271,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     --length
                 }
 
-                myIntLength = length
+                myIntegralLength = length
                 valueComplete(CirJsonToken.VALUE_NUMBER_INT)
             }
 
@@ -1225,7 +1225,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     @Throws(CirJacksonException::class)
     protected open fun startFloatThatStartsWithPeriod(): CirJsonToken? {
         myNumberNegative = false
-        myIntLength = 0
+        myIntegralLength = 0
         val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
         return startFloat(outputBuffer, 0, CODE_PERIOD)
     }
@@ -1250,7 +1250,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         while (true) {
             if (ch < CODE_0) {
                 if (ch == CODE_PERIOD) {
-                    myIntLength = outputPointer
+                    myIntegralLength = outputPointer
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1260,7 +1260,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             if (ch > CODE_9) {
                 if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
-                    myIntLength = outputPointer
+                    myIntegralLength = outputPointer
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1283,7 +1283,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
         }
 
-        myIntLength = outputPointer
+        myIntegralLength = outputPointer
         myTextBuffer.currentSegmentSize = outputPointer
         return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
@@ -1320,7 +1320,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         if (myInputPointer >= myInputEnd) {
             myMinorState = MINOR_NUMBER_INTEGER_DIGITS
             myTextBuffer.currentSegmentSize = 2
-            myIntLength = 1
+            myIntegralLength = 1
             return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
         }
 
@@ -1330,7 +1330,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         while (true) {
             if (ch < CODE_0) {
                 if (ch == CODE_PERIOD) {
-                    myIntLength = outputPointer - 1
+                    myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1340,7 +1340,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             if (ch > CODE_9) {
                 if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
-                    myIntLength = outputPointer - 1
+                    myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1363,7 +1363,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
         }
 
-        myIntLength = outputPointer
+        myIntegralLength = outputPointer
         myTextBuffer.currentSegmentSize = outputPointer
         return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
@@ -1410,7 +1410,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         if (myInputPointer >= myInputEnd) {
             myMinorState = MINOR_NUMBER_INTEGER_DIGITS
             myTextBuffer.currentSegmentSize = 2
-            myIntLength = 1
+            myIntegralLength = 1
             return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
         }
 
@@ -1420,7 +1420,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         while (true) {
             if (ch < CODE_0) {
                 if (ch == CODE_PERIOD) {
-                    myIntLength = outputPointer - 1
+                    myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1430,7 +1430,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             if (ch > CODE_9) {
                 if (ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
-                    myIntLength = outputPointer - 1
+                    myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
                 }
@@ -1453,7 +1453,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
         }
 
-        myIntLength = outputPointer
+        myIntegralLength = outputPointer
         myTextBuffer.currentSegmentSize = outputPointer
         return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
@@ -1472,7 +1472,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         if (ch !in CODE_0..CODE_9) {
             if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
                 myInputPointer = pointer
-                myIntLength = 1
+                myIntegralLength = 1
                 val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                 outputBuffer[0] = '0'
                 return startFloat(outputBuffer, 1, ch)
@@ -1549,7 +1549,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
             outputBuffer[0] = if (negative) '-' else '+'
             outputBuffer[1] = code.toChar()
-            myIntLength = 1
+            myIntegralLength = 1
             finishNumberIntegralPart(outputBuffer, 2)
         }
     }
@@ -1566,7 +1566,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             if (ch !in CODE_0..CODE_9) {
                 if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
-                    myIntLength = 1
+                    myIntegralLength = 1
                     val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                     outputBuffer[0] = '0'
                     return startFloat(outputBuffer, 1, ch)
@@ -1587,7 +1587,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
                 val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                 outputBuffer[0] = ch.toChar()
-                myIntLength = 1
+                myIntegralLength = 1
                 finishNumberIntegralPart(outputBuffer, 1)
             }
 
@@ -1621,7 +1621,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                     outputBuffer[0] = if (negative) '-' else '+'
                     outputBuffer[1] = ch.toChar()
-                    myIntLength = 1
+                    myIntegralLength = 1
                     return startFloat(outputBuffer, 2, ch)
                 }
 
@@ -1641,7 +1641,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                 outputBuffer[0] = if (negative) '-' else '+'
                 outputBuffer[1] = ch.toChar()
-                myIntLength = 1
+                myIntegralLength = 1
                 finishNumberIntegralPart(outputBuffer, 2)
             }
 
@@ -1667,7 +1667,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             if (ch !in CODE_0..CODE_9) {
                 if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
-                    myIntLength = realOutputPointer + negMod
+                    myIntegralLength = realOutputPointer + negMod
                     ++myInputPointer
                     return startFloat(outputBuffer, 2, ch)
                 }
@@ -1684,7 +1684,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             realOutputBuffer[realOutputPointer++] = ch.toChar()
         }
 
-        myIntLength = realOutputPointer + negMod
+        myIntegralLength = realOutputPointer + negMod
         myTextBuffer.currentSegmentSize = realOutputPointer
         return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }

@@ -1502,7 +1502,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      * buffer boundary. As a result code is very similar, except that it has to explicitly copy contents to the text
      * buffer instead of just sharing the main input buffer.
      *
-     * @param neg Whether number being decoded is negative or not
+     * @param negative Whether number being decoded is negative or not
      *
      * @param startPointer Offset in input buffer for the next character of content
      *
@@ -1514,7 +1514,164 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     private fun parseNumber(negative: Boolean, startPointer: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        myInputPointer = if (negative) startPointer + 1 else startPointer
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 0
+
+        if (negative) {
+            outputBuffer[outputPointer++] = '-'
+        }
+
+        var integralLength = 0
+        var c = if (myInputPointer < myInputEnd) {
+            myInputBuffer[myInputPointer++]
+        } else {
+            getNextChar("No digit following sign", CirJsonToken.VALUE_NUMBER_INT)
+        }
+
+        if (c == '0') {
+            c = verifyNoLeadingZeroes()
+        }
+
+        var eof = false
+
+        while (c in '0'..'9') {
+            ++integralLength
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c
+
+            if (myInputPointer >= myInputEnd && !loadMore()) {
+                c = CODE_NULL_CHAR.toChar()
+                eof = true
+                break
+            }
+
+            c = myInputBuffer[myInputPointer++]
+        }
+
+        if (integralLength == 0) {
+            if (c != '.' || !isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                return handleInvalidNumberStart(c.code, negative)
+            }
+        }
+
+        var fractionLength = -1
+
+        if (c == '.') {
+            fractionLength = 0
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c
+
+            while (true) {
+                if (myInputPointer >= myInputEnd && !loadMore()) {
+                    eof = true
+                    break
+                }
+
+                c = myInputBuffer[myInputPointer++]
+
+                if (c !in '0'..'9') {
+                    break
+                }
+
+                ++fractionLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c
+            }
+
+            if (fractionLength == 0) {
+                if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                    return reportUnexpectedNumberChar(c, "Decimal point not followed by a digit")
+                }
+            }
+        }
+
+        var exponentLength = -1
+
+        if (c.code or 0x20 == CODE_E_LOWERCASE) {
+            exponentLength = 0
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c
+
+            c = if (myInputPointer < myInputEnd) {
+                myInputBuffer[myInputPointer++]
+            } else {
+                getNextChar("expected a digit for number exponent", CirJsonToken.VALUE_NUMBER_FLOAT)
+            }
+
+            if (c == '-' || c == '+') {
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c
+
+                c = if (myInputPointer < myInputEnd) {
+                    myInputBuffer[myInputPointer++]
+                } else {
+                    getNextChar("expected a digit for number exponent", CirJsonToken.VALUE_NUMBER_FLOAT)
+                }
+            }
+
+            while (c in '0'..'9') {
+                ++exponentLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c
+
+                if (myInputPointer >= myInputEnd && !loadMore()) {
+                    eof = true
+                    break
+                }
+
+                c = myInputBuffer[myInputPointer++]
+            }
+
+            if (exponentLength == 0) {
+                return reportUnexpectedNumberChar(c, "Exponent indicator not followed by a digit")
+            }
+        }
+
+        if (!eof) {
+            --myInputPointer
+
+            if (streamReadContext!!.isInRoot) {
+                verifyRootSpace(c.code)
+            }
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+
+        return if (fractionLength < 0 && exponentLength < 0) {
+            resetInt(negative, integralLength)
+        } else {
+            resetFloat(negative, integralLength, fractionLength, exponentLength)
+        }
     }
 
     /**
@@ -1522,17 +1679,57 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     private fun verifyNoLeadingZeroes(): Char {
-        TODO("Not yet implemented")
+        if (myInputPointer < myInputEnd) {
+            val ch = myInputBuffer[myInputPointer]
+
+            if (ch !in '0'..'9') {
+                return '0'
+            }
+        }
+
+        return verifyNoLeadingZeroes2()
     }
 
     @Throws(CirJacksonException::class)
     private fun verifyNoLeadingZeroes2(): Char {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return '0'
+        }
+
+        var ch = myInputBuffer[myInputPointer]
+
+        if (ch !in '0'..'9') {
+            return '0'
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_ZEROS_FOR_NUMBERS)) {
+            return reportInvalidNumber("Leading zeroes not allowed")
+        }
+
+        ++myInputPointer
+
+        if (ch == '0') {
+            while (myInputPointer < myInputEnd || loadMore()) {
+                ch = myInputBuffer[myInputPointer]
+
+                if (ch !in '0'..'9') {
+                    return '0'
+                }
+
+                ++myInputPointer
+
+                if (ch != '0') {
+                    break
+                }
+            }
+        }
+
+        return ch
     }
 
     @Throws(CirJacksonException::class)
     protected fun handleInvalidNumberStart(code: Int, negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        return handleInvalidNumberStart(code, negative, false)
     }
 
     /**
@@ -1540,7 +1737,51 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun handleInvalidNumberStart(code: Int, negative: Boolean, hasSign: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        var ch = code
+
+        if (ch == 'I'.code) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOFInValue(CirJsonToken.VALUE_NUMBER_INT)
+                }
+            }
+
+            ch = myInputBuffer[myInputPointer++].code
+
+            if (ch == 'N'.code) {
+                val match = if (negative) "-INF" else "+INF"
+                matchToken(match, 3)
+
+                return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN(match, if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY)
+                } else {
+                    reportError(
+                            "Non-standard token '$match': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            } else if (ch == 'n'.code) {
+                val match = if (negative) "-Infinity" else "+Infinity"
+                matchToken(match, 3)
+
+                return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN(match, if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY)
+                } else {
+                    reportError(
+                            "Non-standard token '$match': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            }
+        }
+
+        return if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS) && hasSign && !negative) {
+            reportUnexpectedNumberChar('+',
+                    "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+        } else {
+            val message = if (negative) {
+                "expected digit (0-9) to follow minus sign, for valid numeric value"
+            } else {
+                "expected digit (0-9) for valid numeric value"
+            }
+            reportUnexpectedNumberChar(ch.toChar(), message)
+        }
     }
 
     /**
@@ -1553,11 +1794,28 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      *
      * @throws CirJacksonIOException for low-level read issues
      *
-     * @throws CirStreamReadException for decoding problems
+     * @throws StreamReadException for decoding problems
      */
     @Throws(CirJacksonException::class)
     private fun verifyRootSpace(code: Int) {
-        TODO("Not yet implemented")
+        ++myInputPointer
+
+        when (code) {
+            ' '.code, '\t'.code -> {}
+
+            '\r'.code -> {
+                --myInputPointer
+            }
+
+            '\n'.code -> {
+                ++myCurrentInputRow
+                myCurrentInputRowStart = myInputPointer
+            }
+
+            else -> {
+                reportMissingRootWhiteSpace(code.toChar())
+            }
+        }
     }
 
     /*
