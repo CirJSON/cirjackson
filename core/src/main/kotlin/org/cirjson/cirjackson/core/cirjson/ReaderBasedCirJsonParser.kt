@@ -1363,7 +1363,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     @Suppress("NAME_SHADOWING")
-    private fun parseFloat(code: Int, startPointer: Int, pointer: Int, neg: Boolean,
+    private fun parseFloat(code: Int, startPointer: Int, pointer: Int, negative: Boolean,
             integralLength: Int): CirJsonToken? {
         var ch = code
         var pointer = pointer
@@ -1373,7 +1373,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         if (ch == '.'.code) {
             while (true) {
                 if (pointer >= inputLength) {
-                    return parseNumber(neg, startPointer)
+                    return parseNumber(negative, startPointer)
                 }
 
                 ch = myInputBuffer[pointer++].code
@@ -1397,7 +1397,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         if (ch or 0x20 == CODE_E_LOWERCASE) {
             if (pointer >= inputLength) {
                 myInputPointer = startPointer
-                return parseNumber(neg, startPointer)
+                return parseNumber(negative, startPointer)
             }
 
             ch = myInputBuffer[pointer++].code
@@ -1405,7 +1405,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             if (ch == CODE_MINUS || ch == CODE_PLUS) {
                 if (pointer >= inputLength) {
                     myInputPointer = startPointer
-                    return parseNumber(neg, startPointer)
+                    return parseNumber(negative, startPointer)
                 }
 
                 ch = myInputBuffer[pointer++].code
@@ -1416,7 +1416,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
                 if (pointer >= inputLength) {
                     myInputPointer = startPointer
-                    return parseNumber(neg, startPointer)
+                    return parseNumber(negative, startPointer)
                 }
 
                 ch = myInputBuffer[pointer++].code
@@ -1440,7 +1440,61 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     protected fun parseSignedNumber(negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+        val startPointer = if (negative) pointer - 1 else pointer
+        val inputEnd = myInputEnd
+
+        if (pointer >= inputEnd) {
+            return parseNumber(negative, startPointer)
+        }
+
+        var ch = myInputBuffer[pointer++].code
+
+        if (ch !in CODE_0..CODE_9) {
+            myInputPointer = pointer
+
+            return if (ch == CODE_PERIOD) {
+                parseFloatThatStartsWithPeriod(negative)
+            } else {
+                handleInvalidNumberStart(ch, negative, true)
+            }
+        }
+
+        if (ch == CODE_0) {
+            return parseNumber(negative, startPointer)
+        }
+
+        var integralLength = 1
+
+        while (true) {
+            if (pointer >= inputEnd) {
+                return parseNumber(negative, startPointer)
+            }
+
+            ch = myInputBuffer[pointer++].code
+
+            if (ch !in CODE_0..CODE_9) {
+                break
+            }
+
+            ++integralLength
+        }
+
+        if (ch == CODE_PERIOD || ch or 0x20 == CODE_E_LOWERCASE) {
+            myInputPointer = pointer
+            return parseFloat(ch, startPointer, pointer, negative, integralLength)
+        }
+
+        --pointer
+        myInputPointer = pointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(ch)
+        }
+
+        val length = pointer - startPointer
+        myTextBuffer.resetWithShared(myInputBuffer, startPointer, length)
+        return resetInt(negative, integralLength)
     }
 
     /**
@@ -1459,7 +1513,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      * @throws StreamReadException for decoding problems
      */
     @Throws(CirJacksonException::class)
-    private fun parseNumber(neg: Boolean, startPointer: Int): CirJsonToken? {
+    private fun parseNumber(negative: Boolean, startPointer: Int): CirJsonToken? {
         TODO("Not yet implemented")
     }
 
