@@ -3047,23 +3047,39 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
 
     override fun currentTokenLocation(): CirJsonLocation {
-        TODO("Not yet implemented")
+        return if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || myCurrentToken == CirJsonToken.PROPERTY_NAME) {
+            val total = myCurrentInputProcessed + myNameStartOffset - 1
+            CirJsonLocation(contentReference(), -1L, total, myNameStartRow, myNameStartColumn)
+        } else {
+            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, myNameStartRow, myNameStartColumn)
+        }
     }
 
     override fun currentLocation(): CirJsonLocation {
-        TODO("Not yet implemented")
+        val column = myInputPointer - myCurrentInputRowStart + 1
+        return CirJsonLocation(contentReference(), -1L, myCurrentInputProcessed + myInputPointer, myCurrentInputRow,
+                column)
     }
 
     override fun currentLocationMinusOne(): CirJsonLocation {
-        TODO("Not yet implemented")
+        val previousInputPointer = myInputPointer - 1
+        val column = previousInputPointer - myCurrentInputRowStart + 1
+        return CirJsonLocation(contentReference(), -1L, myCurrentInputProcessed + previousInputPointer,
+                myCurrentInputRow, column)
     }
 
     private fun updateLocation() {
-        TODO("Not yet implemented")
+        val pointer = myInputPointer
+        tokenCharacterOffset = myCurrentInputProcessed + pointer
+        tokenLineNumber = myCurrentInputRow
+        myTokenInputColumn = pointer - myCurrentInputRowStart
     }
 
     private fun updateNameLocation() {
-        TODO("Not yet implemented")
+        val pointer = myInputPointer
+        myNameStartOffset = pointer
+        myNameStartRow = myCurrentInputRow
+        myNameStartColumn = pointer - myCurrentInputRowStart
     }
 
     override val objectId: Any?
