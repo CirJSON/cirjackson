@@ -2917,7 +2917,127 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
     @Throws(CirJacksonException::class)
     protected fun decodeBase64(base64Variant: Base64Variant): ByteArray {
-        TODO("Not yet implemented")
+        val builder = byteArrayBuilder
+
+        while (true) {
+            var ch: Char
+
+            do {
+                if (myInputPointer >= myInputEnd) {
+                    loadMoreGuaranteed()
+                }
+
+                ch = myInputBuffer[myInputPointer++]
+            } while (ch <= ' ')
+
+            var bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (ch == '"') {
+                    return builder.toByteArray()
+                }
+
+                bits = decodeBase64Escape(base64Variant, ch, 0)
+
+                if (bits < 0) {
+                    continue
+                }
+            }
+
+            var decodedData = bits
+
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            ch = myInputBuffer[myInputPointer++]
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                bits = decodeBase64Escape(base64Variant, ch, 1)
+            }
+
+            decodedData = decodedData shl 6 or bits
+
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            ch = myInputBuffer[myInputPointer++]
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == '"') {
+                        decodedData = decodedData shr 4
+                        builder.append(decodedData)
+
+                        if (base64Variant.isRequiringPaddingOnRead) {
+                            --myInputPointer
+                            return handleBase64MissingPadding(base64Variant)
+                        }
+
+                        return builder.toByteArray()
+                    }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 2)
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    if (myInputPointer >= myInputEnd) {
+                        loadMoreGuaranteed()
+                    }
+
+                    ch = myInputBuffer[myInputPointer++]
+
+                    if (!base64Variant.usesPaddingChar(ch)) {
+                        if (decodeBase64Escape(base64Variant, ch, 3) != Base64Variant.BASE64_VALUE_PADDING) {
+                            return reportInvalidBase64Char(base64Variant, ch, 3,
+                                    "expected padding character '${base64Variant.paddingChar}'")
+                        }
+                    }
+
+                    decodedData = decodedData shr 4
+                    builder.append(decodedData)
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            ch = myInputBuffer[myInputPointer++]
+            bits = base64Variant.decodeBase64Char(ch)
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == '"') {
+                        decodedData = decodedData shr 2
+                        builder.appendTwoBytes(decodedData)
+
+                        if (base64Variant.isRequiringPaddingOnRead) {
+                            --myInputPointer
+                            return handleBase64MissingPadding(base64Variant)
+                        }
+
+                        return builder.toByteArray()
+                    }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 3)
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    decodedData = decodedData shr 2
+                    builder.appendTwoBytes(decodedData)
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+            builder.appendThreeBytes(decodedData)
+        }
     }
 
     /*
