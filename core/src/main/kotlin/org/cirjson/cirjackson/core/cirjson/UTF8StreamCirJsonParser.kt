@@ -1678,6 +1678,12 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         return null
     }
 
+    /*
+     *******************************************************************************************************************
+     * Internal methods, number parsing
+     *******************************************************************************************************************
+     */
+
     @Throws(CirJacksonException::class)
     protected fun parseFloatThatStartsWithPeriod(negative: Boolean): CirJsonToken? {
         TODO("Not yet implemented")
