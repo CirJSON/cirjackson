@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.core.cirjson
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.extensions.growBy
 import org.cirjson.cirjackson.core.extensions.write
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
@@ -1327,23 +1328,239 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchName(matcher: PropertyNameMatcher, i: Int): Int {
-        TODO("Not yet implemented")
+        var i = i
+
+        if (i != CODE_QUOTE) {
+            return -1
+        }
+
+        var quadPointer = myInputPointer
+
+        if (quadPointer + 13 > myInputEnd) {
+            return -1
+        }
+
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var q = input[quadPointer++].toInt() and 0xFF
+
+        if (codes[q] != 0) {
+            return if (q == CODE_QUOTE) {
+                matcher.matchName("")
+            } else {
+                -1
+            }
+        }
+
+        i = input[quadPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            if (i != CODE_QUOTE) {
+                return -1
+            }
+        } else {
+            q = q shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+            } else {
+                q = q shl 8 or i
+                i = input[quadPointer++].toInt() and 0xFF
+
+                if (codes[i] != 0) {
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                } else {
+                    q = q shl 8 or i
+                    i = input[quadPointer++].toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        myQuad1 = q
+                        return matchMediumName(matcher, quadPointer, i)
+                    }
+
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                }
+            }
+        }
+
+        myQuadPointer = quadPointer
+        return matcher.matchByQuad(q)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchMediumName(matcher: PropertyNameMatcher, quadPointer: Int, quad2: Int): Int {
-        TODO("Not yet implemented")
+        var quadPointer = quadPointer
+        var q2 = quad2
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var i = input[quadPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            if (i != CODE_QUOTE) {
+                return -1
+            }
+        } else {
+            q2 = q2 shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+            } else {
+                q2 = q2 shl 8 or i
+                i = input[quadPointer++].toInt() and 0xFF
+
+                if (codes[i] != 0) {
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                } else {
+                    q2 = q2 shl 8 or i
+                    i = input[quadPointer++].toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        return matchMediumName(matcher, quadPointer, i, q2)
+                    }
+
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                }
+            }
+        }
+
+        myQuadPointer = quadPointer
+        return matcher.matchByQuad(myQuad1, q2)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchMediumName(matcher: PropertyNameMatcher, quadPointer: Int, quad3: Int, q2: Int): Int {
-        TODO("Not yet implemented")
+        var q3 = quad3
+        var quadPointer = quadPointer
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var i = input[quadPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            if (i != CODE_QUOTE) {
+                return -1
+            }
+        } else {
+            q3 = q3 shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+            } else {
+                q3 = q3 shl 8 or i
+                i = input[quadPointer++].toInt() and 0xFF
+
+                if (codes[i] != 0) {
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                } else {
+                    q3 = q3 shl 8 or i
+                    i = input[quadPointer++].toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        myQuadBuffer[0] = myQuad1
+                        myQuadBuffer[1] = q2
+                        myQuadBuffer[2] = q3
+                        return matchLongName(matcher, quadPointer, i)
+                    }
+
+                    if (i != CODE_QUOTE) {
+                        return -1
+                    }
+                }
+            }
+        }
+
+        myQuadPointer = quadPointer
+        return matcher.matchByQuad(myQuad1, q2, q3)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchLongName(matcher: PropertyNameMatcher, quadPointer: Int, quad: Int): Int {
-        TODO("Not yet implemented")
+        var q = quad
+        var quadPointer = quadPointer
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+        var quadLength = 3
+
+        while (quadPointer + 4 <= myInputEnd) {
+            var i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    myQuadPointer = quadPointer
+                    return matcher.matchByQuad(myQuadBuffer, quadLength)
+                } else {
+                    -1
+                }
+            }
+
+            q = q shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+
+                break
+            }
+
+            q = q shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+
+                break
+            }
+
+            q = q shl 8 or i
+            i = input[quadPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                if (i != CODE_QUOTE) {
+                    return -1
+                }
+
+                break
+            }
+
+            if (quadLength >= myQuadBuffer.size) {
+                myQuadBuffer = myQuadBuffer.growBy(quadLength)
+            }
+
+            myQuadBuffer[quadLength++] = q
+            q = i
+        }
+
+        return -1
     }
 
     /*
@@ -1974,6 +2191,65 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     override val typeId: Any?
         get() = null
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, error reporting
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidToken(matchedPart: String): T {
+        return reportInvalidToken(matchedPart, validCirJsonTokenList())
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidToken(matchedPart: String, message: String): T {
+        val stringBuilder = StringBuilder(matchedPart)
+
+        while (myInputPointer < myInputEnd) {
+            val i = myInputBuffer[myInputPointer++]
+            val c = decodeCharForError(i.toInt()).toChar()
+
+            if (!c.isJavaIdentifierPart()) {
+                break
+            }
+
+            stringBuilder.append(c)
+
+            if (stringBuilder.length >= myIOContext!!.errorReportConfiguration.maxErrorTokenLength) {
+                stringBuilder.append("...")
+                break
+            }
+        }
+
+        throw constructReadException("Unrecognized token '$stringBuilder': was expecting $message")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidChar(code: Int): T {
+        return if (code < 0) {
+            reportInvalidSpace(code)
+        } else {
+            reportInvalidInitial(code)
+        }
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidInitial(mask: Int): T {
+        return reportError("Invalid UTF-8 start byte 0x${mask.toString(16)}")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidOther(mask: Int): T {
+        return reportError("Invalid UTF-8 middle byte 0x${mask.toString(16)}")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidOther(mask: Int, pointer: Int): T {
+        myInputPointer = pointer
+        return reportInvalidOther(mask)
+    }
 
     companion object {
 
