@@ -1328,7 +1328,22 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     protected fun matchName(matcher: PropertyNameMatcher, i: Int): Int {
-        TODO()
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun matchMediumName(matcher: PropertyNameMatcher, quadPointer: Int, quad2: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun matchMediumName(matcher: PropertyNameMatcher, quadPointer: Int, quad3: Int, q2: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun matchLongName(matcher: PropertyNameMatcher, quadPointer: Int, quad: Int): Int {
+        TODO("Not yet implemented")
     }
 
     /*
