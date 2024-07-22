@@ -13,6 +13,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.Writer
+import kotlin.math.min
 
 /**
  * This is a concrete implementation of [CirJsonParser], which is based on a [InputStream] as the input source.
@@ -1686,7 +1687,18 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     protected fun parseFloatThatStartsWithPeriod(negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+            return handleUnexpectedValue(CODE_PERIOD)
+        }
+
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 0
+
+        if (negative) {
+            outputBuffer[outputPointer++] = '-'
+        }
+
+        return parseFloat(outputBuffer, outputPointer, CODE_PERIOD, negative, 0)
     }
 
     /**
@@ -1709,7 +1721,45 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     protected open fun parseUnsignedNumber(code: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var c = code
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        if (c == CODE_0) {
+            c = verifyNoLeadingZeroes()
+        }
+
+        outputBuffer[0] = c.toChar()
+        var integralLength = 1
+        var outputPointer = 1
+        val end = min(myInputEnd, myInputPointer + outputBuffer.size - 1)
+
+        while (true) {
+            if (myInputPointer >= end) {
+                return parseNumber(outputBuffer, outputPointer, false, integralLength)
+            }
+
+            c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (c !in CODE_0..CODE_9) {
+                break
+            }
+
+            ++integralLength
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        if (c == CODE_PERIOD || c or 0x20 == CODE_E_LOWERCASE) {
+            return parseFloat(outputBuffer, outputPointer, c, false, integralLength)
+        }
+
+        --myInputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(c)
+        }
+
+        return resetInt(false, integralLength)
     }
 
     @Throws(CirJacksonException::class)
@@ -1723,7 +1773,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     private fun parseNumber(outputBuffer: CharArray, outputPointer: Int, negative: Boolean,
-            integralPartLength: Int): CirJsonToken? {
+            integralLength: Int): CirJsonToken? {
         TODO("Not yet implemented")
     }
 
@@ -1736,8 +1786,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     }
 
     @Throws(CirJacksonException::class)
-    private fun parseFloat(outputBuffer: CharArray, outputPointer: Int, negative: Boolean,
-            integralPartLength: Int): CirJsonToken? {
+    private fun parseFloat(outputBuffer: CharArray, outputPointer: Int, code: Int, negative: Boolean,
+            integralLength: Int): CirJsonToken? {
         TODO("Not yet implemented")
     }
 
