@@ -2064,22 +2064,230 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     protected fun parseName(code: Int): String? {
-        TODO("Not yet implemented")
+        var i = code
+
+        if (i != CODE_QUOTE) {
+            return handleOddName(i)
+        }
+
+        if (myInputPointer + 13 > myInputEnd) {
+            return slowParseName()
+        }
+
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var q = input[myInputPointer++].toInt() and 0xFF
+
+        return if (codes[q] == 0) {
+            i = input[myInputPointer++].toInt() and 0xFF
+            if (codes[i] == 0) {
+                q = q shl 8 or i
+                i = input[myInputPointer++].toInt() and 0xFF
+
+                if (codes[i] == 0) {
+                    q = q shl 8 or i
+                    i = input[myInputPointer++].toInt() and 0xFF
+
+                    if (codes[i] == 0) {
+                        q = q shl 8 or i
+                        i = input[myInputPointer++].toInt() and 0xFF
+
+                        if (codes[i] == 0) {
+                            myQuad1 = q
+                            parseMediumName(i)
+                        } else if (q == CODE_QUOTE) {
+                            findName(q, 4)
+                        } else {
+                            parseName(q, i, 4)
+                        }
+                    } else if (q == CODE_QUOTE) {
+                        findName(q, 3)
+                    } else {
+                        parseName(q, i, 3)
+                    }
+                } else if (q == CODE_QUOTE) {
+                    findName(q, 2)
+                } else {
+                    parseName(q, i, 2)
+                }
+            } else if (q == CODE_QUOTE) {
+                findName(q, 1)
+            } else {
+                parseName(q, i, 1)
+            }
+        } else if (q == CODE_QUOTE) {
+            ""
+        } else {
+            parseName(0, q, 0)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun parseMediumName(quad2: Int): String? {
-        TODO("Not yet implemented")
+        var q2 = quad2
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 1)
+            } else {
+                parseName(myQuad1, q2, i, 1)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 2)
+            } else {
+                parseName(myQuad1, q2, i, 2)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 3)
+            } else {
+                parseName(myQuad1, q2, i, 3)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        return if (codes[i] != 0) {
+            if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 4)
+            } else {
+                parseName(myQuad1, q2, i, 4)
+            }
+        } else {
+            parseMediumName(i, q2)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun parseMediumName(quad3: Int, q2: Int): String? {
-        TODO("Not yet implemented")
+        var q3 = quad3
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+
+        var i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 1)
+            } else {
+                parseName(myQuad1, q2, q3, i, 1)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 2)
+            } else {
+                parseName(myQuad1, q2, q3, i, 2)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 3)
+            } else {
+                parseName(myQuad1, q2, q3, i, 3)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = input[myInputPointer++].toInt() and 0xFF
+
+        return if (codes[i] != 0) {
+            if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 4)
+            } else {
+                parseName(myQuad1, q2, q3, i, 4)
+            }
+        } else {
+            parseLongName(i, q2, q3)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun parseLongName(quad: Int, q2: Int, q3: Int): String? {
-        TODO("Not yet implemented")
+        var q = quad
+
+        myQuadBuffer[0] = myQuad1
+        myQuadBuffer[1] = q2
+        myQuadBuffer[2] = q3
+
+        val input = myInputBuffer
+        val codes = INPUT_CODE_LATIN1
+        var quadLength = 3
+
+        while (myInputPointer + 4 <= myInputEnd) {
+            var i = input[myInputPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 1)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 1)
+                }
+            }
+
+            q = q shl 8 or i
+            i = input[myInputPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 2)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 2)
+                }
+            }
+
+            q = q shl 8 or i
+            i = input[myInputPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 3)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 3)
+                }
+            }
+
+            q = q shl 8 or i
+            i = input[myInputPointer++].toInt() and 0xFF
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 4)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 4)
+                }
+            }
+
+            myQuadBuffer[quadLength++] = q
+            q = 1
+        }
+
+        return parseEscapedName(myQuadBuffer, quadLength, 0, q, 0)
     }
 
     /**
@@ -2088,28 +2296,136 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     protected open fun slowParseName(): String? {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF(": was expecting closing '\"' for name", CirJsonToken.PROPERTY_NAME)
+            }
+        }
+
+        val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+        return if (i != CODE_QUOTE) {
+            parseEscapedName(myQuadBuffer, 0, 0, i, 0)
+        } else {
+            ""
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun parseName(q1: Int, code: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        return parseEscapedName(myQuadBuffer, 0, q1, code, lastQuadBytes)
     }
 
     @Throws(CirJacksonException::class)
     private fun parseName(q1: Int, q2: Int, code: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        myQuadBuffer[0] = q1
+        return parseEscapedName(myQuadBuffer, 1, q2, code, lastQuadBytes)
     }
 
     @Throws(CirJacksonException::class)
     private fun parseName(q1: Int, q2: Int, q3: Int, code: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+        return parseEscapedName(myQuadBuffer, 2, q3, code, lastQuadBytes)
     }
 
+    /**
+     * Slower parsing method which is generally branched to when an escape sequence is detected (or alternatively for
+     * long names, one crossing input buffer boundary). Needs to be able to handle more exceptional cases, gets slower,
+     * and hence is offlined to a separate method.
+     */
     @Throws(CirJacksonException::class)
-    protected fun parseEscapedName(quads: IntArray, quadLength: Int, currentQuad: Int, ch: Int,
+    @Suppress("NAME_SHADOWING")
+    protected fun parseEscapedName(quads: IntArray, quadLength: Int, currentQuad: Int, code: Int,
             currentQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        var quads = quads
+        var quadLength = quadLength
+        var currentQuad = currentQuad
+        var ch = code
+        var currentQuadBytes = currentQuadBytes
+
+        while (true) {
+            if (INPUT_CODE_LATIN1[ch] != 0) {
+                if (ch == CODE_QUOTE) {
+                    break
+                }
+
+                if (ch != CODE_BACKSLASH) {
+                    throwUnquotedSpace(ch, "name")
+                } else {
+                    ch = decodeEscaped().code
+                }
+
+                if (ch > 127) {
+                    if (currentQuadBytes >= 4) {
+                        if (quadLength >= quads.size) {
+                            quads = growNameDecodeBuffer(quads, quads.size)
+                            myQuadBuffer = quads
+                        }
+
+                        quads[quadLength++] = currentQuad
+                        currentQuad = 0
+                        currentQuadBytes = 0
+                    }
+
+                    if (ch < 0x800) {
+                        currentQuad = currentQuad shl 8 or (ch shr 6) or 0xC0
+                    } else {
+                        currentQuad = currentQuad shl 8 or (ch shr 12) or 0xE0
+                        ++currentQuadBytes
+
+                        if (currentQuadBytes >= 4) {
+                            if (quadLength >= quads.size) {
+                                quads = growNameDecodeBuffer(quads, quads.size)
+                                myQuadBuffer = quads
+                            }
+
+                            quads[quadLength++] = currentQuad
+                            currentQuad = 0
+                            currentQuadBytes = 0
+                        }
+
+                        currentQuad = currentQuad shl 8 or (ch shr 6 and 0x3F) or 0x80
+                    }
+
+                    ++currentQuadBytes
+                    ch = ch and 0x3F or 0x80
+                }
+            }
+
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+            }
+
+            ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+        }
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
     /**
@@ -2126,12 +2442,172 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     protected open fun handleOddName(code: Int): String? {
-        TODO("Not yet implemented")
+        var ch = code
+
+        if (ch == CODE_APOSTROPHE && isEnabled(CirJsonReadFeature.ALLOW_SINGLE_QUOTES)) {
+            return parseApostropheName()
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_UNQUOTED_PROPERTY_NAMES)) {
+            val c = decodeCharForError(ch).toChar()
+            return reportUnexpectedChar(c, "was expecting double-quote to start property name")
+        }
+
+        val codes = INPUT_CODE_UTF8_JS_NAMES
+
+        if (codes[ch] != 0) {
+            return reportUnexpectedChar(ch.toChar(),
+                    "was expecting either valid name character (for unquoted name) or double-quote (for quoted) to start property name")
+        }
+
+        var quads = myQuadBuffer
+        var quadLength = 0
+        var currentQuad = 0
+        var currentQuadBytes = 0
+
+        while (true) {
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+            }
+
+            ch = myInputBuffer[myInputPointer].toInt() and 0xFF
+
+            if (codes[ch] != 0) {
+                break
+            }
+
+            ++myInputPointer
+        }
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
+    /**
+     * Parsing to support apostrophe-quoted names. Plenty of duplicated code; main reason being to try to avoid slowing
+     * down fast path for valid CirJSON -- more alternatives, more code, generally a bit slower execution.
+     */
     @Throws(CirJacksonException::class)
     protected open fun parseApostropheName(): String? {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF(": was expecting closing ''' for name", CirJsonToken.PROPERTY_NAME)
+            }
+        }
+
+        var ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+        if (ch == CODE_APOSTROPHE) {
+            return ""
+        }
+
+        var quads = myQuadBuffer
+        var quadLength = 0
+        var currentQuad = 0
+        var currentQuadBytes = 0
+
+        while (ch != CODE_APOSTROPHE) {
+            if (INPUT_CODE_LATIN1[ch] != 0 && ch != CODE_QUOTE) {
+                if (ch != CODE_BACKSLASH) {
+                    throwUnquotedSpace(ch, "name")
+                } else {
+                    ch = decodeEscaped().code
+                }
+
+                if (ch > 127) {
+                    if (currentQuadBytes >= 4) {
+                        if (quadLength >= quads.size) {
+                            quads = growNameDecodeBuffer(quads, quads.size)
+                            myQuadBuffer = quads
+                        }
+
+                        quads[quadLength++] = currentQuad
+                        currentQuad = 0
+                        currentQuadBytes = 0
+                    }
+
+                    if (ch < 0x800) {
+                        currentQuad = currentQuad shl 8 or (ch shr 6) or 0xC0
+                    } else {
+                        currentQuad = currentQuad shl 8 or (ch shr 12) or 0xE0
+                        ++currentQuadBytes
+
+                        if (currentQuadBytes >= 4) {
+                            if (quadLength >= quads.size) {
+                                quads = growNameDecodeBuffer(quads, quads.size)
+                                myQuadBuffer = quads
+                            }
+
+                            quads[quadLength++] = currentQuad
+                            currentQuad = 0
+                            currentQuadBytes = 0
+                        }
+
+                        currentQuad = currentQuad shl 8 or (ch shr 6 and 0x3F) or 0x80
+                    }
+
+                    ++currentQuadBytes
+                    ch = ch and 0x3F or 0x80
+                }
+            }
+
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+            }
+
+            ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+        }
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
     /*
@@ -2548,6 +3024,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
          * This is the main input-code lookup table, fetched eagerly
          */
         private val INPUT_CODE_UTF8 = CharTypes.inputCodeUtf8
+
+        private val INPUT_CODE_UTF8_JS_NAMES = CharTypes.inputCodeUtf8JsNames
 
         /**
          * Latin1 encoding is not supported, but we do use 8-bit subset for pre-processing task, to simplify first pass,
