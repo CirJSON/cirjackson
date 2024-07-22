@@ -1764,7 +1764,64 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     private fun parseSignedNumber(negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 1
+
+        if (negative) {
+            outputBuffer[outputPointer++] = '-'
+        }
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        var c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+        if (c <= CODE_0) {
+            if (c != CODE_0) {
+                return if (c == CODE_PERIOD) {
+                    parseFloatThatStartsWithPeriod(negative)
+                } else {
+                    handleInvalidNumberStart(c, negative, true)
+                }
+            }
+
+            c = verifyNoLeadingZeroes()
+        } else if (c > CODE_9) {
+            return handleInvalidNumberStart(c, negative, true)
+        }
+
+        outputBuffer[outputPointer++] = c.toChar()
+        var integralLength = 1
+        val end = min(myInputEnd, myInputPointer + outputBuffer.size - 1)
+
+        while (true) {
+            if (myInputPointer >= end) {
+                return parseNumber(outputBuffer, outputPointer, negative, integralLength)
+            }
+
+            c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (c !in CODE_0..CODE_9) {
+                break
+            }
+
+            ++integralLength
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        if (c == CODE_PERIOD || c or 0x20 == CODE_E_LOWERCASE) {
+            return parseFloat(outputBuffer, outputPointer, c, negative, integralLength)
+        }
+
+        --myInputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(c)
+        }
+
+        return resetInt(negative, integralLength)
     }
 
     /**
@@ -1772,9 +1829,46 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      * to store it)
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun parseNumber(outputBuffer: CharArray, outputPointer: Int, negative: Boolean,
             integralLength: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var outputBuffer = outputBuffer
+        var outputPointer = outputPointer
+        var integralLength = integralLength
+
+        while (true) {
+            if (myInputPointer >= myInputEnd && !loadMore()) {
+                myTextBuffer.currentSegmentSize = outputPointer
+                return resetInt(negative, integralLength)
+            }
+
+            val c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (c !in CODE_0..CODE_9) {
+                if (c == CODE_PERIOD || c or 0x20 == CODE_E_LOWERCASE) {
+                    return parseFloat(outputBuffer, outputPointer, c, negative, integralLength)
+                }
+
+                break
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            ++integralLength
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        --myInputPointer
+        myTextBuffer.currentSegmentSize = outputPointer
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace(myInputBuffer[myInputPointer].toInt() and 0xFF)
+        }
+
+        return resetInt(negative, integralLength)
     }
 
     /**
@@ -1782,13 +1876,150 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     private fun verifyNoLeadingZeroes(): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return CODE_0
+        }
+
+        var ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+        if (ch !in CODE_0..CODE_9) {
+            return CODE_0
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_ZEROS_FOR_NUMBERS)) {
+            return reportInvalidNumber("Leading zeroes not allowed")
+        }
+
+        ++myInputPointer
+
+        if (ch == CODE_0) {
+            while (myInputPointer < myInputEnd || loadMore()) {
+                ch = myInputBuffer[myInputPointer].toInt() and 0xFF
+
+                if (ch !in CODE_0..CODE_9) {
+                    return CODE_0
+                }
+
+                ++myInputPointer
+
+                if (ch != CODE_0) {
+                    break
+                }
+            }
+        }
+
+        return ch
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun parseFloat(outputBuffer: CharArray, outputPointer: Int, code: Int, negative: Boolean,
             integralLength: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var outputBuffer = outputBuffer
+        var outputPointer = outputPointer
+        var c = code
+        var fractionLength = 0
+        var eof = false
+
+        if (c == CODE_PERIOD) {
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+
+            while (true) {
+                if (myInputPointer >= myInputEnd && !loadMore()) {
+                    eof = true
+                    break
+                }
+
+                c = myInputBuffer[myInputPointer].toInt() and 0xFF
+
+                if (c !in CODE_0..CODE_9) {
+                    break
+                }
+
+                ++fractionLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+            }
+
+            if (fractionLength == 0) {
+                if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                    return reportUnexpectedNumberChar(c.toChar(), "Decimal point not followed by a digit")
+                }
+            }
+        }
+
+        var exponentLength = 0
+
+        if (c or 0x20 == CODE_E_LOWERCASE) {
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (c == CODE_MINUS || c == CODE_PLUS) {
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c.toChar()
+
+                if (myInputPointer >= myInputEnd) {
+                    loadMoreGuaranteed()
+                }
+
+                c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+            }
+
+            while (c in CODE_0..CODE_9) {
+                ++exponentLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c.toChar()
+
+                if (myInputPointer >= myInputEnd && !loadMore()) {
+                    eof = true
+                    break
+                }
+
+                c = myInputBuffer[myInputPointer++].toInt() and 0xFF
+            }
+
+            if (exponentLength == 0) {
+                return reportUnexpectedNumberChar(c.toChar(), "Exponent indicator not followed by a digit")
+            }
+        }
+
+        if (!eof) {
+            --myInputPointer
+
+            if (streamReadContext!!.isInRoot) {
+                verifyRootSpace(c)
+            }
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        return resetFloat(negative, integralLength, fractionLength, exponentLength)
     }
 
     /**

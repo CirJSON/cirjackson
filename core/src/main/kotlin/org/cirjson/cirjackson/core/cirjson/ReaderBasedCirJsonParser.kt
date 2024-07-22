@@ -1423,7 +1423,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
                 ch = myInputBuffer[pointer++].code
             }
 
-            if (fractionLength == 0) {
+            if (exponentLength == 0) {
                 return reportUnexpectedNumberChar(ch.toChar(), "Exponent indicator not followed by a digit")
             }
         }
