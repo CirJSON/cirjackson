@@ -126,7 +126,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     /*
      *******************************************************************************************************************
-     * Configuration access
+     * Base method defs, overrides
      *******************************************************************************************************************
      */
 
@@ -233,6 +233,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         if (count > 0) {
             myNameStartOffset -= bufferSize
+            myInputPointer = 0
             myInputEnd = count
             return true
         }
@@ -3047,7 +3048,8 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
      */
 
     override fun currentTokenLocation(): CirJsonLocation {
-        return if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || myCurrentToken == CirJsonToken.PROPERTY_NAME) {
+        return if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
+                myCurrentToken == CirJsonToken.PROPERTY_NAME) {
             val total = myCurrentInputProcessed + myNameStartOffset - 1
             CirJsonLocation(contentReference(), -1L, total, myNameStartRow, myNameStartColumn)
         } else {
@@ -3090,7 +3092,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     /*
      *******************************************************************************************************************
-     * Internal methods, location updating
+     * Internal methods, scope updating
      *******************************************************************************************************************
      */
 

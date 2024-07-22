@@ -13,3 +13,7 @@ fun IntArray?.growBy(toAdd: Int): IntArray {
 
     return copyOf(newSize)
 }
+
+fun ByteArray.toCharArray(): CharArray {
+    return CharArray(size) { this[it].toInt().toChar() }
+}
