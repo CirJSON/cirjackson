@@ -3202,37 +3202,180 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     protected open fun handleInvalidNumberStart(code: Int, negative: Boolean, hasSign: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        var ch = code
+
+        if (ch == 'I'.code) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOFInValue(CirJsonToken.VALUE_NUMBER_FLOAT)
+                }
+
+                ch = myInputBuffer[myInputPointer++].toInt()
+
+                val match = if (ch == 'N'.code) {
+                    if (negative) {
+                        "-INF"
+                    } else {
+                        "+INF"
+                    }
+                } else if (ch == 'n'.code) {
+                    if (negative) {
+                        "-Infinity"
+                    } else {
+                        "+Infinity"
+                    }
+                } else {
+                    null
+                }
+
+                if (match != null) {
+                    matchToken(match, 3)
+
+                    return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                        resetAsNaN(match, if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY)
+                    } else {
+                        reportError(
+                                "Non-standard token '$match': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                    }
+                }
+            }
+        }
+
+        return if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS) && hasSign && !negative) {
+            reportUnexpectedNumberChar('+',
+                    "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
+        } else {
+            val message = if (negative) {
+                "expected digit (0-9) to follow minus sign, for valid numeric value"
+            } else {
+                "expected digit (0-9) for valid numeric value"
+            }
+            reportUnexpectedNumberChar(ch.toChar(), message)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun matchTrue() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer++].toInt() == 'r'.code && buffer[pointer++].toInt() == 'u'.code &&
+                    buffer[pointer++].toInt() == 'e'.code) {
+                val ch = buffer[pointer++].toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken2("true", 1)
     }
 
     @Throws(CirJacksonException::class)
     protected fun matchFalse() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 4 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer++].toInt() == 'a'.code && buffer[pointer++].toInt() == 'l'.code &&
+                    buffer[pointer++].toInt() == 's'.code && buffer[pointer++].toInt() == 'e'.code) {
+                val ch = buffer[pointer++].toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken2("false", 1)
     }
 
     @Throws(CirJacksonException::class)
     protected fun matchNull() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer + 3 < myInputEnd) {
+            val buffer = myInputBuffer
+
+            if (buffer[pointer++].toInt() == 'u'.code && buffer[pointer++].toInt() == 'l'.code &&
+                    buffer[pointer++].toInt() == 'l'.code) {
+                val ch = buffer[pointer++].toInt() and 0xFF
+
+                if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
+                    myInputPointer = pointer
+                    return
+                }
+            }
+        }
+
+        matchToken2("null", 1)
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun matchToken(matchString: String, i: Int) {
-        TODO("Not yet implemented")
+        var i = i
+        val length = matchString.length
+
+        if (myInputPointer + length >= myInputEnd) {
+            matchToken2(matchString, i)
+            return
+        }
+
+        do {
+            if (myInputBuffer[myInputPointer].toInt() != matchString[i].code) {
+                return reportInvalidToken(matchString.substring(0, i))
+            }
+
+            ++myInputPointer
+        } while (++i < length)
+
+        val ch = myInputBuffer[myInputPointer].toInt() and 0xFF
+
+        if (ch >= CODE_0 && ch != CODE_R_BRACKET && ch != CODE_R_CURLY) {
+            checkMatchEnd(matchString, i, ch)
+        }
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun matchToken2(matchString: String, i: Int) {
-        TODO("Not yet implemented")
+        var i = i
+        val length = matchString.length
+
+        do {
+            if (myInputPointer >= myInputEnd && !loadMore() ||
+                    myInputBuffer[myInputPointer].toInt() != matchString[i].code) {
+                return reportInvalidToken(matchString.substring(0, i))
+            }
+
+            ++myInputPointer
+        } while (++i < length)
+
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return
+        }
+
+        val ch = myInputBuffer[myInputPointer].toInt() and 0xFF
+
+        if (ch >= CODE_0 && ch != CODE_R_BRACKET && ch != CODE_R_CURLY) {
+            checkMatchEnd(matchString, i, ch)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun checkMatchEnd(matchString: String, i: Int, code: Int) {
-        TODO("Not yet implemented")
+        val c = decodeCharForError(code).toChar()
+
+        if (c.isJavaIdentifierPart()) {
+            return reportInvalidToken(matchString.substring(0, i))
+        }
     }
 
     /*
