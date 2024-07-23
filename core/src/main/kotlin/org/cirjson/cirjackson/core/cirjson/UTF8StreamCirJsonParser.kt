@@ -3877,37 +3877,177 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     private fun decodeUTF8V2(c: Int): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        val d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        return c shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeUTF8V3(code1: Int): Int {
-        TODO("Not yet implemented")
+        var c1 = code1
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        c1 = c1 and 0x0F
+        var d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        c1 = c1 shl 6 or (d and 0x3F)
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        return c1 shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeUTF8V3Fast(code1: Int): Int {
-        TODO("Not yet implemented")
+        var c1 = code1
+        c1 = c1 and 0x0F
+        var d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        c1 = c1 shl 6 or (d and 0x3F)
+        d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        return c1 shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class)
     private fun decodeUTF8V4(code: Int): Int {
-        TODO("Not yet implemented")
+        var c = code
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        var d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        c = c and 0x07 shl 6 or (d and 0x3F)
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        c = c shl 6 or (d and 0x3F)
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        d = myInputBuffer[myInputPointer++].toInt()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF, myInputPointer)
+        }
+
+        return (c shl 6 or (d and 0x3F)) - 0x10000
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipUTF8V2(): Int {
-        TODO("Not yet implemented")
+    private fun skipUTF8V2() {
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        val c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipUTF8V3(): Int {
-        TODO("Not yet implemented")
+    private fun skipUTF8V3() {
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        var c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
     }
 
     @Throws(CirJacksonException::class)
-    private fun skipUTF8V4(): Int {
-        TODO("Not yet implemented")
+    private fun skipUTF8V4() {
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        var c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
+
+        if (myInputPointer >= myInputEnd) {
+            loadMoreGuaranteed()
+        }
+
+        c = myInputBuffer[myInputPointer++].toInt()
+
+        if (c and 0xC0 != 0x080) {
+            return reportInvalidOther(c and 0xFF, myInputPointer)
+        }
     }
 
     /*
