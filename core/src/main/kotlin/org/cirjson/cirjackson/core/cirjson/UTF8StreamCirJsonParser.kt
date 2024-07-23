@@ -3386,47 +3386,347 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespace(): Int {
-        TODO("Not yet implemented")
+        while (myInputPointer < myInputEnd) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    --myInputPointer
+                    skipWhitespace2()
+                } else {
+                    i
+                }
+            }
+
+            if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return skipWhitespace2()
     }
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespace2(): Int {
-        TODO("Not yet implemented")
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                return i
+            }
+
+            if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        throw constructReadException(
+                "Unexpected end-of-input within/between ${streamReadContext!!.typeDescription} entries")
     }
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespaceOrEnd(): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return eofAsNextChar()
+            }
+        }
+
+        var i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+        if (i > CODE_SPACE) {
+            return if (i == CODE_SLASH || i == CODE_HASH) {
+                --myInputPointer
+                skipWhitespaceOrEnd2()
+            } else {
+                i
+            }
+        }
+
+        if (i != CODE_SPACE) {
+            if (i == CODE_LF) {
+                ++myCurrentInputRow
+                myCurrentInputRowStart = myInputPointer
+            } else if (i == CODE_CR) {
+                skipCR()
+            } else if (i != CODE_TAB) {
+                return reportInvalidSpace(i)
+            }
+        }
+
+        while (myInputPointer < myInputEnd) {
+            i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    --myInputPointer
+                    skipWhitespaceOrEnd2()
+                } else {
+                    i
+                }
+            }
+
+            if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return skipWhitespaceOrEnd2()
     }
 
     @Throws(CirJacksonException::class)
     private fun skipWhitespaceOrEnd2(): Int {
-        TODO("Not yet implemented")
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                return i
+            }
+
+            if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return eofAsNextChar()
     }
 
     @Throws(CirJacksonException::class)
     private fun skipColon(): Int {
-        TODO("Not yet implemented")
+        if (myInputPointer + 4 >= myInputEnd) {
+            return skipColon(false)
+        }
+
+        var i = myInputBuffer[myInputPointer].toInt()
+
+        if (i == CODE_COLON) {
+            i = myInputBuffer[++myInputPointer].toInt()
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipColon(true)
+                } else {
+                    ++myInputPointer
+                    i
+                }
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[++myInputPointer].toInt()
+
+                if (i > CODE_SPACE) {
+                    return if (i == CODE_SLASH || i == CODE_HASH) {
+                        skipColon(true)
+                    } else {
+                        ++myInputPointer
+                        i
+                    }
+                }
+            }
+
+            return skipColon(true)
+        }
+
+        if (i == CODE_SPACE || i == CODE_TAB) {
+            i = myInputBuffer[++myInputPointer].toInt()
+        }
+
+        if (i == CODE_COLON) {
+            i = myInputBuffer[++myInputPointer].toInt()
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipColon(true)
+                } else {
+                    ++myInputPointer
+                    i
+                }
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputBuffer[++myInputPointer].toInt()
+
+                if (i > CODE_SPACE) {
+                    return if (i == CODE_SLASH || i == CODE_HASH) {
+                        skipColon(true)
+                    } else {
+                        ++myInputPointer
+                        i
+                    }
+                }
+            }
+
+            return skipColon(true)
+        }
+
+        return skipColon(false)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipColon(gotColon: Boolean): Int {
-        TODO("Not yet implemented")
+        var realGotColon = gotColon
+
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (skipYAMLComment()) {
+                        continue
+                    }
+                }
+
+                if (realGotColon) {
+                    return i
+                }
+
+                if (i != CODE_COLON) {
+                    return reportUnexpectedChar(i.toChar(), "was expecting a colon to separate property name and value")
+                }
+
+                realGotColon = true
+            } else if (i != CODE_SPACE) {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                } else if (i == CODE_CR) {
+                    skipCR()
+                } else if (i != CODE_TAB) {
+                    return reportInvalidSpace(i)
+                }
+            }
+        }
+
+        return reportInvalidEOF("within/between ${streamReadContext!!.typeDescription} entries", null)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipComment() {
-        TODO("Not yet implemented")
+        if (!isEnabled(CirJsonReadFeature.ALLOW_JAVA_COMMENTS)) {
+            return reportUnexpectedChar('/',
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_COMMENTS' not enabled for parser)")
+        }
+
+        if (myInputPointer >= myInputEnd && !loadMore()) {
+            return reportInvalidEOF("in a comment", null)
+        }
+
+        when (val c = myInputBuffer[myInputPointer++].toInt() and 0xFF) {
+            CODE_SLASH -> skipLine()
+
+            CODE_ASTERISK -> skipCComment()
+
+            else -> return reportUnexpectedChar(c.toChar(), "was expecting either '*' or '/' for a comment")
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun skipCComment() {
-        TODO("Not yet implemented")
+        val codes = INPUT_CODE_COMMENT
+
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+            val code = codes[i]
+
+            if (code == 0) {
+                continue
+            }
+
+            when (code) {
+                CODE_ASTERISK -> {
+                    if (myInputPointer >= myInputEnd && !loadMore()) {
+                        break
+                    }
+
+                    if (myInputBuffer[myInputPointer].toInt() == CODE_SLASH) {
+                        ++myInputPointer
+                        return
+                    }
+                }
+
+                CODE_LF -> {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                }
+
+                CODE_CR -> skipCR()
+
+                2 -> skipUTF8V2()
+
+                3 -> skipUTF8V3()
+
+                4 -> skipUTF8V4()
+
+                else -> return reportInvalidChar(i)
+            }
+        }
+
+        return reportInvalidEOF("in a comment", null)
     }
 
     @Throws(CirJacksonException::class)
     private fun skipYAMLComment(): Boolean {
-        TODO("Not yet implemented")
+        return if (isEnabled(CirJsonReadFeature.ALLOW_YAML_COMMENTS)) {
+            skipLine()
+            true
+        } else {
+            false
+        }
     }
 
     /**
@@ -3434,17 +3734,139 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     private fun skipLine() {
-        TODO("Not yet implemented")
+        val codes = INPUT_CODE_COMMENT
+
+        while (myInputPointer < myInputEnd || loadMore()) {
+            val i = myInputBuffer[myInputPointer++].toInt() and 0xFF
+            val code = codes[i]
+
+            if (code == 0) {
+                continue
+            }
+
+            when (code) {
+                CODE_LF -> {
+                    ++myCurrentInputRow
+                    myCurrentInputRowStart = myInputPointer
+                }
+
+                CODE_CR -> skipCR()
+
+                CODE_ASTERISK -> {}
+
+                2 -> skipUTF8V2()
+
+                3 -> skipUTF8V3()
+
+                4 -> skipUTF8V4()
+
+                else -> {
+                    if (code < 0) {
+                        return reportInvalidChar(i)
+                    }
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun decodeEscaped(): Char {
-        TODO("Not yet implemented")
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+            }
+        }
+
+        when (val c = myInputBuffer[myInputPointer++].toInt()) {
+            'b'.code -> return '\b'
+            't'.code -> return '\t'
+            'n'.code -> return '\n'
+            'r'.code -> return '\r'
+            'f'.code -> return '\u000c'
+            '"'.code, '/'.code, '\\'.code -> return c.toChar()
+            'u'.code -> {}
+            else -> return handleUnrecognizedCharacterEscape(decodeCharForError(c).toChar())
+        }
+
+        var value = 0
+
+        for (i in 0..<4) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+                }
+            }
+
+            val ch = myInputBuffer[myInputPointer++].toInt()
+            val digit = CharTypes.charToHex(ch.toChar())
+
+            if (digit < 0) {
+                return reportUnexpectedChar((ch and 0xFF).toChar(),
+                        "expected a hex-digit for character escape sequence")
+            }
+
+            value = value shl 4 or digit
+        }
+
+        return value.toChar()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun decodeCharForError(firstByte: Int): Int {
-        TODO("Not yet implemented")
+        var c = firstByte and 0xFF
+
+        if (c > 0x7F) {
+            val needed = when {
+                c and 0xE0 == 0xC0 -> {
+                    c = c and 0x1F
+                    1
+                }
+
+                c and 0xF0 == 0xE0 -> {
+                    c = c and 0x0F
+                    2
+                }
+
+                c and 0xF8 == 0xF0 -> {
+                    c = c and 0x07
+                    3
+                }
+
+                else -> {
+                    return reportInvalidInitial(c and 0xFF)
+                }
+            }
+
+            var d = nextByte()
+
+            if (d and 0xC0 != 0x080) {
+                return reportInvalidOther(d and 0xFF)
+            }
+
+            c = c shl 6 or (d and 0x3F)
+
+            if (needed > 1) {
+                d = nextByte()
+
+                if (d and 0xC0 != 0x080) {
+                    return reportInvalidOther(d and 0xFF)
+                }
+
+                c = c shl 6 or (d and 0x3F)
+
+                if (needed > 2) {
+                    d = nextByte()
+
+                    if (d and 0xC0 != 0x080) {
+                        return reportInvalidOther(d and 0xFF)
+                    }
+
+                    c = c shl 6 or (d and 0x3F)
+                }
+            }
+        }
+
+        return c
     }
 
     /*
@@ -3684,6 +4106,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         private val INPUT_CODE_UTF8 = CharTypes.inputCodeUtf8
 
         private val INPUT_CODE_UTF8_JS_NAMES = CharTypes.inputCodeUtf8JsNames
+
+        private val INPUT_CODE_COMMENT = CharTypes.inputCodeComment
 
         /**
          * Latin1 encoding is not supported, but we do use 8-bit subset for pre-processing task, to simplify first pass,
