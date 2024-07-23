@@ -2803,17 +2803,161 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     protected open fun finishString() {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            loadMoreGuaranteed()
+            pointer = myInputPointer
+        }
+
+        var outputPointer = 0
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        val max = min(myInputEnd, pointer + outputBuffer.size)
+        val inputBuffer = myInputBuffer
+
+        while (pointer < max) {
+            val c = inputBuffer[pointer].toInt() and 0xFF
+
+            if (INPUT_CODE_UTF8[c] != 0) {
+                if (c == CODE_QUOTE) {
+                    myInputPointer = pointer + 1
+                    myTextBuffer.currentSegmentSize = outputPointer
+                    return
+                }
+
+                break
+            }
+
+            ++pointer
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myInputPointer = pointer
+        finishString(outputBuffer, outputPointer)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun finishAndReturnString(): String? {
-        TODO("Not yet implemented")
+        var pointer = myInputPointer
+
+        if (pointer >= myInputEnd) {
+            loadMoreGuaranteed()
+            pointer = myInputPointer
+        }
+
+        var outputPointer = 0
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        val max = min(myInputEnd, pointer + outputBuffer.size)
+        val inputBuffer = myInputBuffer
+
+        while (pointer < max) {
+            val c = inputBuffer[pointer].toInt() and 0xFF
+
+            if (INPUT_CODE_UTF8[c] != 0) {
+                if (c == CODE_QUOTE) {
+                    myInputPointer = pointer + 1
+                    return myTextBuffer.setCurrentAndReturn(outputPointer)
+                }
+
+                break
+            }
+
+            ++pointer
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myInputPointer = pointer
+        finishString(outputBuffer, outputPointer)
+        return myTextBuffer.contentsAsString()
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun finishString(outputBuffer: CharArray, outputPointer: Int) {
-        TODO("Not yet implemented")
+        var outputBuffer = outputBuffer
+        var outputPointer = outputPointer
+
+        var c: Int
+
+        val codes = INPUT_CODE_UTF8
+        val inputBuffer = myInputBuffer
+
+        while (true) {
+            asciiLoop@ while (true) {
+                var pointer = myInputPointer
+
+                if (pointer >= myInputEnd) {
+                    loadMoreGuaranteed()
+                    pointer = myInputPointer
+                }
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                val max = min(myInputEnd, pointer + outputBuffer.size - outputPointer)
+
+                while (pointer < max) {
+                    c = inputBuffer[pointer++].toInt() and 0xFF
+
+                    if (codes[c] != 0) {
+                        myInputPointer = pointer
+                        break@asciiLoop
+                    }
+
+                    outputBuffer[outputPointer++] = c.toChar()
+                }
+
+                myInputPointer = pointer
+            }
+
+            if (c == CODE_QUOTE) {
+                break
+            }
+
+            c = when (codes[c]) {
+                1 -> decodeEscaped().code
+
+                2 -> decodeUTF8V2(c)
+
+                3 -> if (myInputEnd - myInputPointer >= 2) {
+                    decodeUTF8V3Fast(c)
+                } else {
+                    decodeUTF8V3(c)
+                }
+
+                4 -> {
+                    c = decodeUTF8V4(c)
+                    outputBuffer[outputPointer++] = (c shr 10 or 0x0800).toChar()
+
+                    if (outputPointer >= outputBuffer.size) {
+                        outputBuffer = myTextBuffer.finishCurrentSegment()
+                        outputPointer = 0
+                    }
+
+                    c and 0x03FF or 0xDC00
+                }
+
+                else -> if (c < CODE_SPACE) {
+                    throwUnquotedSpace(c, "string value")
+                    c
+                } else {
+                    reportInvalidChar(c)
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
     }
 
     /**
@@ -2826,17 +2970,220 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
     @Throws(CirJacksonException::class)
     protected open fun skipString() {
-        TODO("Not yet implemented")
+        myIsTokenIncomplete = false
+
+        val codes = INPUT_CODE_UTF8
+        val inputBuffer = myInputBuffer
+
+        while (true) {
+            var c: Int
+
+            asciiLoop@ while (true) {
+                var pointer = myInputPointer
+                var max = myInputEnd
+
+                if (pointer >= max) {
+                    loadMoreGuaranteed()
+                    pointer = myInputPointer
+                    max = myInputEnd
+                }
+
+                while (pointer <= max) {
+                    c = inputBuffer[pointer++].toInt() and 0xFF
+
+                    if (codes[c] != 0) {
+                        myInputPointer = pointer
+                        break@asciiLoop
+                    }
+                }
+
+                myInputPointer = pointer
+            }
+
+            if (c == CODE_QUOTE) {
+                break
+            }
+
+            when (codes[c]) {
+                1 -> decodeEscaped()
+
+                2 -> skipUTF8V2()
+
+                3 -> skipUTF8V3()
+
+                4 -> skipUTF8V4()
+
+                else -> if (c < CODE_SPACE) {
+                    throwUnquotedSpace(c, "string value")
+                } else {
+                    return reportInvalidChar(c)
+                }
+            }
+        }
     }
 
+    /**
+     * Method for handling cases where first non-space character of an expected value token is not legal for standard
+     * CirJSON content.
+     *
+     * @param code First undecoded character of possible "odd value" to decode
+     *
+     * @return Type of value decoded, if allowed and successful
+     *
+     * @throws CirJacksonIOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
     @Throws(CirJacksonException::class)
     protected open fun handleUnexpectedValue(code: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        val ch = code.toChar()
+
+        when (ch) {
+            ']', ',', '}' -> {
+                if (ch == ']' && !streamReadContext!!.isInArray) {
+                    return if (ch.isJavaIdentifierStart()) {
+                        reportInvalidToken(ch.toString(), validCirJsonTokenList())
+                    } else {
+                        reportUnexpectedChar(ch, "expected a valid value ${validCirJsonValueList()}")
+                    }
+                }
+
+                if (ch != '}' && !streamReadContext!!.isInRoot) {
+                    if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
+                        --myInputPointer
+                        return CirJsonToken.VALUE_NULL
+                    }
+                }
+
+                return reportUnexpectedChar(ch, "expected a value")
+            }
+
+            '\'' -> {
+                if (isEnabled(CirJsonReadFeature.ALLOW_SINGLE_QUOTES)) {
+                    return handleApostrophe()
+                }
+            }
+
+            'N' -> {
+                matchToken("NaN", 1)
+
+                return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN("NaN", Double.NaN)
+                } else {
+                    reportError(
+                            "Non-standard token 'NaN': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            }
+
+            'I' -> {
+                matchToken("Infinity", 1)
+
+                return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN("Infinity", Double.POSITIVE_INFINITY)
+                } else {
+                    reportError(
+                            "Non-standard token 'Infinity': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
+                }
+            }
+
+            '+' -> {
+                if (myInputPointer >= myInputEnd) {
+                    if (!loadMore()) {
+                        return reportInvalidEOFInValue(CirJsonToken.VALUE_NUMBER_INT)
+                    }
+                }
+
+                return handleInvalidNumberStart(myInputBuffer[myInputPointer++].toInt() and 0xFF, negative = false,
+                        hasSign = true)
+            }
+        }
+
+        return if (ch.isJavaIdentifierStart()) {
+            reportInvalidToken(ch.toString(), validCirJsonTokenList())
+        } else {
+            reportUnexpectedChar(ch, "expected a valid value ${validCirJsonValueList()}")
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun handleApostrophe(): CirJsonToken? {
-        TODO("Not yet implemented")
+        var c: Int
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 0
+
+        val codes = INPUT_CODE_UTF8
+        val inputBuffer = myInputBuffer
+
+        mainLoop@ while (true) {
+            asciiLoop@ while (true) {
+                if (myInputPointer >= myInputEnd) {
+                    loadMoreGuaranteed()
+                }
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                val max = min(myInputEnd, myInputPointer + outputBuffer.size - outputPointer)
+
+                while (myInputPointer < max) {
+                    c = inputBuffer[myInputPointer++].toInt() and 0xFF
+
+                    if (c == CODE_APOSTROPHE) {
+                        break@mainLoop
+                    }
+
+                    if (codes[c] != 0 && c != CODE_QUOTE) {
+                        break@asciiLoop
+                    }
+
+                    outputBuffer[outputPointer++] = c.toChar()
+                }
+            }
+
+            c = when (codes[c]) {
+                1 -> decodeEscaped().code
+
+                2 -> decodeUTF8V2(c)
+
+                3 -> if (myInputEnd - myInputPointer >= 2) {
+                    decodeUTF8V3Fast(c)
+                } else {
+                    decodeUTF8V3(c)
+                }
+
+                4 -> {
+                    c = decodeUTF8V4(c)
+                    outputBuffer[outputPointer++] = (c shr 10 or 0x0800).toChar()
+
+                    if (outputPointer >= outputBuffer.size) {
+                        outputBuffer = myTextBuffer.finishCurrentSegment()
+                        outputPointer = 0
+                    }
+
+                    c and 0x03FF or 0xDC00
+                }
+
+                else -> {
+                    if (c < CODE_SPACE) {
+                        throwUnquotedSpace(c, "string value")
+                    }
+
+                    reportInvalidChar(c)
+                }
+            }
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        return CirJsonToken.VALUE_STRING
     }
 
     /*
@@ -2844,6 +3191,14 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      * Internal methods, well-known token decoding
      *******************************************************************************************************************
      */
+
+    /**
+     * Method called if expected numeric value (due to leading sign) does not look like a number
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun handleInvalidNumberStart(code: Int, negative: Boolean): CirJsonToken? {
+        return handleInvalidNumberStart(code, negative, false)
+    }
 
     @Throws(CirJacksonException::class)
     protected open fun handleInvalidNumberStart(code: Int, negative: Boolean, hasSign: Boolean): CirJsonToken? {
