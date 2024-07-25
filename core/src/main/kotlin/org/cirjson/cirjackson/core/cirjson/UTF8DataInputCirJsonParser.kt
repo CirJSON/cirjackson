@@ -1,13 +1,14 @@
 package org.cirjson.cirjackson.core.cirjson
 
-import org.cirjson.cirjackson.core.CirJsonLocation
-import org.cirjson.cirjackson.core.CirJsonToken
-import org.cirjson.cirjackson.core.ObjectReadContext
+import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
 import java.io.DataInput
+import java.io.IOException
 import java.io.OutputStream
+import java.io.Writer
 
 /**
  * This is a concrete implementation of [CirJsonParser], which is based on a [DataInput] as the input source.
@@ -26,9 +27,9 @@ import java.io.OutputStream
  *
  * @property myNextByte Sometimes we need buffering for just a single byte we read but have to "push back"
  */
-class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioContext: IOContext, streamReadFeatures: Int,
-        formatReadFeatures: Int, protected var myInputData: DataInput, protected val mySymbols: ByteQuadsCanonicalizer,
-        protected var myNextByte: Int) :
+open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioContext: IOContext,
+        streamReadFeatures: Int, formatReadFeatures: Int, protected var myInputData: DataInput,
+        protected val mySymbols: ByteQuadsCanonicalizer, protected var myNextByte: Int) :
         CirJsonParserBase(objectReadContext, ioContext, streamReadFeatures, formatReadFeatures) {
 
     /**
@@ -91,6 +92,548 @@ class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioContext
      *******************************************************************************************************************
      */
 
+    @get:Throws(CirJacksonException::class)
+    override val text: String?
+        get() = TODO("Not yet implemented")
+
+    @Throws(CirJacksonException::class)
+    override fun getText(writer: Writer): Int {
+        TODO("Not yet implemented")
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val valueAsString: String?
+        get() = TODO("Not yet implemented")
+
+    @Throws(CirJacksonException::class)
+    override fun getValueAsString(defaultValue: String?): String? {
+        TODO("Not yet implemented")
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val valueAsInt: Int
+        get() = TODO("Not yet implemented")
+
+    @Throws(CirJacksonException::class)
+    override fun getValueAsInt(defaultValue: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun getText(token: CirJsonToken?): String? {
+        TODO("Not yet implemented")
+    }
+
+    @get:Throws(CirJacksonException::class)
+    override val textCharacters: CharArray?
+        get() = TODO("Not yet implemented")
+
+    @get:Throws(CirJacksonException::class)
+    override val textLength: Int
+        get() = TODO("Not yet implemented")
+
+    @get:Throws(CirJacksonException::class)
+    override val textOffset: Int
+        get() = TODO("Not yet implemented")
+
+    @Throws(CirJacksonException::class)
+    override fun getBinaryValue(base64Variant: Base64Variant): ByteArray {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun readBinaryValue(base64Variant: Base64Variant, output: OutputStream): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun readBinary(base64Variant: Base64Variant, output: OutputStream): Int {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, traversal, basic
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    override fun nextToken(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun nextTokenInternal(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun nextTokenNotInObject(i: Int): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun nextAfterName(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun finishToken() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun nextName(): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun nextNameInternal(): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun nextTextValue(): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun nextIntValue(defaultValue: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun nextLongValue(defaultValue: Long): Long {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun nextBooleanValue(): Boolean? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, number parsing
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun parseFloatThatStartsWithPeriod(negative: Boolean): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Initial parsing method for number values. It needs to be able to parse enough input to be able to determine
+     * whether the value is to be considered a simple integer value, or a more generic decimal value: latter of which
+     * needs to be expressed as a floating point number. The basic rule is that if the number has no fractional or
+     * exponential part, it is an integer; otherwise a floating point number.
+     *
+     * Because much of input has to be processed in any case, no partial parsing is done: all input text will be stored
+     * for further processing. However, actual numeric value conversion will be deferred, since it is usually the most
+     * complicated and costliest part of processing.
+     *
+     * @param c The first non-null digit character of the number to parse
+     *
+     * @return Type of token decoded, usually [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT]
+     *
+     * @throws IOException for low-level I/O
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun parseUnsignedNumber(code: Int): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun parsePosNumber(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun parseNegNumber(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseSignedNumber(negative: Boolean): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called when we have seen one zero, and want to ensure it is not followed by another, or, if leading zeroes
+     * allowed, skipped redundant ones.
+     *
+     * @return Character immediately following zeroes
+     *
+     * @throws IOException for low-level read issues
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun handleLeadingZeroes(): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseFloat(outputBuffer: CharArray, outputPointer: Int, code: Int, negative: Boolean,
+            integralLength: Int): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called to ensure that a root-value is followed by a space token, if possible.
+     *
+     * NOTE: with [DataInput] source, not really feasible, up-front. If we did want, we could rearrange things to
+     * require space before next read, but initially let's just do nothing.
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun verifyRootSpace() {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, secondary parsing
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun parseName(i: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseMediumName(quad2: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseMediumName(quad3: Int, q2: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    fun parseLongName(quad: Int, q2: Int, q3: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseName(q1: Int, code: Int, lastQuadBytes: Int): String? {
+        return parseEscapedName(myQuadBuffer, 0, q1, code, lastQuadBytes)
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseName(q1: Int, q2: Int, code: Int, lastQuadBytes: Int): String? {
+        myQuadBuffer[0] = q1
+        return parseEscapedName(myQuadBuffer, 1, q2, code, lastQuadBytes)
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun parseName(q1: Int, q2: Int, q3: Int, code: Int, lastQuadBytes: Int): String? {
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+        return parseEscapedName(myQuadBuffer, 2, q3, code, lastQuadBytes)
+    }
+
+    /**
+     * Slower parsing method which is generally branched to when an escape sequence is detected (or alternatively for
+     * long names, one crossing input buffer boundary). Needs to be able to handle more exceptional cases, gets slower,
+     * and hence is offlined to a separate method.
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun parseEscapedName(quads: IntArray, quadLength: Int, currentQuad: Int, code: Int,
+            currentQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called when we see non-white space character other than double quote, when expecting a property name. In
+     * standard mode will just throw an exception; but in non-standard modes may be able to parse name.
+     *
+     * @param code First undecoded character of possible "odd name" to decode
+     *
+     * @return Name decoded, if allowed and successful
+     *
+     * @throws IOException for low-level I/O problem
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun handleOddName(code: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Parsing to support apostrophe-quoted names. Plenty of duplicated code; main reason being to try to avoid slowing
+     * down fast path for valid CirJSON -- more alternatives, more code, generally a bit slower execution.
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun parseApostropheName(): String? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, symbol (name) handling
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun findName(quad1: Int, lastQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun findName(q1: Int, quad2: Int, lastQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun findName(q1: Int, q2: Int, quad3: Int, lastQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun findName(quads: IntArray, quadLength: Int, lastQuad: Int, lastQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * This is the main workhorse method used when we take a symbol table miss. It needs to demultiplex individual
+     * bytes, decode multibyte chars (if any), and then construct Name instance and add it to the symbol table.
+     */
+    @Throws(StreamReadException::class)
+    private fun addName(quads: IntArray, quadLength: Int, lastQuadBytes: Int): String? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, String value parsing
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected open fun finishString() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    private fun finishAndReturnString(): String? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
+    private fun finishString(outputBuffer: CharArray, outputPointer: Int, code: Int) {
+        var outputBuffer = outputBuffer
+        var outputPointer = outputPointer
+        var c = code
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called to skim through rest of unparsed String value, if it is not needed. This can be done a bit faster
+     * if contents need not be stored for future access.
+     *
+     * @throws IOException for low-level I/O problem
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun skipString() {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for handling cases where first non-space character of an expected value token is not legal for standard
+     * CirJSON content.
+     *
+     * @param code First undecoded character of unexpected (but possibly ultimate accepted) value
+     *
+     * @return Token that was successfully decoded (if successful)
+     *
+     * @throws IOException for low-level I/O
+     *
+     * @throws StreamReadException for decoding problems
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun handleUnexpectedValue(code: Int): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun handleApostrophe(): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called if expected numeric value (due to leading sign) does not look like a number
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun handleInvalidNumberStart(code: Int, negative: Boolean): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun handleInvalidNumberStart(code: Int, negative: Boolean, hasSign: Boolean): CirJsonToken? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
+    protected fun matchToken(matchString: String, i: Int) {
+        var i = i
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun checkMatchEnd(matchString: String, i: Int, code: Int) {
+        val ch = decodeCharForError(code)
+        val c = ch.toChar()
+
+        if (c.isJavaIdentifierPart()) {
+            return reportInvalidToken(ch, matchString.substring(0, i))
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, whitespace skipping, escape/unescape
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipWhitespace(): Int {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Alternative to [skipWhitespace] that handles possible [EOFException] caused by trying to read past the end of the
+     * [DataInput].
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipWhitespaceOrEnd(): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipWhitespaceComment(i: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipColon(): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipColon(i: Int, gotColon: Boolean): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipComment() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipCComment() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipYAMLComment(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for skipping contents of an input line; usually for CPP and YAML style comments.
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipLine() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun decodeEscaped(): Char {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun decodeEscapedInternal() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    protected open fun decodeCharForError(firstByte: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, UTF8 decoding
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun decodeUTF8V2(c: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun decodeUTF8V3(code1: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun decodeUTF8V4(code: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipUTF8V2() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipUTF8V3() {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipUTF8V4() {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, binary access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Efficient handling for incremental parsing of base64-encoded textual content.
+     *
+     * @param base64Variant Type of base64 encoding expected in context
+     *
+     * @return Fully decoded value of base64 content
+     *
+     * @throws IOException for low-level I/O problem
+     */
+    @Throws(CirJacksonException::class, IOException::class)
+    protected fun decodeBase64(base64Variant: Base64Variant): ByteArray {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Improved location updating
+     *******************************************************************************************************************
+     */
+
     override fun currentTokenLocation(): CirJsonLocation {
         TODO("Not yet implemented")
     }
@@ -99,27 +642,61 @@ class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioContext
         TODO("Not yet implemented")
     }
 
-    override fun nextToken(): CirJsonToken? {
+    override fun currentLocationMinusOne(): CirJsonLocation {
         TODO("Not yet implemented")
     }
-
-    override val text: String?
-        get() = TODO("Not yet implemented")
-
-    override val textCharacters: CharArray?
-        get() = TODO("Not yet implemented")
-
-    override val textLength: Int
-        get() = TODO("Not yet implemented")
-
-    override val textOffset: Int
-        get() = TODO("Not yet implemented")
 
     override val objectId: Any?
         get() = TODO("Not yet implemented")
 
     override val typeId: Any?
         get() = TODO("Not yet implemented")
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, other
+     *******************************************************************************************************************
+     */
+
+    @Throws(StreamReadException::class)
+    private fun closeScope(i: Int) {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, error reporting
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidToken(code: Int, matchedPart: String): T {
+        return reportInvalidToken(code, matchedPart, validCirJsonTokenList())
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun <T> reportInvalidToken(code: Int, matchedPart: String, message: String): T {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidChar(code: Int): T {
+        return if (code < 0) {
+            reportInvalidSpace(code)
+        } else {
+            reportInvalidInitial(code)
+        }
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidInitial(mask: Int): T {
+        return reportError("Invalid UTF-8 start byte 0x${mask.toString(16)}")
+    }
+
+    @Throws(StreamReadException::class)
+    protected fun <T> reportInvalidOther(mask: Int): T {
+        return reportError("Invalid UTF-8 middle byte 0x${mask.toString(16)}")
+    }
 
     companion object {
 
@@ -135,6 +712,17 @@ class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioContext
          * keep it fast.
          */
         private val INPUT_CODE_LATIN1 = CharTypes.inputCodeLatin1
+
+        /**
+         * Helper method needed for masking of `0x00` character
+         */
+        private fun padLastQuad(q: Int, bytes: Int): Int {
+            return if (bytes != 4) {
+                -1 shl (bytes shl 3) or q
+            } else {
+                q
+            }
+        }
 
     }
 

@@ -4261,7 +4261,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     /*
      *******************************************************************************************************************
-     * Internal methods, location updating
+     * Internal methods, other
      *******************************************************************************************************************
      */
 
