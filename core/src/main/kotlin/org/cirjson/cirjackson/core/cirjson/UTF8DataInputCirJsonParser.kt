@@ -1480,9 +1480,91 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      * and hence is offlined to a separate method.
      */
     @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun parseEscapedName(quads: IntArray, quadLength: Int, currentQuad: Int, code: Int,
             currentQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        var quads = quads
+        var quadLength = quadLength
+        var currentQuad = currentQuad
+        var ch = code
+        var currentQuadBytes = currentQuadBytes
+
+        while (true) {
+            if (INPUT_CODE_LATIN1[ch] != 0) {
+                if (ch == CODE_QUOTE) {
+                    break
+                }
+
+                if (ch != CODE_BACKSLASH) {
+                    throwUnquotedSpace(ch, "name")
+                } else {
+                    ch = decodeEscaped().code
+                }
+
+                if (ch > 127) {
+                    if (currentQuadBytes >= 4) {
+                        if (quadLength >= quads.size) {
+                            quads = growNameDecodeBuffer(quads, quads.size)
+                            myQuadBuffer = quads
+                        }
+
+                        quads[quadLength++] = currentQuad
+                        currentQuad = 0
+                        currentQuadBytes = 0
+                    }
+
+                    if (ch < 0x800) {
+                        currentQuad = currentQuad shl 8 or (ch shr 6) or 0xC0
+                    } else {
+                        currentQuad = currentQuad shl 8 or (ch shr 12) or 0xE0
+                        ++currentQuadBytes
+
+                        if (currentQuadBytes >= 4) {
+                            if (quadLength >= quads.size) {
+                                quads = growNameDecodeBuffer(quads, quads.size)
+                                myQuadBuffer = quads
+                            }
+
+                            quads[quadLength++] = currentQuad
+                            currentQuad = 0
+                            currentQuadBytes = 0
+                        }
+
+                        currentQuad = currentQuad shl 8 or (ch shr 6 and 0x3F) or 0x80
+                    }
+
+                    ++currentQuadBytes
+                    ch = ch and 0x3F or 0x80
+                }
+            }
+
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            ch = myInputData.readUnsignedByte()
+        }
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
     /**
@@ -1499,7 +1581,59 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     protected open fun handleOddName(code: Int): String? {
-        TODO("Not yet implemented")
+        var ch = code
+
+        if (ch == CODE_APOSTROPHE && isEnabled(CirJsonReadFeature.ALLOW_SINGLE_QUOTES)) {
+            return parseApostropheName()
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_UNQUOTED_PROPERTY_NAMES)) {
+            val c = decodeCharForError(ch).toChar()
+            return reportUnexpectedChar(c, "was expecting double-quote to start property name")
+        }
+
+        val codes = INPUT_CODE_UTF8_JS_NAMES
+
+        if (codes[ch] != 0) {
+            return reportUnexpectedChar(ch.toChar(),
+                    "was expecting either valid name character (for unquoted name) or double-quote (for quoted) to start property name")
+        }
+
+        var quads = myQuadBuffer
+        var quadLength = 0
+        var currentQuad = 0
+        var currentQuadBytes = 0
+
+        do {
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            ch = myInputData.readUnsignedByte()
+        } while (codes[ch] != 0)
+
+        myNextByte = ch
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
     /**
@@ -1508,7 +1642,89 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     protected open fun parseApostropheName(): String? {
-        TODO("Not yet implemented")
+        var ch = myInputData.readUnsignedByte()
+
+        if (ch == CODE_APOSTROPHE) {
+            return ""
+        }
+
+        var quads = myQuadBuffer
+        var quadLength = 0
+        var currentQuad = 0
+        var currentQuadBytes = 0
+
+        while (ch != CODE_APOSTROPHE) {
+            if (INPUT_CODE_LATIN1[ch] != 0 && ch != CODE_QUOTE) {
+                if (ch != CODE_BACKSLASH) {
+                    throwUnquotedSpace(ch, "name")
+                } else {
+                    ch = decodeEscaped().code
+                }
+
+                if (ch > 127) {
+                    if (currentQuadBytes >= 4) {
+                        if (quadLength >= quads.size) {
+                            quads = growNameDecodeBuffer(quads, quads.size)
+                            myQuadBuffer = quads
+                        }
+
+                        quads[quadLength++] = currentQuad
+                        currentQuad = 0
+                        currentQuadBytes = 0
+                    }
+
+                    if (ch < 0x800) {
+                        currentQuad = currentQuad shl 8 or (ch shr 6) or 0xC0
+                    } else {
+                        currentQuad = currentQuad shl 8 or (ch shr 12) or 0xE0
+                        ++currentQuadBytes
+
+                        if (currentQuadBytes >= 4) {
+                            if (quadLength >= quads.size) {
+                                quads = growNameDecodeBuffer(quads, quads.size)
+                                myQuadBuffer = quads
+                            }
+
+                            quads[quadLength++] = currentQuad
+                            currentQuad = 0
+                            currentQuadBytes = 0
+                        }
+
+                        currentQuad = currentQuad shl 8 or (ch shr 6 and 0x3F) or 0x80
+                    }
+
+                    ++currentQuadBytes
+                    ch = ch and 0x3F or 0x80
+                }
+            }
+
+            if (currentQuadBytes < 4) {
+                ++currentQuadBytes
+                currentQuad = currentQuad shl 8 or ch
+            } else {
+                if (quadLength >= quads.size) {
+                    quads = growNameDecodeBuffer(quads, quads.size)
+                    myQuadBuffer = quads
+                }
+
+                quads[quadLength++] = currentQuad
+                currentQuad = ch
+                currentQuadBytes = 1
+            }
+
+            ch = myInputData.readUnsignedByte()
+        }
+
+        if (currentQuadBytes > 0) {
+            if (quadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
+            quads[quadLength++] = padLastQuad(currentQuad, currentQuadBytes)
+        }
+
+        return mySymbols.findName(quads, quadLength) ?: addName(quads, quadLength, currentQuadBytes)
     }
 
     /*
@@ -1841,6 +2057,8 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
          * This is the main input-code lookup table, fetched eagerly
          */
         private val INPUT_CODE_UTF8 = CharTypes.inputCodeUtf8
+
+        private val INPUT_CODE_UTF8_JS_NAMES = CharTypes.inputCodeUtf8JsNames
 
         private val INPUT_CODE_COMMENT = CharTypes.inputCodeComment
 
