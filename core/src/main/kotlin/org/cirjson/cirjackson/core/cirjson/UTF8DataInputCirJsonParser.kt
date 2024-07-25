@@ -578,12 +578,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         val token = when (i) {
             '-'.code -> {
-                parseSignedNumber(true)
+                parseNegNumber()
             }
 
             '+'.code -> {
                 if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
-                    parseSignedNumber(false)
+                    parsePosNumber()
                 } else {
                     handleUnexpectedValue(i)
                 }
@@ -663,12 +663,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             '-'.code -> {
-                parseSignedNumber(true).also { myCurrentToken = it }
+                parseNegNumber().also { myCurrentToken = it }
             }
 
             '+'.code -> {
                 if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
-                    parseSignedNumber(false).also { myCurrentToken = it }
+                    parsePosNumber().also { myCurrentToken = it }
                 } else {
                     handleUnexpectedValue(i).also { myCurrentToken = it }
                 }
@@ -777,12 +777,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         val token = when (i) {
             '-'.code -> {
-                parseSignedNumber(true)
+                parseNegNumber()
             }
 
             '+'.code -> {
                 if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
-                    parseSignedNumber(false)
+                    parsePosNumber()
                 } else {
                     handleUnexpectedValue(i)
                 }
