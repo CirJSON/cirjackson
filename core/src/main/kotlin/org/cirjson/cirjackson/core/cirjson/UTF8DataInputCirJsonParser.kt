@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.StreamReadException
+import org.cirjson.cirjackson.core.extensions.growBy
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
@@ -1234,23 +1235,225 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
 
     @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun parseName(i: Int): String? {
-        TODO("Not yet implemented")
+        var i = i
+
+        if (i != CODE_QUOTE) {
+            return handleOddName(i)
+        }
+
+        val codes = INPUT_CODE_LATIN1
+
+        var q = myInputData.readUnsignedByte()
+
+        return if (codes[q] == 0) {
+            i = myInputData.readUnsignedByte()
+            if (codes[i] == 0) {
+                q = q shl 8 or i
+                i = myInputData.readUnsignedByte()
+
+                if (codes[i] == 0) {
+                    q = q shl 8 or i
+                    i = myInputData.readUnsignedByte()
+
+                    if (codes[i] == 0) {
+                        q = q shl 8 or i
+                        i = myInputData.readUnsignedByte()
+
+                        if (codes[i] == 0) {
+                            myQuad1 = q
+                            parseMediumName(i)
+                        } else if (q == CODE_QUOTE) {
+                            findName(q, 4)
+                        } else {
+                            parseName(q, i, 4)
+                        }
+                    } else if (q == CODE_QUOTE) {
+                        findName(q, 3)
+                    } else {
+                        parseName(q, i, 3)
+                    }
+                } else if (q == CODE_QUOTE) {
+                    findName(q, 2)
+                } else {
+                    parseName(q, i, 2)
+                }
+            } else if (q == CODE_QUOTE) {
+                findName(q, 1)
+            } else {
+                parseName(q, i, 1)
+            }
+        } else if (q == CODE_QUOTE) {
+            ""
+        } else {
+            parseName(0, q, 0)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun parseMediumName(quad2: Int): String? {
-        TODO("Not yet implemented")
+        var q2 = quad2
+        val codes = INPUT_CODE_LATIN1
+
+        var i = myInputData.readUnsignedByte()
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 1)
+            } else {
+                parseName(myQuad1, q2, i, 1)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 2)
+            } else {
+                parseName(myQuad1, q2, i, 2)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 3)
+            } else {
+                parseName(myQuad1, q2, i, 3)
+            }
+        }
+
+        q2 = q2 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        return if (codes[i] != 0) {
+            if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, 4)
+            } else {
+                parseName(myQuad1, q2, i, 4)
+            }
+        } else {
+            parseMediumName(i, q2)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun parseMediumName(quad3: Int, q2: Int): String? {
-        TODO("Not yet implemented")
+        var q3 = quad3
+        val codes = INPUT_CODE_LATIN1
+
+        var i = myInputData.readUnsignedByte()
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 1)
+            } else {
+                parseName(myQuad1, q2, q3, i, 1)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 2)
+            } else {
+                parseName(myQuad1, q2, q3, i, 2)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        if (codes[i] != 0) {
+            return if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 3)
+            } else {
+                parseName(myQuad1, q2, q3, i, 3)
+            }
+        }
+
+        q3 = q3 shl 8 or i
+        i = myInputData.readUnsignedByte()
+
+        return if (codes[i] != 0) {
+            if (i == CODE_QUOTE) {
+                findName(myQuad1, q2, q3, 4)
+            } else {
+                parseName(myQuad1, q2, q3, i, 4)
+            }
+        } else {
+            parseLongName(i, q2, q3)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     fun parseLongName(quad: Int, q2: Int, q3: Int): String? {
-        TODO("Not yet implemented")
+        var q = quad
+
+        myQuadBuffer[0] = myQuad1
+        myQuadBuffer[1] = q2
+        myQuadBuffer[2] = q3
+
+        val codes = INPUT_CODE_LATIN1
+        var quadLength = 3
+
+        while (true) {
+            var i = myInputData.readUnsignedByte()
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 1)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 1)
+                }
+            }
+
+            q = q shl 8 or i
+            i = myInputData.readUnsignedByte()
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 2)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 2)
+                }
+            }
+
+            q = q shl 8 or i
+            i = myInputData.readUnsignedByte()
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 3)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 3)
+                }
+            }
+
+            q = q shl 8 or i
+            i = myInputData.readUnsignedByte()
+
+            if (codes[i] != 0) {
+                return if (i == CODE_QUOTE) {
+                    findName(myQuadBuffer, quadLength, q, 4)
+                } else {
+                    parseEscapedName(myQuadBuffer, quadLength, q, i, 4)
+                }
+            }
+
+            if (quadLength >= myQuadBuffer.size) {
+                myQuadBuffer = myQuadBuffer.growBy(quadLength)
+            }
+
+            myQuadBuffer[quadLength++] = q
+            q = 1
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
