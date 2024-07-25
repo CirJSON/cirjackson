@@ -94,61 +94,405 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @get:Throws(CirJacksonException::class)
     override val text: String?
-        get() = TODO("Not yet implemented")
+        get() = if (myCurrentToken == CirJsonToken.VALUE_STRING) {
+            if (myIsTokenIncomplete) {
+                myIsTokenIncomplete = false
+                finishAndReturnString()
+            } else {
+                myTextBuffer.contentsAsString()
+            }
+        } else {
+            getText(myCurrentToken)
+        }
 
     @Throws(CirJacksonException::class)
     override fun getText(writer: Writer): Int {
-        TODO("Not yet implemented")
+        val token = myCurrentToken ?: return 0
+
+        return try {
+            when (token) {
+                CirJsonToken.VALUE_STRING -> {
+                    if (myIsTokenIncomplete) {
+                        myIsTokenIncomplete = false
+                        finishString()
+                    }
+
+                    myTextBuffer.contentsToWriter(writer)
+                }
+
+                CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
+                    val name = streamReadContext!!.currentName!!
+                    writer.write(name)
+                    name.length
+                }
+
+                else -> {
+                    if (token.isNumeric) {
+                        myTextBuffer.contentsToWriter(writer)
+                    } else {
+                        val c = token.charArrayRepresentation!!
+                        writer.write(c)
+                        c.size
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     @get:Throws(CirJacksonException::class)
     override val valueAsString: String?
-        get() = TODO("Not yet implemented")
+        get() = when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING -> {
+                if (myIsTokenIncomplete) {
+                    myIsTokenIncomplete = false
+                    finishAndReturnString()
+                } else {
+                    myTextBuffer.contentsAsString()
+                }
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
+                currentName
+            }
+
+            else -> {
+                super.getValueAsString(null)
+            }
+        }
 
     @Throws(CirJacksonException::class)
     override fun getValueAsString(defaultValue: String?): String? {
-        TODO("Not yet implemented")
+        return when (myCurrentToken) {
+            CirJsonToken.VALUE_STRING -> {
+                if (myIsTokenIncomplete) {
+                    myIsTokenIncomplete = false
+                    finishAndReturnString()
+                } else {
+                    myTextBuffer.contentsAsString()
+                }
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
+                currentName
+            }
+
+            else -> {
+                super.getValueAsString(null)
+            }
+        }
     }
 
     @get:Throws(CirJacksonException::class)
     override val valueAsInt: Int
-        get() = TODO("Not yet implemented")
+        get() = if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT ||
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
+            if (myNumberTypesValid and NUMBER_INT == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseIntValue()
+                } else if (myNumberTypesValid and NUMBER_INT == 0) {
+                    convertNumberToInt()
+                    myNumberInt
+                } else {
+                    myNumberInt
+                }
+            } else {
+                myNumberInt
+            }
+        } else {
+            super.getValueAsInt(0)
+        }
 
     @Throws(CirJacksonException::class)
     override fun getValueAsInt(defaultValue: Int): Int {
-        TODO("Not yet implemented")
+        return if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT ||
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
+            if (myNumberTypesValid and NUMBER_INT == 0) {
+                if (myNumberTypesValid == NUMBER_UNKNOWN) {
+                    parseIntValue()
+                } else if (myNumberTypesValid and NUMBER_INT == 0) {
+                    convertNumberToInt()
+                    myNumberInt
+                } else {
+                    myNumberInt
+                }
+            } else {
+                myNumberInt
+            }
+        } else {
+            super.getValueAsInt(defaultValue)
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected fun getText(token: CirJsonToken?): String? {
-        TODO("Not yet implemented")
+        token ?: return null
+
+        return when (token.id) {
+            CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                streamReadContext!!.currentName
+            }
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                myTextBuffer.contentsAsString()
+            }
+
+            else -> {
+                token.token
+            }
+        }
     }
 
     @get:Throws(CirJacksonException::class)
     override val textCharacters: CharArray?
-        get() = TODO("Not yet implemented")
+        get() = when (val id = myCurrentToken?.id) {
+            null -> null
+
+            CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                currentNameInBuffer()
+            }
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                if (id == CirJsonTokenId.ID_STRING) {
+                    if (myIsTokenIncomplete) {
+                        myIsTokenIncomplete = false
+                        finishString()
+                    }
+                }
+
+                myTextBuffer.textBuffer
+            }
+
+            else -> {
+                myCurrentToken!!.charArrayRepresentation
+            }
+        }
 
     @get:Throws(CirJacksonException::class)
     override val textLength: Int
-        get() = TODO("Not yet implemented")
+        get() = when (val id = myCurrentToken?.id) {
+            null -> 0
+
+            CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                streamReadContext!!.currentName!!.length
+            }
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                if (id == CirJsonTokenId.ID_STRING) {
+                    if (myIsTokenIncomplete) {
+                        myIsTokenIncomplete = false
+                        finishString()
+                    }
+                }
+
+                myTextBuffer.size
+            }
+
+            else -> {
+                myCurrentToken!!.charArrayRepresentation!!.size
+            }
+        }
 
     @get:Throws(CirJacksonException::class)
     override val textOffset: Int
-        get() = TODO("Not yet implemented")
+        get() = when (val id = myCurrentToken?.id) {
+            null -> 0
+
+            CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                0
+            }
+
+            CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                if (id == CirJsonTokenId.ID_STRING) {
+                    if (myIsTokenIncomplete) {
+                        myIsTokenIncomplete = false
+                        finishString()
+                    }
+                }
+
+                myTextBuffer.textOffset
+            }
+
+            else -> 0
+        }
 
     @Throws(CirJacksonException::class)
     override fun getBinaryValue(base64Variant: Base64Variant): ByteArray {
-        TODO("Not yet implemented")
+        if (myCurrentToken != CirJsonToken.VALUE_STRING && (myCurrentToken != CirJsonToken.VALUE_EMBEDDED_OBJECT ||
+                        myBinaryValue == null)) {
+            return reportError(
+                    "Current token ($myCurrentToken) not VALUE_STRING or VALUE_EMBEDDED_OBJECT, can not access as binary")
+        }
+
+        if (myIsTokenIncomplete) {
+            try {
+                myBinaryValue = decodeBase64(base64Variant)
+            } catch (e: IllegalArgumentException) {
+                throw constructReadException("Failed to decode VALUE_STRING as base64 ($base64Variant): ${e.message}")
+            }
+
+            myIsTokenIncomplete = false
+        } else if (myBinaryValue == null) {
+            val builder = byteArrayBuilder
+            decodeBase64(text!!, builder, base64Variant)
+            myBinaryValue = builder.toByteArray()
+        }
+
+        return myBinaryValue!!
     }
 
     @Throws(CirJacksonException::class)
     override fun readBinaryValue(base64Variant: Base64Variant, output: OutputStream): Int {
-        TODO("Not yet implemented")
+        if (!myIsTokenIncomplete || myCurrentToken != CirJsonToken.VALUE_STRING) {
+            val b = getBinaryValue(base64Variant)
+
+            try {
+                output.write(b)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            return b.size
+        }
+
+        val buffer = myIOContext!!.allocateBase64Buffer()
+
+        try {
+            return readBinary(base64Variant, output, buffer)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        } finally {
+            myIOContext.releaseBase64Buffer(buffer)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
-    protected open fun readBinary(base64Variant: Base64Variant, output: OutputStream): Int {
-        TODO("Not yet implemented")
+    protected open fun readBinary(base64Variant: Base64Variant, output: OutputStream, buffer: ByteArray): Int {
+        var outputPointer = 0
+        val outputEnd = buffer.size - 3
+        var outputCount = 0
+
+        while (true) {
+            var ch: Int
+
+            do {
+                ch = myInputData.readUnsignedByte()
+            } while (ch <= CODE_SPACE)
+
+            var bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (ch == CODE_QUOTE) {
+                    break
+                }
+
+                bits = decodeBase64Escape(base64Variant, ch, 0)
+
+                if (bits < 0) {
+                    continue
+                }
+            }
+
+            if (outputPointer > outputEnd) {
+                outputCount += outputPointer
+
+                try {
+                    output.write(buffer, 0, outputPointer)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                outputPointer = 0
+            }
+
+            var decodedData = bits
+
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                bits = decodeBase64Escape(base64Variant, ch, 1)
+            }
+
+            decodedData = decodedData shl 6 or bits
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == CODE_QUOTE) {
+                        decodedData = decodedData shr 4
+                        buffer[outputPointer++] = decodedData.toByte()
+
+                        if (base64Variant.isRequiringPaddingOnRead) {
+                            --myInputPointer
+                            return handleBase64MissingPadding(base64Variant)
+                        }
+
+                        break
+                    }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 2)
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    ch = myInputData.readUnsignedByte()
+
+                    if (!base64Variant.usesPaddingChar(ch)) {
+                        if (decodeBase64Escape(base64Variant, ch, 3) != Base64Variant.BASE64_VALUE_PADDING) {
+                            return reportInvalidBase64Char(base64Variant, ch.toChar(), 3,
+                                    "expected padding character '${base64Variant.paddingChar}'")
+                        }
+                    }
+
+                    decodedData = decodedData shr 4
+                    buffer[outputPointer++] = decodedData.toByte()
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == CODE_QUOTE) {
+                        decodedData = decodedData shr 2
+                        buffer[outputPointer++] = (decodedData shr 8).toByte()
+                        buffer[outputPointer++] = decodedData.toByte()
+
+                        if (base64Variant.isRequiringPaddingOnRead) {
+                            --myInputPointer
+                            return handleBase64MissingPadding(base64Variant)
+                        }
+
+                        break
+                    }
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    decodedData = decodedData shr 2
+                    buffer[outputPointer++] = (decodedData shr 8).toByte()
+                    buffer[outputPointer++] = decodedData.toByte()
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+            buffer[outputPointer++] = (decodedData shr 16).toByte()
+            buffer[outputPointer++] = (decodedData shr 8).toByte()
+            buffer[outputPointer++] = decodedData.toByte()
+        }
+        myIsTokenIncomplete = false
+
+        if (outputPointer > 0) {
+            outputCount += outputPointer
+            output.write(buffer, 0, outputPointer)
+        }
+
+        return outputCount
     }
 
     /*

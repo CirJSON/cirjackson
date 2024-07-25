@@ -308,7 +308,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @get:Throws(CirJacksonException::class)
     override val valueAsInt: Int
-        get() = if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT || myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
+        get() = if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT ||
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
             if (myNumberTypesValid and NUMBER_INT == 0) {
                 if (myNumberTypesValid == NUMBER_UNKNOWN) {
                     parseIntValue()
@@ -327,7 +328,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     @Throws(CirJacksonException::class)
     override fun getValueAsInt(defaultValue: Int): Int {
-        return if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT || myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
+        return if (myCurrentToken == CirJsonToken.VALUE_NUMBER_INT ||
+                myCurrentToken == CirJsonToken.VALUE_NUMBER_FLOAT) {
             if (myNumberTypesValid and NUMBER_INT == 0) {
                 if (myNumberTypesValid == NUMBER_UNKNOWN) {
                     parseIntValue()
