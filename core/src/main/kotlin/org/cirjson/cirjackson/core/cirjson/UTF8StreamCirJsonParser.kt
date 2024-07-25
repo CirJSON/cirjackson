@@ -1949,6 +1949,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                     outputBuffer = myTextBuffer.finishCurrentSegment()
                     outputPointer = 0
                 }
+
+                outputBuffer[outputPointer++] = c.toChar()
             }
 
             if (fractionLength == 0) {

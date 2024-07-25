@@ -944,7 +944,18 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class, IOException::class)
     protected fun parseFloatThatStartsWithPeriod(negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+            return handleUnexpectedValue(CODE_PERIOD)
+        }
+
+        val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 0
+
+        if (negative) {
+            outputBuffer[outputPointer++] = '-'
+        }
+
+        return parseFloat(outputBuffer, outputPointer, CODE_PERIOD, negative, 0)
     }
 
     /**
@@ -957,7 +968,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      * for further processing. However, actual numeric value conversion will be deferred, since it is usually the most
      * complicated and costliest part of processing.
      *
-     * @param c The first non-null digit character of the number to parse
+     * @param code The first non-null digit character of the number to parse
      *
      * @return Type of token decoded, usually [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT]
      *
@@ -967,22 +978,114 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     protected open fun parseUnsignedNumber(code: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var c = code
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+
+        var outputPointer = if (c == CODE_0) {
+            c = handleLeadingZeroes()
+
+            if (c in CODE_0..CODE_9) {
+                0
+            } else if (c or 0x20 == 'x'.code) {
+                return handleInvalidNumberStart(c, false)
+            } else {
+                outputBuffer[0] = '0'
+                1
+            }
+        } else {
+            outputBuffer[0] = c.toChar()
+            c = myInputData.readUnsignedByte()
+            1
+        }
+
+        var integralLength = outputPointer
+
+        while (c in CODE_0..CODE_9) {
+            ++integralLength
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+            c = myInputData.readUnsignedByte()
+        }
+
+        if (c == CODE_PERIOD || c or 0x20 == CODE_E_LOWERCASE) {
+            return parseFloat(outputBuffer, outputPointer, c, false, integralLength)
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        myNextByte = c
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace()
+        }
+
+        return resetInt(false, integralLength)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     protected fun parsePosNumber(): CirJsonToken? {
-        TODO("Not yet implemented")
+        return parseSignedNumber(false)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     protected fun parseNegNumber(): CirJsonToken? {
-        TODO("Not yet implemented")
+        return parseSignedNumber(true)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun parseSignedNumber(negative: Boolean): CirJsonToken? {
-        TODO("Not yet implemented")
+        var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var outputPointer = 1
+
+        if (negative) {
+            outputBuffer[outputPointer++] = '-'
+        }
+
+        var c = myInputData.readUnsignedByte()
+        outputBuffer[outputPointer++] = c.toChar()
+
+        if (c <= CODE_0) {
+            if (c != CODE_0) {
+                return if (c == CODE_PERIOD) {
+                    parseFloatThatStartsWithPeriod(negative)
+                } else {
+                    handleInvalidNumberStart(c, negative, true)
+                }
+            }
+
+            c = handleLeadingZeroes()
+        } else if (c > CODE_9) {
+            return handleInvalidNumberStart(c, negative, true)
+        } else {
+            c = myInputData.readUnsignedByte()
+        }
+
+        var integralLength = 1
+
+        while (c in CODE_0..CODE_9) {
+            ++integralLength
+
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+            c = myInputData.readUnsignedByte()
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        myNextByte = c
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace()
+        }
+
+        return resetInt(negative, integralLength)
     }
 
     /**
@@ -997,13 +1100,110 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     private fun handleLeadingZeroes(): Int {
-        TODO("Not yet implemented")
+        var ch = myInputData.readUnsignedByte()
+
+        if (ch !in CODE_0..CODE_9) {
+            return ch
+        }
+
+        if (!isEnabled(CirJsonReadFeature.ALLOW_LEADING_ZEROS_FOR_NUMBERS)) {
+            return reportInvalidNumber("Leading zeroes not allowed")
+        }
+
+        while (ch == CODE_0) {
+            ch = myInputData.readUnsignedByte()
+        }
+
+        return ch
     }
 
     @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
     private fun parseFloat(outputBuffer: CharArray, outputPointer: Int, code: Int, negative: Boolean,
             integralLength: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        var outputBuffer = outputBuffer
+        var outputPointer = outputPointer
+        var c = code
+        var fractionLength = 0
+
+        if (c == CODE_PERIOD) {
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+
+            while (true) {
+                c = myInputData.readUnsignedByte()
+
+                if (c !in CODE_0..CODE_9) {
+                    break
+                }
+
+                ++fractionLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c.toChar()
+            }
+
+            if (fractionLength == 0) {
+                if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
+                    return reportUnexpectedNumberChar(c.toChar(), "Decimal point not followed by a digit")
+                }
+            }
+        }
+
+        var exponentLength = 0
+
+        if (c or 0x20 == CODE_E_LOWERCASE) {
+            if (outputPointer >= outputBuffer.size) {
+                outputBuffer = myTextBuffer.finishCurrentSegment()
+                outputPointer = 0
+            }
+
+            outputBuffer[outputPointer++] = c.toChar()
+            c = myInputData.readUnsignedByte()
+
+            if (c == CODE_MINUS || c == CODE_PLUS) {
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c.toChar()
+                c = myInputData.readUnsignedByte()
+            }
+
+            while (c in CODE_0..CODE_9) {
+                ++exponentLength
+
+                if (outputPointer >= outputBuffer.size) {
+                    outputBuffer = myTextBuffer.finishCurrentSegment()
+                    outputPointer = 0
+                }
+
+                outputBuffer[outputPointer++] = c.toChar()
+                c = myInputData.readUnsignedByte()
+            }
+
+            if (exponentLength == 0) {
+                return reportUnexpectedNumberChar(c.toChar(), "Exponent indicator not followed by a digit")
+            }
+        }
+
+        myNextByte = c
+
+        if (streamReadContext!!.isInRoot) {
+            verifyRootSpace()
+        }
+
+        myTextBuffer.currentSegmentSize = outputPointer
+        return resetFloat(negative, integralLength, fractionLength, exponentLength)
     }
 
     /**
@@ -1012,9 +1212,19 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      * NOTE: with [DataInput] source, not really feasible, up-front. If we did want, we could rearrange things to
      * require space before next read, but initially let's just do nothing.
      */
-    @Throws(CirJacksonException::class, IOException::class)
+    @Throws(CirJacksonException::class)
     private fun verifyRootSpace() {
-        TODO("Not yet implemented")
+        val ch = myNextByte
+
+        if (ch > CODE_SPACE) {
+            return reportMissingRootWhiteSpace(ch.toChar())
+        }
+
+        myNextByte = -1
+
+        if (ch == CODE_CR || ch == CODE_LF) {
+            ++myCurrentInputRow
+        }
     }
 
     /*
