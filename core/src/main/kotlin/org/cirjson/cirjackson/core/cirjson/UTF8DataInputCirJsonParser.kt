@@ -503,27 +503,211 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class)
     override fun nextToken(): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (isClosed) {
+            return null
+        }
+
+        return try {
+            if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
+                    myCurrentToken == CirJsonToken.PROPERTY_NAME) {
+                nextAfterName()
+            } else {
+                nextTokenInternal()
+            }
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun nextTokenInternal(): CirJsonToken? {
-        TODO("Not yet implemented")
+        myNumberTypesValid = NUMBER_UNKNOWN
+
+        if (myIsTokenIncomplete) {
+            skipString()
+        }
+
+        var i = skipWhitespaceOrEnd()
+
+        if (i < 0) {
+            close()
+            myCurrentToken = null
+            return null
+        }
+
+        myBinaryValue = null
+        tokenLineNumber = myCurrentInputRow
+
+        if (i or 0x20 == CODE_R_CURLY) {
+            closeScope(i)
+            return myCurrentToken
+        }
+
+        if (streamReadContext!!.isExpectingComma) {
+            if (i != CODE_COMMA) {
+                return reportUnexpectedChar(i.toChar(),
+                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+            }
+
+            i = skipWhitespace()
+
+            if (isEnabled(CirJsonReadFeature.ALLOW_TRAILING_COMMA)) {
+                if (i or 0x20 == CODE_R_CURLY) {
+                    closeScope(i)
+                    return myCurrentToken
+                }
+            }
+        }
+
+        if (!streamReadContext!!.isInObject) {
+            return nextTokenNotInObject(i)
+        }
+
+        val name = parseName(i)
+        streamReadContext!!.currentName = name
+        myCurrentToken = CirJsonToken.PROPERTY_NAME
+
+        i = skipColon()
+
+        if (i == CODE_QUOTE) {
+            myIsTokenIncomplete = true
+            myNextToken = CirJsonToken.VALUE_STRING
+            return myCurrentToken
+        }
+
+        val token = when (i) {
+            '-'.code -> {
+                parseSignedNumber(true)
+            }
+
+            '+'.code -> {
+                if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    parseSignedNumber(false)
+                } else {
+                    handleUnexpectedValue(i)
+                }
+            }
+
+            '.'.code -> {
+                parseFloatThatStartsWithPeriod(false)
+            }
+
+            '0'.code, '1'.code, '2'.code, '3'.code, '4'.code, '5'.code, '6'.code, '7'.code, '8'.code, '9'.code -> {
+                parseUnsignedNumber(i)
+            }
+
+            't'.code -> {
+                matchToken("true", 1)
+                CirJsonToken.VALUE_TRUE
+            }
+
+            'f'.code -> {
+                matchToken("false", 1)
+                CirJsonToken.VALUE_FALSE
+            }
+
+            'n'.code -> {
+                matchToken("null", 1)
+                CirJsonToken.VALUE_NULL
+            }
+
+            '['.code -> {
+                CirJsonToken.START_ARRAY
+            }
+
+            '{'.code -> {
+                CirJsonToken.START_OBJECT
+            }
+
+            else -> {
+                handleUnexpectedValue(i)
+            }
+        }
+
+        myNextToken = token
+        return myCurrentToken
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun nextTokenNotInObject(i: Int): CirJsonToken? {
-        TODO("Not yet implemented")
+        if (i == CODE_QUOTE) {
+            myIsTokenIncomplete = true
+            return CirJsonToken.VALUE_STRING.also { myCurrentToken = it }
+        }
+
+        return when (i) {
+            '['.code -> {
+                streamReadContext = streamReadContext!!.createChildArrayContext(tokenLineNumber, myTokenInputColumn)
+                CirJsonToken.START_ARRAY.also { myCurrentToken = it }
+            }
+
+            '{'.code -> {
+                streamReadContext = streamReadContext!!.createChildObjectContext(tokenLineNumber, myTokenInputColumn)
+                CirJsonToken.START_OBJECT.also { myCurrentToken = it }
+            }
+
+            't'.code -> {
+                matchToken("true", 1)
+                CirJsonToken.VALUE_TRUE.also { myCurrentToken = it }
+            }
+
+            'f'.code -> {
+                matchToken("false", 1)
+                CirJsonToken.VALUE_FALSE.also { myCurrentToken = it }
+            }
+
+            'n'.code -> {
+                matchToken("null", 1)
+                CirJsonToken.VALUE_NULL.also { myCurrentToken = it }
+            }
+
+            '-'.code -> {
+                parseSignedNumber(true).also { myCurrentToken = it }
+            }
+
+            '+'.code -> {
+                if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS)) {
+                    parseSignedNumber(false).also { myCurrentToken = it }
+                } else {
+                    handleUnexpectedValue(i).also { myCurrentToken = it }
+                }
+            }
+
+            '.'.code -> {
+                parseFloatThatStartsWithPeriod(false).also { myCurrentToken = it }
+            }
+
+            '0'.code, '1'.code, '2'.code, '3'.code, '4'.code, '5'.code, '6'.code, '7'.code, '8'.code, '9'.code -> {
+                parseUnsignedNumber(i).also { myCurrentToken = it }
+            }
+
+            else -> {
+                handleUnexpectedValue(i).also { myCurrentToken = it }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun nextAfterName(): CirJsonToken? {
-        TODO("Not yet implemented")
+        myIsNameCopied = false
+        val token = myNextToken
+        myNextToken = null
+
+        if (token == CirJsonToken.START_ARRAY) {
+            createChildArrayContext(tokenLineNumber, myTokenInputColumn)
+        } else if (token == CirJsonToken.START_OBJECT) {
+            createChildObjectContext(tokenLineNumber, myTokenInputColumn)
+        }
+
+        return token.also { myCurrentToken = it }
     }
 
     @Throws(CirJacksonException::class)
     override fun finishToken() {
-        TODO("Not yet implemented")
+        if (myIsTokenIncomplete) {
+            myIsTokenIncomplete = false
+            finishString()
+        }
     }
 
     @Throws(CirJacksonException::class)
