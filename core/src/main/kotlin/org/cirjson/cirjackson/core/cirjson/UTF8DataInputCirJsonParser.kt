@@ -1733,24 +1733,64 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      *******************************************************************************************************************
      */
 
-    @Throws(CirJacksonException::class, IOException::class)
+    @Throws(StreamReadException::class)
     private fun findName(quad1: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        val q1 = padLastQuad(quad1, lastQuadBytes)
+
+        val name = mySymbols.findName(q1)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+        return addName(myQuadBuffer, 1, lastQuadBytes)
     }
 
-    @Throws(CirJacksonException::class, IOException::class)
+    @Throws(StreamReadException::class)
     private fun findName(q1: Int, quad2: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        val q2 = padLastQuad(quad2, lastQuadBytes)
+
+        val name = mySymbols.findName(q1, q2)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+        return addName(myQuadBuffer, 2, lastQuadBytes)
     }
 
-    @Throws(CirJacksonException::class, IOException::class)
+    @Throws(StreamReadException::class)
     private fun findName(q1: Int, q2: Int, quad3: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        val q3 = padLastQuad(quad3, lastQuadBytes)
+
+        val name = mySymbols.findName(q1, q2, q3)
+
+        if (name != null) {
+            return name
+        }
+
+        myQuadBuffer[0] = q1
+        myQuadBuffer[1] = q2
+        myQuadBuffer[2] = padLastQuad(q3, lastQuadBytes)
+        return addName(myQuadBuffer, 3, lastQuadBytes)
     }
 
-    @Throws(CirJacksonException::class, IOException::class)
+    @Throws(StreamReadException::class)
     private fun findName(quads: IntArray, quadLength: Int, lastQuad: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        var realQuads = quads
+        var realQuadLength = quadLength
+
+        if (realQuadLength >= realQuads.size) {
+            realQuads = growNameDecodeBuffer(realQuads, realQuads.size)
+            myQuadBuffer = realQuads
+        }
+
+        realQuads[realQuadLength++] = padLastQuad(lastQuad, lastQuadBytes)
+
+        return mySymbols.findName(realQuads, realQuadLength) ?: addName(realQuads, realQuadLength, lastQuadBytes)
     }
 
     /**
@@ -1759,7 +1799,120 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(StreamReadException::class)
     private fun addName(quads: IntArray, quadLength: Int, lastQuadBytes: Int): String? {
-        TODO("Not yet implemented")
+        val byteLength = (quadLength shl 2) - 4 + lastQuadBytes
+
+        val lastQuad: Int
+
+        if (lastQuadBytes < 4) {
+            lastQuad = quads[quadLength - 1]
+            quads[quadLength - 1] = lastQuad shl (4 - lastQuadBytes shl 3)
+        } else {
+            lastQuad = 0
+        }
+
+        var charBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+        var charIndex = 0
+        var index = 0
+
+        while (index < byteLength) {
+            var ch = quads[index shr 2]
+            var byteIndex = index and 3
+            ch = ch shr (3 - byteIndex shl 3) and 0xFF
+            ++index
+
+            if (ch > 127) {
+                val needed = when {
+                    ch and 0xE0 == 0xC0 -> {
+                        ch = ch and 0x1F
+                        1
+                    }
+
+                    ch and 0xF0 == 0xE0 -> {
+                        ch = ch and 0x0F
+                        2
+                    }
+
+                    ch and 0xF8 == 0xF0 -> {
+                        ch = ch and 0x07
+                        3
+                    }
+
+                    else -> {
+                        reportInvalidInitial(ch)
+                    }
+                }
+
+                if (index + needed > byteLength) {
+                    return reportInvalidEOF("in property name", CirJsonToken.PROPERTY_NAME)
+                }
+
+                var ch2 = quads[index shr 2]
+                byteIndex = index and 3
+                ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                ++index
+
+                if (ch2 and 0xC0 != 0x080) {
+                    return reportInvalidOther(ch2)
+                }
+
+                ch = ch shl 6 or (ch2 and 0x3F)
+
+                if (needed > 1) {
+                    ch2 = quads[index shr 2]
+                    byteIndex = index and 3
+                    ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                    ++index
+
+                    if (ch2 and 0xC0 != 0x080) {
+                        return reportInvalidOther(ch2)
+                    }
+
+                    ch = ch shl 6 or (ch2 and 0x3F)
+
+                    if (needed > 2) {
+                        ch2 = quads[index shr 2]
+                        byteIndex = index and 3
+                        ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                        ++index
+
+                        if (ch2 and 0xC0 != 0x080) {
+                            return reportInvalidOther(ch2)
+                        }
+
+                        ch = ch shl 6 or (ch2 and 0x3F)
+                    }
+                }
+
+                if (needed > 2) {
+                    ch -= 0x10000
+
+                    if (charIndex >= charBuffer.size) {
+                        charBuffer = myTextBuffer.expandCurrentSegment()
+                    }
+
+                    charBuffer[charIndex++] = ((ch shr 10) + 0x0800).toChar()
+                    ch = ch and 0x03FF or 0xDC00
+                }
+            }
+
+            if (charIndex >= charBuffer.size) {
+                charBuffer = myTextBuffer.expandCurrentSegment()
+            }
+
+            charBuffer[charIndex++] = ch.toChar()
+        }
+
+        val baseName = String(charBuffer, 0, charIndex)
+
+        if (!mySymbols.isCanonicalizing) {
+            return baseName
+        }
+
+        if (lastQuadBytes < 4) {
+            quads[quadLength - 1] = lastQuad
+        }
+
+        return mySymbols.addName(baseName, quads, quadLength)
     }
 
     /*
