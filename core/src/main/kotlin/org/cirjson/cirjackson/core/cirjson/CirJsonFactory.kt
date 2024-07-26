@@ -227,27 +227,67 @@ open class CirJsonFactory : TextualTSFactory {
                 ContentReference.rawReference(srcRef), false, CirJsonEncoding.UTF8)
     }
 
+    /*
+     *******************************************************************************************************************
+     * Factory methods used by factory for creating parser instances
+     *******************************************************************************************************************
+     */
+
     override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
             len: Int): CirJsonParser {
-        TODO("Not yet implemented")
+        checkRangeBoundsForByteArray(data, offset, len)
+
+        return ByteSourceCirJsonBootstrapper(context, data, offset, len).constructParser(readContext,
+                readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), myByteSymbolCanonicalizer, myRootCharSymbols,
+                factoryFeatures)
     }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray, offset: Int,
             len: Int, recyclable: Boolean): CirJsonParser {
-        TODO("Not yet implemented")
+        checkRangeBoundsForCharArray(content, offset, len)
+
+        return ReaderBasedCirJsonParser(readContext, context, readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), null, myRootCharSymbols.makeChild(), content,
+                offset, offset + len, recyclable)
     }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, input: DataInput): CirJsonParser {
-        TODO("Not yet implemented")
+        val firstByte = ByteSourceCirJsonBootstrapper.skipUTF8BOM(input)
+        val canonicalizer = myByteSymbolCanonicalizer.makeChildOrPlaceholder(factoryFeatures)
+        return UTF8DataInputCirJsonParser(readContext, context, readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), input, canonicalizer, firstByte)
     }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, input: InputStream): CirJsonParser {
-        TODO("Not yet implemented")
+        try {
+            return ByteSourceCirJsonBootstrapper(context, input).constructParser(readContext,
+                    readContext.getStreamReadFeatures(streamReadFeatures),
+                    readContext.getFormatReadFeatures(formatReadFeatures), myByteSymbolCanonicalizer, myRootCharSymbols,
+                    factoryFeatures)
+        } catch (e: RuntimeException) {
+            if (context.isResourceManaged) {
+                try {
+                    input.close()
+                } catch (e2: Exception) {
+                    e.addSuppressed(e2)
+                }
+            }
+
+            throw e
+        }
     }
 
     override fun createParser(readContext: ObjectReadContext, context: IOContext, reader: Reader): CirJsonParser {
-        TODO("Not yet implemented")
+        return ReaderBasedCirJsonParser(readContext, context, readContext.getStreamReadFeatures(streamReadFeatures),
+                readContext.getFormatReadFeatures(formatReadFeatures), reader, myRootCharSymbols.makeChild())
     }
+
+    /*
+     *******************************************************************************************************************
+     * Factory methods used by factory for creating generator instances
+     *******************************************************************************************************************
+     */
 
     override fun createGenerator(writeContext: ObjectWriteContext, context: IOContext,
             writer: Writer): CirJsonGenerator {
