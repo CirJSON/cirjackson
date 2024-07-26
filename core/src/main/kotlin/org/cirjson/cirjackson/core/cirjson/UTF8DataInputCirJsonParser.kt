@@ -2965,22 +2965,22 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
 
     override fun currentTokenLocation(): CirJsonLocation {
-        TODO("Not yet implemented")
+        return CirJsonLocation(contentReference(), -1L, -1L, tokenLineNumber, -1)
     }
 
     override fun currentLocation(): CirJsonLocation {
-        TODO("Not yet implemented")
+        return CirJsonLocation(contentReference(), -1L, -1L, myCurrentInputRow, -1)
     }
 
     override fun currentLocationMinusOne(): CirJsonLocation {
-        TODO("Not yet implemented")
+        return currentLocation()
     }
 
     override val objectId: Any?
-        get() = TODO("Not yet implemented")
+        get() = null
 
     override val typeId: Any?
-        get() = TODO("Not yet implemented")
+        get() = null
 
     /*
      *******************************************************************************************************************
@@ -2990,7 +2990,25 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(StreamReadException::class)
     private fun closeScope(i: Int) {
-        TODO("Not yet implemented")
+        if (i == CODE_R_BRACKET) {
+            if (!streamReadContext!!.isInArray) {
+                reportMismatchedEndMarker(i.toChar(), '}')
+            }
+
+            streamReadContext = streamReadContext!!.clearAndGetParent()
+            myCurrentToken = CirJsonToken.END_ARRAY
+        }
+
+        if (i != CODE_R_CURLY) {
+            return
+        }
+
+        if (!streamReadContext!!.isInObject) {
+            reportMismatchedEndMarker(i.toChar(), ']')
+        }
+
+        streamReadContext = streamReadContext!!.clearAndGetParent()
+        myCurrentToken = CirJsonToken.END_OBJECT
     }
 
     /*
