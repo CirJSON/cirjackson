@@ -2859,7 +2859,103 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     protected fun decodeBase64(base64Variant: Base64Variant): ByteArray {
-        TODO("Not yet implemented")
+        val builder = byteArrayBuilder
+
+        while (true) {
+            var ch: Int
+
+            do {
+                ch = myInputData.readUnsignedByte()
+            } while (ch <= CODE_SPACE)
+
+            var bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (ch == CODE_QUOTE) {
+                    return builder.toByteArray()
+                }
+
+                bits = decodeBase64Escape(base64Variant, ch, 0)
+
+                if (bits < 0) {
+                    continue
+                }
+            }
+
+            var decodedData = bits
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                bits = decodeBase64Escape(base64Variant, ch, 1)
+            }
+
+            decodedData = decodedData shl 6 or bits
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == CODE_QUOTE) {
+                        decodedData = decodedData shr 4
+                        builder.append(decodedData)
+
+                        return if (base64Variant.isRequiringPaddingOnRead) {
+                            handleBase64MissingPadding(base64Variant)
+                        } else {
+                            builder.toByteArray()
+                        }
+                    }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 2)
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    ch = myInputData.readUnsignedByte()
+
+                    if (!base64Variant.usesPaddingChar(ch)) {
+                        if (decodeBase64Escape(base64Variant, ch, 3) != Base64Variant.BASE64_VALUE_PADDING) {
+                            return reportInvalidBase64Char(base64Variant, ch.toChar(), 3,
+                                    "expected padding character '${base64Variant.paddingChar}'")
+                        }
+                    }
+
+                    decodedData = decodedData shr 4
+                    builder.append(decodedData)
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+            ch = myInputData.readUnsignedByte()
+            bits = base64Variant.decodeBase64Char(ch)
+
+            if (bits < 0) {
+                if (bits != Base64Variant.BASE64_VALUE_PADDING) {
+                    if (ch == CODE_QUOTE) {
+                        decodedData = decodedData shr 2
+                        builder.appendTwoBytes(decodedData)
+
+                        return if (base64Variant.isRequiringPaddingOnRead) {
+                            handleBase64MissingPadding(base64Variant)
+                        } else {
+                            builder.toByteArray()
+                        }
+                    }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 3)
+                }
+
+                if (bits == Base64Variant.BASE64_VALUE_PADDING) {
+                    decodedData = decodedData shr 2
+                    builder.appendTwoBytes(decodedData)
+                    continue
+                }
+            }
+
+            decodedData = decodedData shl 6 or bits
+            builder.appendThreeBytes(decodedData)
+        }
     }
 
     /*

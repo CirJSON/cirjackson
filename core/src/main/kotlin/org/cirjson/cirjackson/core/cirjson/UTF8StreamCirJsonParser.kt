@@ -4191,6 +4191,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
             bits = base64Variant.decodeBase64Char(ch)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == CODE_QUOTE) {
