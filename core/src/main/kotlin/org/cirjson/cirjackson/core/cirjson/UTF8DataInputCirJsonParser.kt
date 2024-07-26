@@ -2742,32 +2742,104 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun decodeUTF8V2(c: Int): Int {
-        TODO("Not yet implemented")
+        val d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        return c shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun decodeUTF8V3(code1: Int): Int {
-        TODO("Not yet implemented")
+        var c1 = code1 and 0x0F
+
+        var d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        c1 = c1 shl 6 or (d and 0x3F)
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        return c1 shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun decodeUTF8V4(code: Int): Int {
-        TODO("Not yet implemented")
+        var c = code
+        var d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        c = c shl 6 or (d and 0x3F)
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        c = c shl 6 or (d and 0x3F)
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        return (c shl 6 or (d and 0x3F)) - 0x10000
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipUTF8V2() {
-        TODO("Not yet implemented")
+        val d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipUTF8V3() {
-        TODO("Not yet implemented")
+        var d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipUTF8V4() {
-        TODO("Not yet implemented")
+        var d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
+
+        d = myInputData.readUnsignedByte()
+
+        if (d and 0xC0 != 0x080) {
+            return reportInvalidOther(d and 0xFF)
+        }
     }
 
     /*
@@ -2838,7 +2910,25 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class)
     protected fun <T> reportInvalidToken(code: Int, matchedPart: String, message: String): T {
-        TODO("Not yet implemented")
+        var ch = code
+
+        val stringBuilder = StringBuilder(matchedPart)
+
+        try {
+            while (true) {
+                val c = decodeCharForError(ch).toChar()
+
+                if (!c.isJavaIdentifierPart()) {
+                    break
+                }
+
+                stringBuilder.append(c)
+                ch = myInputData.readUnsignedByte()
+            }
+        } catch (_: IOException) {
+        }
+
+        return reportError("Unrecognized token '$stringBuilder': was expecting $message")
     }
 
     @Throws(StreamReadException::class)
