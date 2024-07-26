@@ -6,10 +6,7 @@ import org.cirjson.cirjackson.core.extensions.growBy
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
-import java.io.DataInput
-import java.io.IOException
-import java.io.OutputStream
-import java.io.Writer
+import java.io.*
 
 /**
  * This is a concrete implementation of [CirJsonParser], which is based on a [DataInput] as the input source.
@@ -2343,7 +2340,29 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipWhitespace(): Int {
-        TODO("Not yet implemented")
+        var i = myNextByte
+
+        if (i < 0) {
+            i = myInputData.readUnsignedByte()
+        } else {
+            myNextByte = -1
+        }
+
+        while (true) {
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipWhitespaceComment(i)
+                } else {
+                    i
+                }
+            }
+
+            if (i == CODE_CR || i == CODE_LF) {
+                ++myCurrentInputRow
+            }
+
+            i = myInputData.readUnsignedByte()
+        }
     }
 
     /**
@@ -2352,37 +2371,238 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipWhitespaceOrEnd(): Int {
-        TODO("Not yet implemented")
+        var i = myNextByte
+
+        if (i < 0) {
+            try {
+                i = myInputData.readUnsignedByte()
+            } catch (e: EOFException) {
+                return eofAsNextChar()
+            }
+        } else {
+            myNextByte = -1
+        }
+
+        while (true) {
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipWhitespaceComment(i)
+                } else {
+                    i
+                }
+            }
+
+            if (i == CODE_CR || i == CODE_LF) {
+                ++myCurrentInputRow
+            }
+
+            try {
+                i = myInputData.readUnsignedByte()
+            } catch (e: EOFException) {
+                return eofAsNextChar()
+            }
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
     private fun skipWhitespaceComment(i: Int): Int {
-        TODO("Not yet implemented")
+        var i = i
+
+        while (true) {
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                } else if (i == CODE_HASH) {
+                    if (!skipYAMLComment()) {
+                        return i
+                    }
+                } else {
+                    return i
+                }
+            }
+
+            if (i == CODE_CR || i == CODE_LF) {
+                ++myCurrentInputRow
+            }
+
+            i = myInputData.readUnsignedByte()
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipColon(): Int {
-        TODO("Not yet implemented")
+        var i = myNextByte
+
+        if (i < 0) {
+            i = myInputData.readUnsignedByte()
+        } else {
+            myNextByte = -1
+        }
+
+        if (i == CODE_COLON) {
+            i = myInputData.readUnsignedByte()
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipColon(i, true)
+                } else {
+                    i
+                }
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputData.readUnsignedByte()
+
+                if (i > CODE_SPACE) {
+                    return if (i == CODE_SLASH || i == CODE_HASH) {
+                        skipColon(i, true)
+                    } else {
+                        i
+                    }
+                }
+            }
+
+            return skipColon(i, true)
+        }
+
+        if (i == CODE_SPACE || i == CODE_TAB) {
+            i = myInputData.readUnsignedByte()
+        }
+
+        if (i == CODE_COLON) {
+            i = myInputData.readUnsignedByte()
+
+            if (i > CODE_SPACE) {
+                return if (i == CODE_SLASH || i == CODE_HASH) {
+                    skipColon(i, true)
+                } else {
+                    i
+                }
+            }
+
+            if (i == CODE_SPACE || i == CODE_TAB) {
+                i = myInputData.readUnsignedByte()
+
+                if (i > CODE_SPACE) {
+                    return if (i == CODE_SLASH || i == CODE_HASH) {
+                        skipColon(i, true)
+                    } else {
+                        i
+                    }
+                }
+            }
+
+            return skipColon(i, true)
+        }
+
+        return skipColon(i, false)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
+    @Suppress("NAME_SHADOWING")
     private fun skipColon(i: Int, gotColon: Boolean): Int {
-        TODO("Not yet implemented")
+        var i = i
+        var gotColon = gotColon
+
+        while (true) {
+            if (i > CODE_SPACE) {
+                if (i == CODE_SLASH) {
+                    skipComment()
+                    i = myInputData.readUnsignedByte()
+                    continue
+                }
+
+                if (i == CODE_HASH) {
+                    if (!skipYAMLComment()) {
+                        i = myInputData.readUnsignedByte()
+                        continue
+                    }
+                }
+
+                if (gotColon) {
+                    return i
+                }
+
+                if (i != CODE_COLON) {
+                    return reportUnexpectedChar(i.toChar(), "was expecting a colon to separate property name and value")
+                }
+
+                gotColon = true
+            }
+
+            if (i == CODE_CR || i == CODE_LF) {
+                ++myCurrentInputRow
+            }
+
+            i = myInputData.readUnsignedByte()
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipComment() {
-        TODO("Not yet implemented")
+        if (!isEnabled(CirJsonReadFeature.ALLOW_JAVA_COMMENTS)) {
+            return reportUnexpectedChar('/',
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_COMMENTS' not enabled for parser)")
+        }
+
+        when (val c = myInputData.readUnsignedByte()) {
+            CODE_SLASH -> skipLine()
+
+            CODE_ASTERISK -> skipCComment()
+
+            else -> return reportUnexpectedChar(c.toChar(), "was expecting either '*' or '/' for a comment")
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipCComment() {
-        TODO("Not yet implemented")
+        val codes = INPUT_CODE_COMMENT
+        var i = myInputData.readUnsignedByte()
+
+        while (true) {
+            when (val code = codes[i]) {
+                0 -> {}
+
+                CODE_ASTERISK -> {
+                    i = myInputData.readUnsignedByte()
+
+                    if (i == CODE_SLASH) {
+                        return
+                    }
+
+                    continue
+                }
+
+                CODE_LF, CODE_CR -> {
+                    ++myCurrentInputRow
+                }
+
+                2 -> skipUTF8V2()
+
+                3 -> skipUTF8V3()
+
+                4 -> skipUTF8V4()
+
+                else -> {
+                    if (code < 0) {
+                        return reportInvalidChar(i)
+                    }
+                }
+            }
+
+            i = myInputData.readUnsignedByte()
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipYAMLComment(): Boolean {
-        TODO("Not yet implemented")
+        return if (isEnabled(CirJsonReadFeature.ALLOW_YAML_COMMENTS)) {
+            skipLine()
+            true
+        } else {
+            false
+        }
     }
 
     /**
@@ -2390,22 +2610,128 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
      */
     @Throws(CirJacksonException::class, IOException::class)
     private fun skipLine() {
-        TODO("Not yet implemented")
+        val codes = INPUT_CODE_COMMENT
+
+        while (true) {
+            val i = myInputData.readUnsignedByte()
+
+            when (val code = codes[i]) {
+                0 -> {}
+
+                CODE_LF, CODE_CR -> {
+                    ++myCurrentInputRow
+                    return
+                }
+
+                2 -> skipUTF8V2()
+
+                3 -> skipUTF8V3()
+
+                4 -> skipUTF8V4()
+
+                else -> {
+                    if (code < 0) {
+                        return reportInvalidChar(i)
+                    }
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun decodeEscaped(): Char {
-        TODO("Not yet implemented")
+        return try {
+            decodeEscapedInternal()
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     @Throws(CirJacksonException::class, IOException::class)
-    private fun decodeEscapedInternal() {
-        TODO("Not yet implemented")
+    private fun decodeEscapedInternal(): Char {
+        when (val c = myInputData.readUnsignedByte()) {
+            'b'.code -> return '\b'
+            't'.code -> return '\t'
+            'n'.code -> return '\n'
+            'r'.code -> return '\r'
+            'f'.code -> return '\u000c'
+            '"'.code, '/'.code, '\\'.code -> return c.toChar()
+            'u'.code -> {}
+            else -> return handleUnrecognizedCharacterEscape(decodeCharForError(c).toChar())
+        }
+
+        var value = 0
+
+        for (i in 0..<4) {
+            val ch = myInputData.readUnsignedByte()
+            val digit = CharTypes.charToHex(ch.toChar())
+
+            if (digit < 0) {
+                return reportUnexpectedChar(ch.toChar(), "expected a hex-digit for character escape sequence")
+            }
+
+            value = value shl 4 or digit
+        }
+
+        return value.toChar()
     }
 
     @Throws(CirJacksonException::class, IOException::class)
     protected open fun decodeCharForError(firstByte: Int): Int {
-        TODO("Not yet implemented")
+        var c = firstByte and 0xFF
+
+        if (c > 0x7F) {
+            val needed = when {
+                c and 0xE0 == 0xC0 -> {
+                    c = c and 0x1F
+                    1
+                }
+
+                c and 0xF0 == 0xE0 -> {
+                    c = c and 0x0F
+                    2
+                }
+
+                c and 0xF8 == 0xF0 -> {
+                    c = c and 0x07
+                    3
+                }
+
+                else -> {
+                    return reportInvalidInitial(c and 0xFF)
+                }
+            }
+
+            var d = myInputData.readUnsignedByte()
+
+            if (d and 0xC0 != 0x080) {
+                return reportInvalidOther(d and 0xFF)
+            }
+
+            c = c shl 6 or (d and 0x3F)
+
+            if (needed > 1) {
+                d = myInputData.readUnsignedByte()
+
+                if (d and 0xC0 != 0x080) {
+                    return reportInvalidOther(d and 0xFF)
+                }
+
+                c = c shl 6 or (d and 0x3F)
+
+                if (needed > 2) {
+                    d = myInputData.readUnsignedByte()
+
+                    if (d and 0xC0 != 0x080) {
+                        return reportInvalidOther(d and 0xFF)
+                    }
+
+                    c = c shl 6 or (d and 0x3F)
+                }
+            }
+        }
+
+        return c
     }
 
     /*
