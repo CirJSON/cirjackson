@@ -2,6 +2,8 @@ package org.cirjson.cirjackson.core.symbols
 
 import org.cirjson.cirjackson.core.util.Named
 import java.util.*
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Simplified static symbol table used instead of global quad-based canonicalizer when we have smaller set of symbols
@@ -74,34 +76,130 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     fun addName(name: String): Int {
-        TODO("Not yet implemented")
+        val ch = name.toByteArray(Charsets.UTF_8)
+        val length = ch.size
+
+        if (length > 12) {
+            val quads = quads(name)
+            return addName(name, quads, quads.size)
+        }
+
+        if (length <= 4) {
+            return addName(name, decodeLast(ch, 0, length))
+        }
+
+        val q1 = decodeFull(ch, 0)
+
+        return if (length <= 8) {
+            addName(name, q1, decodeLast(ch, 4, length - 4))
+        } else {
+            addName(name, q1, decodeFull(ch, 4), decodeLast(ch, 8, length - 8))
+        }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun addName(name: String, q1: Int): Int {
-        TODO("Not yet implemented")
+        val index = size
+        val offset = findOffsetForAdd(calculateHash(q1))
+        myHashArea[offset] = q1
+        myHashArea[offset + 3] = lengthAndIndex(1)
+        return index
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun addName(name: String, q1: Int, q2: Int): Int {
-        TODO("Not yet implemented")
+        val index = size
+        val offset = findOffsetForAdd(calculateHash(q1, q2))
+        myHashArea[offset] = q1
+        myHashArea[offset + 1] = q2
+        myHashArea[offset + 3] = lengthAndIndex(2)
+        return index
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun addName(name: String, q1: Int, q2: Int, q3: Int): Int {
-        TODO("Not yet implemented")
+        val index = size
+        val offset = findOffsetForAdd(calculateHash(q1, q2, q3))
+        myHashArea[offset] = q1
+        myHashArea[offset + 1] = q2
+        myHashArea[offset + 3] = lengthAndIndex(3)
+        return index
     }
 
     private fun addName(name: String, quads: IntArray, quadLength: Int): Int {
-        TODO("Not yet implemented")
+        return when (quadLength) {
+            1 -> addName(name, quads[0])
+
+            2 -> addName(name, quads[0], quads[1])
+
+            3 -> addName(name, quads[0], quads[1], quads[2])
+
+            else -> {
+                val index = size
+                val hash = calculateHash(quads, quadLength)
+                val offset = findOffsetForAdd(hash)
+                myHashArea[offset] = hash
+                val longStart = appendLongName(quads, quadLength)
+                myHashArea[offset + 1] = longStart
+                myHashArea[offset + 3] = lengthAndIndex(quadLength)
+                index
+            }
+        }
     }
 
     /**
      * Method called to find the location within hash table to add a new symbol in.
      */
     private fun findOffsetForAdd(hash: Int): Int {
-        TODO("Not yet implemented")
+        var offset = calculateOffset(hash)
+        val hashArea = myHashArea
+
+        if (hashArea[offset + 3] == 0) {
+            return offset
+        }
+
+        var offset2 = mySecondaryStart + (offset shr 3 shl 2)
+
+        if (hashArea[offset2 + 3] == 0) {
+            return offset2
+        }
+
+        offset2 = myTertiaryStart + (offset shr myTertiaryStart + 2 shl myTertiaryShift)
+        val bucketSize = 1 shl myTertiaryShift
+        var end = offset2 + bucketSize
+
+        while (offset2 < end) {
+            if (hashArea[offset2 + 2] == 0) {
+                return offset2
+            }
+
+            offset2 += 4
+        }
+
+        offset = mySpilloverEnd
+        end = myHashSize shl 3
+
+        if (mySpilloverEnd >= end) {
+            throw IllegalStateException("Internal error: Overflow with $size entries (hash size of $myHashSize)")
+        }
+
+        mySpilloverEnd += 4
+        return offset
     }
 
     private fun appendLongName(quads: IntArray, quadLength: Int): Int {
-        TODO("Not yet implemented")
+        val start = myLongNameOffset
+
+        if (start + quadLength > myHashArea.size) {
+            val toAdd = start + quadLength - myHashArea.size
+            val minAdd = min(4096, myHashSize)
+            val newSize = myHashArea.size + max(toAdd, minAdd)
+            myHashArea = myHashArea.copyOf(newSize)
+        }
+
+        quads.copyInto(myHashArea, start, 0, quadLength)
+        myLongNameOffset = quadLength
+        return start
     }
 
     /*
@@ -215,7 +313,13 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     override fun toString(): String {
-        TODO("Not yet implemented")
+        val primary = primaryQuadCount()
+        val secondary = secondaryQuadCount()
+        val tertiary = tertiaryQuadCount()
+        val spillover = spilloverQuadCount()
+        val total = totalCount()
+
+        return "[ByteQuadsCanonicalizer: size=$size, bucketCount=$myHashSize, $primary/$secondary/$tertiary/$spillover primary/secondary/tertiary/spillover (=${primary + secondary + tertiary + spillover}), total:$total]"
     }
 
     companion object {
