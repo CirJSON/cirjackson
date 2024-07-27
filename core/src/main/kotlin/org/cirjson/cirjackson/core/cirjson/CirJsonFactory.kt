@@ -8,10 +8,14 @@ import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteArrayJsonParser
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.symbols.BinaryNameMatcher
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
 import org.cirjson.cirjackson.core.symbols.CharsToNameCanonicalizer
+import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
+import org.cirjson.cirjackson.core.util.Named
 import java.io.*
+import java.util.*
 
 /**
  * The main factory class of CirJackson package, used to configure and construct reader (aka parser, [CirJsonParser])
@@ -297,6 +301,21 @@ open class CirJsonFactory : TextualTSFactory {
     override fun createUTF8Generator(writeContext: ObjectWriteContext, context: IOContext,
             output: OutputStream): CirJsonGenerator {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Other factory methods
+     *******************************************************************************************************************
+     */
+
+    override fun constructNameMatcher(matches: List<Named>, alreadyInterned: Boolean): PropertyNameMatcher {
+        return BinaryNameMatcher.constructFrom(matches, alreadyInterned)
+    }
+
+    override fun constructCaseInsensitiveNameMatcher(matches: List<Named>, alreadyInterned: Boolean,
+            locale: Locale): PropertyNameMatcher {
+        return BinaryNameMatcher.constructCaseInsensitive(locale, matches, alreadyInterned)
     }
 
     companion object {

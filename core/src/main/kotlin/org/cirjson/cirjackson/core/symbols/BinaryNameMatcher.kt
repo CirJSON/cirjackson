@@ -699,7 +699,8 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return construct(symbols, SimpleNameMatcher.construct(null, symbols))
         }
 
-        fun constructFrom(locale: Locale, propertyNames: List<Named?>, alreadyInterned: Boolean): BinaryNameMatcher {
+        fun constructCaseInsensitive(locale: Locale, propertyNames: List<Named?>,
+                alreadyInterned: Boolean): BinaryNameMatcher {
             val names = stringsFromNames(propertyNames, alreadyInterned)
             return construct(names, SimpleNameMatcher.constructCaseInsensitive(locale, names))
         }
