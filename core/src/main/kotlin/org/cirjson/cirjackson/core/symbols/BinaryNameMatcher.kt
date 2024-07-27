@@ -370,15 +370,46 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
          */
 
         fun quads(name: String): IntArray {
-            TODO("Not yet implemented")
+            val bytes = name.toByteArray(Charsets.UTF_8)
+            val length = bytes.size
+            val buffer = IntArray(length + 3 shr 2)
+
+            var input = 0
+            var output = 0
+            var left = length
+
+            while (left > 4) {
+                buffer[output++] = decodeFull(bytes, input)
+                input += 4
+                left -= 4
+            }
+
+            buffer[output] = decodeLast(bytes, input, left)
+            return buffer
         }
 
         private fun decodeFull(bytes: ByteArray, offset: Int): Int {
-            TODO("Not yet implemented")
+            return (bytes[offset].toInt() shl 24) + (bytes[offset + 1].toInt() and 0xFF shl 16) +
+                    (bytes[offset + 2].toInt() and 0xFF shl 8) + (bytes[offset + 3].toInt() and 0xFF)
         }
 
         private fun decodeLast(bytes: ByteArray, offset: Int, bytesAmount: Int): Int {
-            TODO("Not yet implemented")
+            var realOffset = offset
+            var value = bytes[realOffset++].toInt() and 0xFF
+
+            if (bytesAmount == 4) {
+                value = value shl 8 or (bytes[realOffset++].toInt() and 0xFF)
+            }
+
+            if (bytesAmount >= 3) {
+                value = value shl 8 or (bytes[realOffset++].toInt() and 0xFF)
+            }
+
+            if (bytesAmount >= 2) {
+                value = value shl 8 or (bytes[realOffset].toInt() and 0xFF)
+            }
+
+            return value
         }
 
     }
