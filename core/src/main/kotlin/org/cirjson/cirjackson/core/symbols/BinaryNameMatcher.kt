@@ -213,23 +213,60 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
     }
 
     fun primaryQuadCount(): Int {
-        TODO("Not yet implemented")
+        var count = 0
+        var offset = 3
+        val end = mySecondaryStart
+
+        while (offset < end) {
+            if (myHashArea[offset] != 0) {
+                ++count
+            }
+
+            offset += 4
+        }
+
+        return count
     }
 
     fun secondaryQuadCount(): Int {
-        TODO("Not yet implemented")
+        val indexRange = IntProgression.fromClosedRange(mySecondaryStart + 3, myTertiaryStart - 1, 4)
+        return myHashArea.filterIndexed { index, value -> index in indexRange && value != 0 }.size
     }
 
     fun tertiaryQuadCount(): Int {
-        TODO("Not yet implemented")
+        var count = 0
+        var offset = myTertiaryStart + 3
+        val end = offset + myHashSize
+
+        while (offset < end) {
+            if (myHashArea[offset] != 0) {
+                ++count
+            }
+
+            offset += 4
+        }
+
+        return count
     }
 
     fun spilloverQuadCount(): Int {
-        TODO("Not yet implemented")
+        return mySpilloverEnd - spilloverStart() shr 2
     }
 
     fun totalCount(): Int {
-        TODO("Not yet implemented")
+        var count = 0
+        var offset = 3
+        val end = myHashSize shl 3
+
+        while (offset < end) {
+            if (myHashArea[offset] != 0) {
+                ++count
+            }
+
+            offset += 4
+        }
+
+        return count
     }
 
     /*
