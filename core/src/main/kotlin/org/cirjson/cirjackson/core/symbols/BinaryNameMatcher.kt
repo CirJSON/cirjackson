@@ -299,7 +299,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return -1
         }
 
-        return findTertiary(offset, q1)
+        return findSecondary(offset, q1)
     }
 
     override fun matchByQuad(q1: Int, q2: Int): Int {
@@ -326,7 +326,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return -1
         }
 
-        return findTertiary(offset, q1, q2)
+        return findSecondary(offset, q1, q2)
     }
 
     override fun matchByQuad(q1: Int, q2: Int, q3: Int): Int {
@@ -353,7 +353,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return -1
         }
 
-        return findTertiary(offset, q1, q2, q3)
+        return findSecondary(offset, q1, q2, q3)
     }
 
     override fun matchByQuad(quads: IntArray, quadLength: Int): Int {
@@ -390,7 +390,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             }
         }
 
-        return findTertiary(offset, hash, quads, quadLength)
+        return findSecondary(offset, hash, quads, quadLength)
     }
 
     private fun calculateOffset(hash: Int): Int {
@@ -404,32 +404,85 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      *******************************************************************************************************************
      */
 
-    private fun findTertiary(originalOffset: Int, q1: Int): Int {
+    private fun findSecondary(originalOffset: Int, q1: Int): Int {
         TODO("Not yet implemented")
     }
 
-    private fun findTertiary(originalOffset: Int, q1: Int, q2: Int): Int {
+    private fun findSecondary(originalOffset: Int, q1: Int, q2: Int): Int {
         TODO("Not yet implemented")
     }
 
-    private fun findTertiary(originalOffset: Int, q1: Int, q2: Int, q3: Int): Int {
+    private fun findSecondary(originalOffset: Int, q1: Int, q2: Int, q3: Int): Int {
         TODO("Not yet implemented")
     }
 
-    private fun findTertiary(originalOffset: Int, hash: Int, quads: IntArray, quadLength: Int): Int {
+    private fun findSecondary(originalOffset: Int, hash: Int, quads: IntArray, quadLength: Int): Int {
         TODO("Not yet implemented")
     }
 
     @Suppress("NAME_SHADOWING")
     private fun verifyLongName(quads: IntArray, quadLength: Int, spillOffset: Int): Boolean {
         var spillOffset = spillOffset
-        TODO("Not yet implemented")
+
+        val hashArea = myHashArea
+        var index = 0
+
+        if (quadLength !in 4..8) {
+            return verifyLongName2(quads, quadLength, spillOffset)
+        }
+
+        if (quadLength == 8) {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        }
+
+        if (quadLength >= 7) {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        }
+
+        if (quadLength >= 6) {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        }
+
+        if (quadLength >= 5) {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        }
+
+        if (quads[index++] != hashArea[spillOffset++]) {
+            return false
+        }
+
+        if (quads[index++] != hashArea[spillOffset++]) {
+            return false
+        }
+
+        if (quads[index++] != hashArea[spillOffset++]) {
+            return false
+        }
+
+        return quads[index] != hashArea[spillOffset]
     }
 
     @Suppress("NAME_SHADOWING")
     private fun verifyLongName2(quads: IntArray, quadLength: Int, spillOffset: Int): Boolean {
         var spillOffset = spillOffset
-        TODO("Not yet implemented")
+        var index = 0
+        val hashArea = myHashArea
+
+        do {
+            if (quads[index++] != hashArea[spillOffset++]) {
+                return false
+            }
+        } while (index < quadLength)
+
+        return true
     }
 
     /*
@@ -439,11 +492,20 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     private fun lengthAndIndex(quadLength: Int): Int {
-        TODO("Not yet implemented")
+        if (quadLength > MAX_LENGTH_IN_QUADS) {
+            throw IllegalArgumentException("Maximum name length in quads ($MAX_LENGTH_IN_QUADS) exceeded: $quadLength")
+        }
+
+        if (size == MAX_ENTRIES) {
+            throw IllegalArgumentException("Maximum entry count ($MAX_ENTRIES) reached, can not add more entries")
+        }
+
+        return size++ shl 16 or quadLength
     }
 
     private fun spilloverStart(): Int {
-        TODO("Not yet implemented")
+        val offset = myHashSize
+        return (offset shl 3) - offset
     }
 
     /*
