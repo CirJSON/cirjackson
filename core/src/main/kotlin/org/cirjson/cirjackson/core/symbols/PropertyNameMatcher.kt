@@ -16,7 +16,7 @@ import java.util.*
  * `matchXxx` methods)
  */
 abstract class PropertyNameMatcher(protected val myLocale: Locale?, protected val myBackupMatcher: PropertyNameMatcher?,
-        val nameLookup: Array<String>?) : Serializable {
+        val nameLookup: Array<String?>?) : Serializable {
 
     /*
      *******************************************************************************************************************

@@ -7,14 +7,14 @@ import java.util.*
  *
  * @property myMask Mask used to get index from raw hash code, within hash area.
  */
-abstract class HashedMatcherBase(locale: Locale?, backupMatcher: PropertyNameMatcher?, nameLookup: Array<String>?,
+abstract class HashedMatcherBase(locale: Locale?, backupMatcher: PropertyNameMatcher?, nameLookup: Array<String?>?,
         private val myNames: Array<String?>, private val myOffsets: IntArray, private val myMask: Int) :
         PropertyNameMatcher(locale, backupMatcher, nameLookup) {
 
     constructor(base: HashedMatcherBase, fallback: HashedMatcherBase) : this(base.myLocale, fallback, base.nameLookup,
             base.myNames, base.myOffsets, base.myMask)
 
-    constructor(base: HashedMatcherBase, nameLookup: Array<String>?) : this(base.myLocale, base.myBackupMatcher,
+    constructor(base: HashedMatcherBase, nameLookup: Array<String?>?) : this(base.myLocale, base.myBackupMatcher,
             nameLookup, base.myNames, base.myOffsets, base.myMask)
 
     final override fun matchName(toMatch: String): Int {
