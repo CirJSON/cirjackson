@@ -307,7 +307,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val hashArea = myHashArea
         var lengthAndIndex = hashArea[offset + 3]
 
-        if (lengthAndIndex and 0xFFFF == 1) {
+        if (lengthAndIndex and 0xFFFF == 2) {
             if (hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
                 return lengthAndIndex shr 16
             }
@@ -318,7 +318,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val offset2 = mySecondaryStart + (offset shr 3 shl 2)
         lengthAndIndex = hashArea[offset2 + 3]
 
-        if (lengthAndIndex and 0xFFFF == 1) {
+        if (lengthAndIndex and 0xFFFF == 2) {
             if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2) {
                 return lengthAndIndex shr 16
             }
@@ -334,7 +334,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val hashArea = myHashArea
         var lengthAndIndex = hashArea[offset + 3]
 
-        if (lengthAndIndex and 0xFFFF == 1) {
+        if (lengthAndIndex and 0xFFFF == 3) {
             if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3) {
                 return lengthAndIndex shr 16
             }
@@ -345,7 +345,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val offset2 = mySecondaryStart + (offset shr 3 shl 2)
         lengthAndIndex = hashArea[offset2 + 3]
 
-        if (lengthAndIndex and 0xFFFF == 1) {
+        if (lengthAndIndex and 0xFFFF == 3) {
             if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2 && hashArea[offset2 + 2] == q3) {
                 return lengthAndIndex shr 16
             }
@@ -384,7 +384,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val offset2 = mySecondaryStart + (offset shr 3 shl 2)
         val lengthAndIndex2 = hashArea[offset2 + 3]
 
-        if (lengthAndIndex2 and 0xFFFF == 1 && hash == hashArea[offset2]) {
+        if (lengthAndIndex2 and 0xFFFF == quadLength && hash == hashArea[offset2]) {
             if (verifyLongName(quads, quadLength, hashArea[offset2 + 1])) {
                 return lengthAndIndex2 shr 16
             }
@@ -405,19 +405,154 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     private fun findSecondary(originalOffset: Int, q1: Int): Int {
-        TODO("Not yet implemented")
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val lenAndIndex = hashArea[offset + 3]
+
+            if (lenAndIndex and 0xFFFF == 1 && hashArea[offset] == q1) {
+                return lenAndIndex shr 16
+            }
+
+            if (lenAndIndex == 0) {
+                return -1
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart()
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1) {
+                val lenAndIndex = hashArea[offset + 3]
+
+                if (lenAndIndex and 0xFFFF == 1) {
+                    return lenAndIndex shr 16
+                }
+            }
+
+            offset += 4
+        }
+
+        return -1
     }
 
     private fun findSecondary(originalOffset: Int, q1: Int, q2: Int): Int {
-        TODO("Not yet implemented")
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val lenAndIndex = hashArea[offset + 3]
+
+            if (lenAndIndex and 0xFFFF == 2 && hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
+                return lenAndIndex shr 16
+            }
+
+            if (lenAndIndex == 0) {
+                return -1
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart()
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
+                val lenAndIndex = hashArea[offset + 3]
+
+                if (lenAndIndex and 0xFFFF == 2) {
+                    return lenAndIndex shr 16
+                }
+            }
+
+            offset += 4
+        }
+
+        return -1
     }
 
     private fun findSecondary(originalOffset: Int, q1: Int, q2: Int, q3: Int): Int {
-        TODO("Not yet implemented")
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val lenAndIndex = hashArea[offset + 3]
+
+            if (lenAndIndex and 0xFFFF == 3 && hashArea[offset] == q1 && hashArea[offset + 1] == q2 &&
+                    hashArea[offset + 2] == q3) {
+                return lenAndIndex shr 16
+            }
+
+            if (lenAndIndex == 0) {
+                return -1
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart()
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3) {
+                val lenAndIndex = hashArea[offset + 3]
+
+                if (lenAndIndex and 0xFFFF == 3) {
+                    return lenAndIndex shr 16
+                }
+            }
+
+            offset += 4
+        }
+
+        return -1
     }
 
     private fun findSecondary(originalOffset: Int, hash: Int, quads: IntArray, quadLength: Int): Int {
-        TODO("Not yet implemented")
+        var offset = myTertiaryStart + ((originalOffset shr (myTertiaryShift + 2)) shl myTertiaryShift)
+        val hashArea = myHashArea
+        val bucketSize = 1 shl myTertiaryShift
+        val end = offset + bucketSize
+
+        while (offset < end) {
+            val lenAndIndex = hashArea[offset + 3]
+
+            if (hashArea[offset] == hash && lenAndIndex and 0xFFFF == quadLength) {
+                if (verifyLongName(quads, quadLength, hashArea[offset + 1])) {
+                    return lenAndIndex shr 16
+                }
+            }
+
+            if (lenAndIndex == 0) {
+                return -1
+            }
+
+            offset += 4
+        }
+
+        offset = spilloverStart()
+
+        while (offset < mySpilloverEnd) {
+            if (hashArea[offset] == hash) {
+                val lenAndIndex = hashArea[offset + 3]
+
+                if (lenAndIndex and 0xFFFF == quadLength && verifyLongName(quads, quadLength, hashArea[offset + 1])) {
+                    return lenAndIndex shr 16
+                }
+            }
+
+            offset += 4
+        }
+
+        return -1
     }
 
     @Suppress("NAME_SHADOWING")
