@@ -276,23 +276,126 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     override fun matchByQuad(q1: Int): Int {
-        TODO("Not yet implemented")
+        val offset = calculateOffset(calculateHash(q1))
+        val hashArea = myHashArea
+        var lengthAndIndex = hashArea[offset + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset] == q1) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        val offset2 = mySecondaryStart + (offset shr 3 shl 2)
+        lengthAndIndex = hashArea[offset2 + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset2] == q1) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        return findTertiary(offset, q1)
     }
 
     override fun matchByQuad(q1: Int, q2: Int): Int {
-        TODO("Not yet implemented")
+        val offset = calculateOffset(calculateHash(q1, q2))
+        val hashArea = myHashArea
+        var lengthAndIndex = hashArea[offset + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        val offset2 = mySecondaryStart + (offset shr 3 shl 2)
+        lengthAndIndex = hashArea[offset2 + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        return findTertiary(offset, q1, q2)
     }
 
     override fun matchByQuad(q1: Int, q2: Int, q3: Int): Int {
-        TODO("Not yet implemented")
+        val offset = calculateOffset(calculateHash(q1, q2, q3))
+        val hashArea = myHashArea
+        var lengthAndIndex = hashArea[offset + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset] == q1 && hashArea[offset + 1] == q2 && hashArea[offset + 2] == q3) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        val offset2 = mySecondaryStart + (offset shr 3 shl 2)
+        lengthAndIndex = hashArea[offset2 + 3]
+
+        if (lengthAndIndex and 0xFFFF == 1) {
+            if (hashArea[offset2] == q1 && hashArea[offset2 + 1] == q2 && hashArea[offset2 + 2] == q3) {
+                return lengthAndIndex shr 16
+            }
+        } else if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        return findTertiary(offset, q1, q2, q3)
     }
 
     override fun matchByQuad(quads: IntArray, quadLength: Int): Int {
-        TODO("Not yet implemented")
+        if (quadLength < 4) {
+            return when (quadLength) {
+                1 -> matchByQuad(quads[0])
+                2 -> matchByQuad(quads[0], quads[1])
+                3 -> matchByQuad(quads[0], quads[1], quads[2])
+                else -> -1
+            }
+        }
+
+        val hash = calculateHash(quads, quadLength)
+        val offset = calculateOffset(hash)
+        val hashArea = myHashArea
+        val lengthAndIndex = hashArea[offset + 3]
+
+        if (lengthAndIndex and 0xFFFF == quadLength && hash == hashArea[offset]) {
+            if (verifyLongName(quads, quadLength, hashArea[offset + 1])) {
+                return lengthAndIndex shr 16
+            }
+        }
+
+        if (lengthAndIndex == 0) {
+            return -1
+        }
+
+        val offset2 = mySecondaryStart + (offset shr 3 shl 2)
+        val lengthAndIndex2 = hashArea[offset2 + 3]
+
+        if (lengthAndIndex2 and 0xFFFF == 1 && hash == hashArea[offset2]) {
+            if (verifyLongName(quads, quadLength, hashArea[offset2 + 1])) {
+                return lengthAndIndex2 shr 16
+            }
+        }
+
+        return findTertiary(offset, hash, quads, quadLength)
     }
 
     private fun calculateOffset(hash: Int): Int {
-        TODO("Not yet implemented")
+        val index = hash and myHashSize - 1
+        return index shl 2
     }
 
     /*
@@ -313,7 +416,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         TODO("Not yet implemented")
     }
 
-    private fun findTertiary(originalOffset: Int, quads: IntArray, quadLength: Int): Int {
+    private fun findTertiary(originalOffset: Int, hash: Int, quads: IntArray, quadLength: Int): Int {
         TODO("Not yet implemented")
     }
 
