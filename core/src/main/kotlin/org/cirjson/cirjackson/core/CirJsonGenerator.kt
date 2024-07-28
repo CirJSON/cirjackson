@@ -235,18 +235,9 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * @return The object's ID
      */
-    protected abstract fun getObjectID(obj: Any): String
-
-    /**
-     * Method for getting the ID of the specified array
-     *
-     * @param array The array for which the ID is required
-     *
-     * @param T The type of the array
-     *
-     * @return The array's ID
-     */
-    protected abstract fun <T> getArrayID(array: Array<T>): String
+    protected fun getObjectID(obj: Any): String {
+        return getID(obj, false)
+    }
 
     /**
      * Method for getting the ID of the specified array
@@ -255,25 +246,20 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * @return The array's ID
      */
-    protected abstract fun getArrayID(array: IntArray): String
+    protected fun getArrayID(array: Any): String {
+        return getID(array, true)
+    }
 
     /**
      * Method for getting the ID of the specified array
      *
-     * @param array The array for which the ID is required
+     * @param target The target for which the ID is required
+     *
+     * @param isArray If the target is considered an array. Otherwise, it is considered an object.
      *
      * @return The array's ID
      */
-    protected abstract fun getArrayID(array: LongArray): String
-
-    /**
-     * Method for getting the ID of the specified array
-     *
-     * @param array The array for which the ID is required
-     *
-     * @return The array's ID
-     */
-    protected abstract fun getArrayID(array: DoubleArray): String
+    protected abstract fun getID(target: Any, isArray: Boolean): String
 
     /*
      *******************************************************************************************************************
@@ -1298,6 +1284,20 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
     @Throws(CirJacksonException::class)
     abstract fun writeObjectId(referenced: Any): CirJsonGenerator
+
+    /**
+     * Method that can be called to output so-called native Array ID.
+     *
+     * @param referenced Referenced value, for which Array ID is expected to be written
+     *
+     * @return This generator, to allow call chaining
+     *
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
+     * @throws StreamWriteException for problems in encoding token stream
+     */
+    @Throws(CirJacksonException::class)
+    abstract fun writeArrayId(referenced: Any): CirJsonGenerator
 
     /**
      * Method that can be called to output so-called native type ID. Note that it may only be called after ensuring this

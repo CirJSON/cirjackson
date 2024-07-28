@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
 import org.cirjson.cirjackson.core.util.Other
 import java.io.IOException
+import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
 
@@ -107,6 +108,11 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
     override fun writeRawValue(raw: SerializableString): CirJsonGenerator {
         verifyValueWrite(WRITE_RAW_VALUE)
         return writeRaw(raw)
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): CirJsonGenerator {
+        return reportUnsupportedOperation()
     }
 
     /*
