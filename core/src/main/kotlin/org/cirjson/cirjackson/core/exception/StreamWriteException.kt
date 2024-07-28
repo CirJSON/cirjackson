@@ -13,11 +13,11 @@ open class StreamWriteException : CirJacksonException {
     override val processor: CirJsonGenerator?
         get() = myProcessor
 
-    constructor(generator: CirJsonGenerator, message: String) : super(message) {
+    constructor(generator: CirJsonGenerator?, message: String) : super(message) {
         myProcessor = generator
     }
 
-    constructor(generator: CirJsonGenerator, message: String, rootCause: Throwable) : super(message, rootCause) {
+    constructor(generator: CirJsonGenerator?, message: String, rootCause: Throwable) : super(message, rootCause) {
         myProcessor = generator
     }
 

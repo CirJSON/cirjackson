@@ -120,7 +120,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * @param value "Current value" to assign to the current output context of this generator
      */
-    abstract fun assignCurrentValue(value: Any?): Any?
+    abstract fun assignCurrentValue(value: Any?)
 
     /*
      *******************************************************************************************************************
@@ -1917,7 +1917,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     @Throws(CirJacksonException::class)
     protected open fun copyCurrentStringValue(parser: CirJsonParser) {
         if (parser.isTextCharactersAvailable) {
-            writeString(parser.textCharacters, parser.textOffset, parser.textLength)
+            writeString(parser.textCharacters!!, parser.textOffset, parser.textLength)
         } else {
             writeString(parser.text!!)
         }
