@@ -111,7 +111,7 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): CirJsonGenerator {
+    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int {
         return reportUnsupportedOperation()
     }
 

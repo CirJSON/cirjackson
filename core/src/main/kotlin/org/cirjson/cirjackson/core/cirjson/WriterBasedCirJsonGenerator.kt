@@ -737,12 +737,56 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun writeBinary(variant: Base64Variant, data: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForByteArray(data, offset, length)
+        verifyValueWrite(WRITE_BINARY)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeBinaryInternal(variant, data, offset, length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int {
+        verifyValueWrite(WRITE_BINARY)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        val encodingBuffer = ioContext.allocateBase64Buffer()
+        val bytes = try {
+            if (dataLength < 0) {
+                writeBinary(variant, data, encodingBuffer)
+            } else {
+                val missing = writeBinary(variant, data, encodingBuffer, dataLength)
+
+                if (missing > 0) {
+                    reportError<Unit>("Too few bytes available: missing $missing bytes (out of $dataLength)")
+                }
+
+                dataLength
+            }
+        } finally {
+            ioContext.releaseBase64Buffer(encodingBuffer)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return bytes
     }
 
     /*

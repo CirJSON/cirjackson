@@ -1009,7 +1009,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): CirJsonGenerator
+    abstract fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int
 
     /**
      * Similar to [writeBinary], but assumes default to using the CirJackson default Base64 variant (which is
@@ -1029,7 +1029,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    open fun writeBinary(data: InputStream, dataLength: Int): CirJsonGenerator {
+    open fun writeBinary(data: InputStream, dataLength: Int): Int {
         return writeBinary(Base64Variants.defaultVariant, data, dataLength)
     }
 
