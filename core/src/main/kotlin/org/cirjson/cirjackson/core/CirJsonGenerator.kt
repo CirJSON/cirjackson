@@ -617,7 +617,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeString(value: String): CirJsonGenerator
+    abstract fun writeString(value: String?): CirJsonGenerator
 
     /**
      * Method for outputting a String value. Depending on context this means either array element, (object) property
@@ -641,7 +641,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * provide enough content)
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeString(reader: Reader, length: Int): CirJsonGenerator
+    abstract fun writeString(reader: Reader?, length: Int): CirJsonGenerator
 
     /**
      * Method for outputting a String value. Depending on context this means either array element, (object) property

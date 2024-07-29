@@ -77,7 +77,7 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeString(reader: Reader, length: Int): CirJsonGenerator {
+    override fun writeString(reader: Reader?, length: Int): CirJsonGenerator {
         return reportUnsupportedOperation()
     }
 
@@ -251,21 +251,21 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
      */
 
     @Throws(CirJacksonException::class)
-    protected fun checkRangeBoundsForByteArray(data: ByteArray?, offset: Int, len: Int) {
+    protected fun checkRangeBoundsForByteArray(data: ByteArray?, offset: Int, length: Int) {
         data ?: return reportArgumentError("Invalid `ByteArray` argument: `null`")
-        checkRange(data.size, offset, len, "ByteArray")
+        checkRange(data.size, offset, length, "ByteArray")
     }
 
     @Throws(CirJacksonException::class)
-    protected fun checkRangeBoundsForCharArray(data: CharArray?, offset: Int, len: Int) {
+    protected fun checkRangeBoundsForCharArray(data: CharArray?, offset: Int, length: Int) {
         data ?: return reportArgumentError("Invalid `CharArray` argument: `null`")
-        checkRange(data.size, offset, len, "CharArray")
+        checkRange(data.size, offset, length, "CharArray")
     }
 
     @Throws(CirJacksonException::class)
-    protected fun checkRangeBoundsForString(data: String?, offset: Int, len: Int) {
+    protected fun checkRangeBoundsForString(data: String?, offset: Int, length: Int) {
         data ?: return reportArgumentError("Invalid `String` argument: `null`")
-        checkRange(data.length, offset, len, "String")
+        checkRange(data.length, offset, length, "String")
     }
 
     @Throws(CirJacksonException::class)

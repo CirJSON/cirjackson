@@ -4,12 +4,14 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.IOContext
+import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
 import java.io.Writer
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * [CirJsonGenerator] that outputs CirJSON content using a [Writer] which handles character encoding.
@@ -27,6 +29,8 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      * Intermediate buffer in which contents are buffered before being written using [myWriter].
      */
     protected var myOutputBuffer: CharArray = ioContext.allocConcatBuffer()
+
+    private val hexChars = if (myConfigurationWriteHexUppercase) HEX_CHARS_UPPER else HEX_CHARS_LOWER
 
     /**
      * Pointer to the first buffered character to output
@@ -139,12 +143,12 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         }
 
         if (myConfigurationUnquoteNames) {
-            writeString(name)
+            writeStringInternal(name)
             return
         }
 
         myOutputBuffer[myOutputTail++] = myQuoteChar
-        writeString(name)
+        writeStringInternal(name)
 
         if (myOutputTail >= myOutputEnd) {
             flushBuffer()
@@ -274,7 +278,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     override fun writeArrayId(referenced: Any): CirJsonGenerator {
         val id = getArrayID(referenced)
-        writeString(id)
+        writeStringInternal(id)
         return this
     }
 
@@ -396,7 +400,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         }
 
         if (myConfigurationUnquoteNames) {
-            writeString(name)
+            writeStringInternal(name)
             return
         }
 
@@ -405,7 +409,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         }
 
         myOutputBuffer[myOutputTail++] = myQuoteChar
-        writeString(name)
+        writeStringInternal(name)
 
         if (myOutputTail >= myOutputEnd) {
             flushBuffer()
@@ -453,28 +457,147 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
 
     @Throws(CirJacksonException::class)
-    override fun writeString(value: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeString(value: String?): CirJsonGenerator {
+        verifyValueWrite(WRITE_STRING)
+
+        if (value == null) {
+            writeNullInternal()
+            return this
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeStringInternal(value)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeString(reader: Reader, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeString(reader: Reader?, length: Int): CirJsonGenerator {
+        verifyValueWrite(WRITE_STRING)
+
+        reader ?: return reportError("null reader")
+
+        var toRead = if (length >= 0) length else Int.MAX_VALUE
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        val buffer = allocateCopyBuffer()
+
+        while (toRead > 0) {
+            val toReadNow = min(toRead, buffer.size)
+            val read = try {
+                reader.read(buffer, 0, toReadNow)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            if (read <= 0) {
+                break
+            }
+
+            writeStringInternal(buffer, 0, read)
+            toRead -= read
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length >= 0 && toRead > 0) {
+            return reportError("Didn't read enough from reader")
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeStringInternal(buffer, offset, length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(value: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        val length = value.appendQuoted(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeStringInternal(value)
+            return this
+        }
+
+        myOutputTail += length
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeStringInternal(string: SerializableString) {
-        TODO("Not yet implemented")
+        val text = string.asQuotedChars()
+        val length = text.size
+
+        if (length < SHORT_WRITE) {
+            val room = myOutputEnd - myOutputTail
+
+            if (length > room) {
+                flushBuffer()
+            }
+
+            text.copyInto(myOutputBuffer, myOutputTail, 0, length)
+            myOutputTail += length
+        } else {
+            flushBuffer()
+
+            try {
+                myWriter.write(text, 0, length)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
@@ -495,31 +618,115 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(text: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val length = text.length
+        var room = myOutputEnd - myOutputTail
+
+        if (room == 0) {
+            flushBuffer()
+            room = myOutputEnd - myOutputTail
+        }
+
+        if (room >= length) {
+            text.toCharArray(myOutputBuffer, myOutputTail, 0, length)
+            myOutputTail += length
+        } else {
+            writeRawLong(text)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(text: String, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForString(text, offset, length)
+
+        var room = myOutputEnd - myOutputTail
+
+        if (room < length) {
+            flushBuffer()
+            room = myOutputEnd - myOutputTail
+        }
+
+        if (room >= length) {
+            text.toCharArray(myOutputBuffer, myOutputTail, offset, offset + length)
+            myOutputTail += length
+        } else {
+            writeRawLong(text.substring(offset, offset + length))
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(raw: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val length = raw.appendUnquoted(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeRaw(raw.value)
+            return this
+        }
+
+        myOutputTail += length
+        return this
     }
 
     override fun writeRaw(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForCharArray(buffer, offset, length)
+
+        if (length < SHORT_WRITE) {
+            val room = myOutputEnd - myOutputTail
+
+            if (length > room) {
+                flushBuffer()
+            }
+
+            buffer.copyInto(myOutputBuffer, myOutputTail, offset, offset + length)
+            myOutputTail += length
+            return this
+        }
+
+        flushBuffer()
+
+        try {
+            myWriter.write(buffer, offset, length)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(char: Char): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = char
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeRawLong(text: String) {
-        TODO("Not yet implemented")
+        val room = myOutputEnd - myOutputTail
+        text.toCharArray(myOutputBuffer, myOutputTail, 0, room)
+        myOutputTail += room
+        var offset = room
+        var length = text.length - room
+
+        while (length > myOutputEnd) {
+            val amount = myOutputEnd
+            text.toCharArray(myOutputBuffer, 0, offset, offset + amount)
+            myOutputHead = 0
+            myOutputTail = amount
+            flushBuffer()
+            offset += amount
+            length -= amount
+        }
+
+        text.toCharArray(myOutputBuffer, 0, offset, offset + length)
+        myOutputHead = 0
+        myOutputTail = length
     }
 
     /*
@@ -852,6 +1059,12 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         const val TYPE_MESSAGE_START_ARRAY = "start an array"
 
         const val TYPE_MESSAGE_START_OBJECT = "start an object"
+
+        const val SHORT_WRITE = 32
+
+        val HEX_CHARS_UPPER = CharTypes.copyHexChars(true)
+
+        val HEX_CHARS_LOWER = CharTypes.copyHexChars(false)
 
     }
 
