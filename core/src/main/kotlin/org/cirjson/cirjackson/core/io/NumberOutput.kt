@@ -55,4 +55,77 @@ object NumberOutput {
         TODO("Not yet implemented")
     }
 
+    /**
+     * Method for appending value of given `Int` value into specified `ByteArray`.
+     *
+     * NOTE: caller must guarantee that the output buffer has enough room for String representation of the value.
+     *
+     * @param value Value to append to buffer
+     *
+     * @param buffer Buffer to append value to: caller must guarantee there is enough room
+     *
+     * @param offset Offset within output buffer (`buffer`) to append number at
+     *
+     * @return Offset within buffer after outputting `Int`
+     */
+    @Suppress("NAME_SHADOWING")
+    fun outputInt(value: Int, buffer: ByteArray, offset: Int): Int {
+        var v = value
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for appending value of given `Long` value into specified `CharArray`.
+     *
+     * NOTE: caller must guarantee that the output buffer has enough room for String representation of the value.
+     *
+     * @param value Value to append to buffer
+     *
+     * @param buffer Buffer to append value to: caller must guarantee there is enough room
+     *
+     * @param offset Offset within output buffer (`buffer`) to append number at
+     *
+     * @return Offset within buffer after outputting `Long`
+     */
+    @Suppress("NAME_SHADOWING")
+    fun outputLong(value: Long, buffer: CharArray, offset: Int): Int {
+        var v = value
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for appending value of given `Long` value into specified `ByteArray`.
+     *
+     * NOTE: caller must guarantee that the output buffer has enough room for String representation of the value.
+     *
+     * @param value Value to append to buffer
+     *
+     * @param buffer Buffer to append value to: caller must guarantee there is enough room
+     *
+     * @param offset Offset within output buffer (`buffer`) to append number at
+     *
+     * @return Offset within buffer after outputting `Long`
+     */
+    @Suppress("NAME_SHADOWING")
+    fun outputLong(value: Long, buffer: ByteArray, offset: Int): Int {
+        var v = value
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Optimized code for integer division by `1000`; typically 50% higher throughput for calculation
+     */
+    internal fun divideBy1000(number: Int): Int {
+        return (number * 274_877_907L ushr 38).toInt()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Convenience serialization methods
+     *******************************************************************************************************************
+     */
+
 }
