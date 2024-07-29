@@ -190,7 +190,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      */
     open var characterEscapes: CharacterEscapes?
         get() = null
-        set(value) {}
+        set(_) {}
 
     /*
      *******************************************************************************************************************

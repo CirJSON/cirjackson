@@ -40,7 +40,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
 
     override var characterEscapes: CharacterEscapes?
         get() = myCharacterEscapes
-        set(value) {}
+        set(_) {}
 
     /**
      * Value between 128 (0x80) and 65535 (0xFFFF) that indicates highest Unicode code point that will not need

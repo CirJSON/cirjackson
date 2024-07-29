@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.IOContext
+import org.cirjson.cirjackson.core.io.NumberOutput
 import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
@@ -797,7 +798,19 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Short): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (myConfigurationNumbersAsStrings) {
+            writeQuotedShort(value)
+            return this
+        }
+
+        if (myOutputTail + 6 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputTail = NumberOutput.outputInt(value.toInt(), myOutputBuffer, myOutputTail)
+        return this
     }
 
     @Throws(CirJacksonException::class)
