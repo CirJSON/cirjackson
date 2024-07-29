@@ -75,6 +75,8 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
                     CirJsonWriteFeature.ESCAPE_FORWARD_SLASHES.isEnabledIn(formatWriteFeatures))
         }
 
+    protected val myIDHolder = IDHolder()
+
     init {
         this.characterEscapes = characterEscapes
     }
@@ -99,27 +101,107 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val status = streamWriteContext.writeName(name)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        writeName(name, status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val status = streamWriteContext.writeName(name.value)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        writeName(name, status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     protected fun writeName(name: String, commaBefore: Boolean) {
-        TODO("Not yet implemented")
+        if (myConfigurationPrettyPrinter != null) {
+            writePrettyPrinterName(name, commaBefore)
+            return
+        }
+
+        if (myOutputTail + 1 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        if (commaBefore) {
+            myOutputBuffer[myOutputTail++] = ','
+        }
+
+        if (myConfigurationUnquoteNames) {
+            writeString(name)
+            return
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeString(name)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
     protected fun writeName(name: SerializableString, commaBefore: Boolean) {
-        TODO("Not yet implemented")
+        if (myConfigurationPrettyPrinter != null) {
+            writePrettyPrinterName(name, commaBefore)
+            return
+        }
+
+        if (myOutputTail + 1 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        if (commaBefore) {
+            myOutputBuffer[myOutputTail++] = ','
+        }
+
+        if (myConfigurationUnquoteNames) {
+            val ch = name.asQuotedChars()
+            writeRaw(ch, 0, ch.size)
+            return
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        val length = name.appendQuoted(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeNameTail(name)
+            return
+        }
+
+        myOutputTail += length
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
-    private fun writeNameTail(string: SerializableString) {
-        TODO("Not yet implemented")
+    private fun writeNameTail(name: SerializableString) {
+        val quoted = name.asQuotedChars()
+        writeRaw(quoted, 0, quoted.size)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     /*
@@ -130,55 +212,176 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun getID(target: Any, isArray: Boolean): String {
-        TODO("Not yet implemented")
+        return myIDHolder.getID(target, isArray)
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
+        streamWriteContext = streamWriteContext.createChildArrayContext(null)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartArray(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '['
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
+        streamWriteContext = streamWriteContext.createChildArrayContext(currentValue)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartArray(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '['
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?, size: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
+        streamWriteContext = streamWriteContext.createChildArrayContext(currentValue)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartArray(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '['
+        }
+
+        return this
     }
 
     override fun writeArrayId(referenced: Any): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val id = getArrayID(referenced)
+        writeString(id)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndArray(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (!streamWriteContext.isInArray) {
+            return reportError("Current context not Array but ${streamWriteContext.typeDescription}")
+        }
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeEndArray(this, streamWriteContext.entryCount)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = ']'
+        }
+
+        streamWriteContext = streamWriteContext.clearAndGetParent()!!
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
+        streamWriteContext = streamWriteContext.createChildObjectContext(null)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartObject(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '{'
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
+        streamWriteContext = streamWriteContext.createChildObjectContext(currentValue)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartObject(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '{'
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?, size: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
+        streamWriteContext = streamWriteContext.createChildObjectContext(currentValue)
+        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeStartObject(this)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '{'
+        }
+
+        return this
     }
 
     override fun writeObjectId(referenced: Any): CirJsonGenerator {
-        TODO("Not yet implemented")
+        writeName(ID_NAME)
+        val id = getObjectID(referenced)
+        writeString(id)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (!streamWriteContext.isInArray) {
+            return reportError("Current context not Object but ${streamWriteContext.typeDescription}")
+        }
+
+        if (myConfigurationPrettyPrinter != null) {
+            myConfigurationPrettyPrinter.writeEndObject(this, streamWriteContext.entryCount)
+        } else {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '}'
+        }
+
+        streamWriteContext = streamWriteContext.clearAndGetParent()!!
+
+        return this
     }
 
     /**
@@ -186,7 +389,29 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: String, commaBefore: Boolean) {
-        TODO("Not yet implemented")
+        if (commaBefore) {
+            myConfigurationPrettyPrinter!!.writeObjectEntrySeparator(this)
+        } else {
+            myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
+        }
+
+        if (myConfigurationUnquoteNames) {
+            writeString(name)
+            return
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeString(name)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     /**
@@ -194,7 +419,31 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: SerializableString, commaBefore: Boolean) {
-        TODO("Not yet implemented")
+        if (commaBefore) {
+            myConfigurationPrettyPrinter!!.writeObjectEntrySeparator(this)
+        } else {
+            myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
+        }
+
+        val quoted = name.asQuotedChars()
+
+        if (myConfigurationUnquoteNames) {
+            writeRaw(quoted, 0, quoted.size)
+            return
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeRaw(quoted, 0, quoted.size)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     /*
@@ -596,6 +845,14 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
     @Throws(CirJacksonException::class)
     protected open fun flushBuffer() {
         TODO("Not yet implemented")
+    }
+
+    companion object {
+
+        const val TYPE_MESSAGE_START_ARRAY = "start an array"
+
+        const val TYPE_MESSAGE_START_OBJECT = "start an object"
+
     }
 
 }

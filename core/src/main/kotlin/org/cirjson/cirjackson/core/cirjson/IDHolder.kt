@@ -20,6 +20,10 @@ class IDHolder() {
         }
     }
 
+    fun isReferencedAlreadySaved(referenced: Any): Boolean {
+        return mySavedIds.find { it.referenced === referenced } != null
+    }
+
     private fun createID(referenced: Any, isArray: Boolean): String {
         val id = (currentID++).toString()
         val added = IDEntity(id, referenced, isArray)

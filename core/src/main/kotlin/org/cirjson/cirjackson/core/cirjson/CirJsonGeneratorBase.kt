@@ -142,6 +142,9 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
      *******************************************************************************************************************
      */
 
+    override val idName: String
+        get() = ID_NAME
+
     override fun writePropertyId(id: Long): CirJsonGenerator {
         writeName(id.toString())
         return this
@@ -193,6 +196,8 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
     }
 
     companion object {
+
+        const val ID_NAME = "__cirJsonId__"
 
         /**
          * This is the default set of escape codes, over 7-bit ASCII range (first 128 character codes), used for

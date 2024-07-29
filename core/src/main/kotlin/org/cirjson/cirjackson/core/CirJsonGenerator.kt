@@ -228,6 +228,8 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *******************************************************************************************************************
      */
 
+    abstract val idName: String
+
     /**
      * Method for getting the ID of the specified Object
      *

@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.CirJsonToken
 import org.cirjson.cirjackson.core.TokenStreamContext
 import org.cirjson.cirjackson.core.exception.StreamWriteException
 
@@ -81,6 +82,18 @@ open class CirJsonWriteContext(type: Int, final override val parent: CirJsonWrit
     fun createChildObjectContext(currentValue: Any?): CirJsonWriteContext {
         return myChild?.reset(TYPE_OBJECT, currentValue) ?: CirJsonWriteContext(TYPE_OBJECT, this,
                 duplicateDetector?.child(), currentValue).also { myChild = it }
+    }
+
+    /**
+     * Method that can be used to both clear the accumulated references (specifically value set with
+     * [assignCurrentValue]) that should not be retained, and returns parent (as would [parent] do). Typically called
+     * when closing the active context when encountering [CirJsonToken.END_ARRAY] or [CirJsonToken.END_OBJECT].
+     *
+     * @return Parent context of this context node, if any; `null` for root context
+     */
+    fun clearAndGetParent(): CirJsonWriteContext? {
+        myCurrentValue = null
+        return parent
     }
 
     /*
