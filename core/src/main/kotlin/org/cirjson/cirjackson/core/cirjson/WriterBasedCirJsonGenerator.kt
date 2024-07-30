@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.extensions.isNotFinite
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.IOContext
@@ -20,8 +21,8 @@ import kotlin.math.min
  * @property myQuoteChar Character used for quoting CirJSON Object property names and String values.
  */
 open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContext: IOContext,
-        streamWriteFeatures: Int, formatWriteFeatures: Int, protected val myWriter: Writer,
-        rootValueSeparator: SerializableString, prettyPrinter: PrettyPrinter?, characterEscapes: CharacterEscapes?,
+        streamWriteFeatures: Int, formatWriteFeatures: Int, protected val myWriter: Writer?,
+        rootValueSeparator: SerializableString?, prettyPrinter: PrettyPrinter?, characterEscapes: CharacterEscapes?,
         maxNonEscaped: Int, protected val myQuoteChar: Char) :
         CirJsonGeneratorBase(objectWriteContext, ioContext, streamWriteFeatures, formatWriteFeatures,
                 rootValueSeparator, prettyPrinter, characterEscapes, maxNonEscaped) {
@@ -83,6 +84,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
     protected val myIDHolder = IDHolder()
 
     init {
+        @Suppress("LeakingThis")
         this.characterEscapes = characterEscapes
     }
 
@@ -588,7 +590,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
             flushBuffer()
 
             try {
-                myWriter.write(text, 0, length)
+                myWriter!!.write(text, 0, length)
             } catch (e: IOException) {
                 throw wrapIOFailure(e)
             }
@@ -689,7 +691,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         flushBuffer()
 
         try {
-            myWriter.write(buffer, offset, length)
+            myWriter!!.write(buffer, offset, length)
         } catch (e: IOException) {
             throw wrapIOFailure(e)
         }
@@ -815,77 +817,223 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     private fun writeQuotedShort(value: Short) {
-        TODO("Not yet implemented")
+        if (myOutputTail + 8 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        myOutputTail = NumberOutput.outputInt(value.toInt(), myOutputBuffer, myOutputTail)
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (myConfigurationNumbersAsStrings) {
+            writeQuotedInt(value)
+            return this
+        }
+
+        if (myOutputTail + 11 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputTail = NumberOutput.outputInt(value, myOutputBuffer, myOutputTail)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeQuotedInt(value: Int) {
-        TODO("Not yet implemented")
+        if (myOutputTail + 13 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        myOutputTail = NumberOutput.outputInt(value, myOutputBuffer, myOutputTail)
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Long): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (myConfigurationNumbersAsStrings) {
+            writeQuotedLong(value)
+            return this
+        }
+
+        if (myOutputTail + 21 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputTail = NumberOutput.outputLong(value, myOutputBuffer, myOutputTail)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeQuotedLong(value: Long) {
-        TODO("Not yet implemented")
+        if (myOutputTail + 23 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        myOutputTail = NumberOutput.outputLong(value, myOutputBuffer, myOutputTail)
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeNumber(value: BigInteger): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeNumber(value: BigInteger?): CirJsonGenerator {
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (value == null) {
+            writeNullInternal()
+        } else if (myConfigurationNumbersAsStrings) {
+            writeQuotedRaw(value.toString())
+        } else {
+            writeRaw(value.toString())
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Double): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val useFastWriter = isEnabled(StreamWriteFeature.USE_FAST_DOUBLE_WRITER)
+
+        if (myConfigurationNumbersAsStrings ||
+                value.isNotFinite() && CirJsonWriteFeature.WRITE_NAN_AS_STRINGS.isEnabledIn(formatWriteFeatures)) {
+            writeString(NumberOutput.toString(value, useFastWriter))
+        } else {
+            verifyValueWrite(WRITE_NUMBER)
+            writeRaw(NumberOutput.toString(value, useFastWriter))
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Float): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val useFastWriter = isEnabled(StreamWriteFeature.USE_FAST_DOUBLE_WRITER)
+
+        if (myConfigurationNumbersAsStrings ||
+                value.isNotFinite() && CirJsonWriteFeature.WRITE_NAN_AS_STRINGS.isEnabledIn(formatWriteFeatures)) {
+            writeString(NumberOutput.toString(value, useFastWriter))
+        } else {
+            verifyValueWrite(WRITE_NUMBER)
+            writeRaw(NumberOutput.toString(value, useFastWriter))
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeNumber(value: BigDecimal): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeNumber(value: BigDecimal?): CirJsonGenerator {
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (value == null) {
+            writeNullInternal()
+        } else if (myConfigurationNumbersAsStrings) {
+            writeQuotedRaw(asString(value))
+        } else {
+            writeRaw(asString(value))
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeNumber(encodedValue: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeNumber(encodedValue: String?): CirJsonGenerator {
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (encodedValue == null) {
+            writeNullInternal()
+        } else if (myConfigurationNumbersAsStrings) {
+            writeQuotedRaw(encodedValue)
+        } else {
+            writeRaw(encodedValue)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(encodedValueBuffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_NUMBER)
+
+        if (myConfigurationNumbersAsStrings) {
+            writeQuotedRaw(encodedValueBuffer, offset, length)
+        } else {
+            writeRaw(encodedValueBuffer, offset, length)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeQuotedRaw(value: String) {
-        TODO("Not yet implemented")
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeRaw(value)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
     private fun writeQuotedRaw(text: CharArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeRaw(text, offset, length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     @Throws(CirJacksonException::class)
     override fun writeBoolean(state: Boolean): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_BOOLEAN)
+
+        if (myOutputTail + 5 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        var pointer = myOutputTail
+        val buffer = myOutputBuffer
+
+        if (state) {
+            buffer[pointer] = 't'
+            buffer[++pointer] = 'r'
+            buffer[++pointer] = 'u'
+        } else {
+            buffer[pointer] = 'f'
+            buffer[++pointer] = 'a'
+            buffer[++pointer] = 'l'
+            buffer[++pointer] = 's'
+        }
+
+        buffer[++pointer] = 'e'
+        myOutputTail = pointer + 1
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNull(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_NULL)
+        writeNullInternal()
+        return this
     }
 
     /*
@@ -895,7 +1043,38 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
 
     final override fun verifyValueWrite(typeMessage: String) {
-        TODO("Not yet implemented")
+        val status = streamWriteContext.writeValue()
+
+        if (myConfigurationPrettyPrinter != null) {
+            verifyPrettyValueWrite(typeMessage, status)
+            return
+        }
+
+        val c = when (status) {
+            CirJsonWriteContext.STATUS_OK_AS_IS -> return
+
+            CirJsonWriteContext.STATUS_OK_AFTER_COMMA -> ','
+
+            CirJsonWriteContext.STATUS_OK_AFTER_COLON -> ':'
+
+            CirJsonWriteContext.STATUS_OK_AFTER_SPACE -> {
+                if (myRootValueSeparator != null) {
+                    writeRaw(myRootValueSeparator.value)
+                }
+
+                return
+            }
+
+            CirJsonWriteContext.STATUS_EXPECT_NAME -> return reportCannotWriteValueExpectName(typeMessage)
+
+            else -> return
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = c
     }
 
     /*
@@ -906,16 +1085,83 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun flush() {
-        TODO("Not yet implemented")
+        flushBuffer()
+
+        if (myWriter == null || !isEnabled(StreamWriteFeature.FLUSH_PASSED_TO_STREAM)) {
+            return
+        }
+
+        try {
+            myWriter.flush()
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun closeInput() {
-        TODO("Not yet implemented")
+        var flushFail: RuntimeException? = null
+
+        try {
+            if (myOutputBuffer !== FLUSHED_OUTPUT_BUFFER && isEnabled(StreamWriteFeature.AUTO_CLOSE_CONTENT)) {
+                while (true) {
+                    val context = streamWriteContext
+
+                    if (context.isInArray) {
+                        writeEndArray()
+                    } else if (context.isInObject) {
+                        writeEndObject()
+                    } else {
+                        break
+                    }
+                }
+            }
+
+            flushBuffer()
+        } catch (e: RuntimeException) {
+            flushFail = e
+        }
+
+        myOutputHead = 0
+        myOutputTail = 0
+
+        if (myWriter != null) {
+            try {
+                if (ioContext.isResourceManaged || isEnabled(StreamWriteFeature.AUTO_CLOSE_TARGET)) {
+                    myWriter.close()
+                } else if (isEnabled(StreamWriteFeature.FLUSH_PASSED_TO_STREAM)) {
+                    myWriter.flush()
+                }
+            } catch (e: IOException) {
+                val cirJacksonException = wrapIOFailure(e)
+
+                if (flushFail != null) {
+                    cirJacksonException.addSuppressed(flushFail)
+                }
+
+                throw cirJacksonException
+            }
+        }
+
+        if (flushFail != null) {
+            throw flushFail
+        }
     }
 
     override fun releaseBuffers() {
-        TODO("Not yet implemented")
+        var buffer: CharArray? = myOutputBuffer
+
+        if (buffer !== FLUSHED_OUTPUT_BUFFER) {
+            myOutputBuffer = FLUSHED_OUTPUT_BUFFER
+            ioContext.releaseConcatBuffer(buffer)
+        }
+
+        buffer = myCopyBuffer
+
+        if (buffer != null) {
+            myCopyBuffer = null
+            ioContext.releaseNameCopyBuffer(buffer)
+        }
     }
 
     /*
@@ -1122,6 +1368,12 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         val HEX_CHARS_UPPER = CharTypes.copyHexChars(true)
 
         val HEX_CHARS_LOWER = CharTypes.copyHexChars(false)
+
+        /**
+         * CharArray used to represent a flushed [myOutputBuffer] in [releaseBuffers], instead of setting it to `null`
+         * and needing to add `!!` everywhere
+         */
+        val FLUSHED_OUTPUT_BUFFER = CharArray(0)
 
     }
 

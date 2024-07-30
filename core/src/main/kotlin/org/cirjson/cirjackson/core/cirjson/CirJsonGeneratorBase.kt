@@ -19,7 +19,7 @@ import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
  * results more human-readable) during output. If `null`, no pretty-printing is done.
  */
 abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: ObjectWriteContext, ioContext: IOContext,
-        streamWriteFeatures: Int, val formatWriteFeatures: Int, protected val myRootValueSeparator: SerializableString,
+        streamWriteFeatures: Int, val formatWriteFeatures: Int, protected val myRootValueSeparator: SerializableString?,
         protected val myConfigurationPrettyPrinter: PrettyPrinter?, characterEscapes: CharacterEscapes?,
         maxNonEscaped: Int) : GeneratorBase(objectWriteContext, ioContext, streamWriteFeatures) {
 
@@ -80,6 +80,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
         protected set
 
     init {
+        @Suppress("LeakingThis")
         this.characterEscapes = characterEscapes
     }
 

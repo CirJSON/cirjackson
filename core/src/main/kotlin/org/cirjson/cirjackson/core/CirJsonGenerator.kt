@@ -1101,7 +1101,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeNumber(value: BigInteger): CirJsonGenerator
+    abstract fun writeNumber(value: BigInteger?): CirJsonGenerator
 
     /**
      * Method for outputting given value as CirJSON number. Can be called in any context where a value is expected
@@ -1149,7 +1149,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeNumber(value: BigDecimal): CirJsonGenerator
+    abstract fun writeNumber(value: BigDecimal?): CirJsonGenerator
 
     /**
      * Write method that can be used for custom numeric types that can not be (easily?) converted to "standard" number
@@ -1174,7 +1174,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeNumber(encodedValue: String): CirJsonGenerator
+    abstract fun writeNumber(encodedValue: String?): CirJsonGenerator
 
     /**
      * Overloaded version of [writeNumber] with same semantics but possibly more efficient operation.
@@ -1475,7 +1475,8 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * @return This generator, to allow call chaining
      *
-     * @throws JacksonIOException if there is an underlying I/O problem
+     * @throws CirJacksonIOException if there is an underlying I/O problem
+     *
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
