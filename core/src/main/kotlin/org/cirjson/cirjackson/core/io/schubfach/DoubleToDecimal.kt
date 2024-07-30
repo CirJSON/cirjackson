@@ -137,43 +137,136 @@ class DoubleToDecimal private constructor() {
     private fun toChars(f: Long, e: Int): Int {
         var f = f
         var e = e
-        TODO("Not yet implemented")
+        var length = MathUtils.flog10pow2(Long.SIZE_BITS - f.countLeadingZeroBits())
+
+        if (f >= MathUtils.pow10(length)) {
+            length += 1
+        }
+
+        f *= MathUtils.pow10(H - length)
+        e += length
+
+        val hm = MathUtils.multiplyHigh(f, 193_428_131_138_340_668L) ushr 20
+        val l = (f - 100_000_000L * hm).toInt()
+        val h = (hm * 1_441_151_881L ushr 57).toInt()
+        val m = (hm - 100_000_000 * h).toInt()
+
+        return when (e) {
+            in 1..7 -> toChars1(h, m, l, e)
+            in -2..0 -> toChars2(h, m, l, e)
+            else -> toChars3(h, m, l, e)
+        }
     }
 
     private fun toChars1(h: Int, m: Int, l: Int, e: Int): Int {
-        TODO("Not yet implemented")
+        appendDigit(h)
+        var y = y(m)
+        var t: Int
+        var i = 1
+
+        while (i < e) {
+            t = 10 * y
+            appendDigit(t ushr 28)
+            y = t and MASK_28
+            ++i
+        }
+
+        append('.'.code)
+
+        while (i <= 8) {
+            t = 10 * y
+            appendDigit(t ushr 28)
+            y = t and MASK_28
+            ++i
+        }
+
+        lowDigits(l)
+        return NON_SPECIAL
     }
 
     @Suppress("NAME_SHADOWING")
     private fun toChars2(h: Int, m: Int, l: Int, e: Int): Int {
         var e = e
-        TODO("Not yet implemented")
+        appendDigit(0)
+        append('.'.code)
+
+        while (e < 0) {
+            appendDigit(0)
+            ++e
+        }
+
+        appendDigit(h)
+        append8Digits(m)
+        lowDigits(l)
+        return NON_SPECIAL
     }
 
     private fun toChars3(h: Int, m: Int, l: Int, e: Int): Int {
-        TODO("Not yet implemented")
+        appendDigit(h)
+        append('.'.code)
+        append8Digits(m)
+        lowDigits(l)
+        exponent(e - 1)
+        return NON_SPECIAL
     }
 
     private fun lowDigits(l: Int) {
-        TODO("Not yet implemented")
+        if (l != 0) {
+            append8Digits(l)
+        }
+
+        removeTrailingZeroes()
     }
 
     private fun append8Digits(m: Int) {
-        TODO("Not yet implemented")
+        var y = y(m)
+
+        for (i in 0..<8) {
+            val t = 10 * y
+            appendDigit(t ushr 28)
+            y = t and MASK_28
+        }
     }
 
     private fun removeTrailingZeroes() {
-        TODO("Not yet implemented")
+        while (myBytes[myIndex] == '0'.code.toByte()) {
+            --myIndex
+        }
+
+        if (myBytes[myIndex] == '.'.code.toByte()) {
+            ++myIndex
+        }
     }
 
     private fun y(a: Int): Int {
-        TODO("Not yet implemented")
+        return (MathUtils.multiplyHigh((a + 1).toLong() shl 28, 193_428_131_138_340_668L) ushr 20).toInt() - 1
     }
 
     @Suppress("NAME_SHADOWING")
     private fun exponent(e: Int) {
         var e = e
-        TODO("Not yet implemented")
+        append('E'.code)
+
+        if (e < 0) {
+            append('-'.code)
+            e = -e
+        }
+
+        if (e < 10) {
+            appendDigit(e)
+        }
+
+        var d: Int
+
+        if (e >= 100) {
+            d = e * 1_311 ushr 17
+            appendDigit(d)
+            e -= 100 * d
+        }
+
+        d = e * 103 ushr 10
+        appendDigit(d)
+        appendDigit(e - 10 * d)
     }
 
     private fun append(c: Int) {
@@ -267,7 +360,7 @@ class DoubleToDecimal private constructor() {
         /**
          * Used for left-to-tight digit extraction.
          */
-        private const val MASK_28 = (1L shl 28) - 1
+        private const val MASK_28 = (1 shl 28) - 1
 
         private const val NON_SPECIAL: Int = 0
 
