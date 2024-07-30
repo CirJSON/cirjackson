@@ -23,15 +23,111 @@ class DoubleToDecimal private constructor() {
     private var myIndex = 0
 
     private fun toDecimalString(value: Double): String {
-        TODO("Not yet implemented")
+        return when (toDecimal(value)) {
+            NON_SPECIAL -> charsToString()
+            PLUS_ZERO -> "0.0"
+            MINUS_ZERO -> "-0.0"
+            PLUS_INF -> "Infinity"
+            MINUS_INF -> "-Infinity"
+            else -> "NaN"
+        }
     }
 
+    /**
+     * Returns
+     * | Value      | Condition                  |
+     * | :--------- | :------------------------- |
+     * | PLUS_ZERO  | iff v is 0.0               |
+     * | MINUS_ZERO | iff v is -0.0              |
+     * | PLUS_INF   | iff v is POSITIVE_INFINITY |
+     * | MINUS_INF  | iff v is NEGATIVE_INFINITY |
+     * | NAN        | iff v is NaN               |
+     */
     private fun toDecimal(v: Double): Int {
-        TODO("Not yet implemented")
+        val bits = v.toRawBits()
+        val t = bits and T_MASK
+        val bq = (bits ushr P - 1).toInt() and BQ_MASK
+
+        if (bq < BQ_MASK) {
+            myIndex = -1
+
+            if (bits < 0) {
+                append('-'.code)
+            }
+
+            return when {
+                bq != 0 -> {
+                    val mq = -Q_MIN + 1 - bq
+                    val c = C_MIN or t
+
+                    if (mq in 1..<P) {
+                        val f = c shr mq
+
+                        if (f shl mq == c) {
+                            return toChars(f, 0)
+                        }
+                    }
+
+                    toDecimal(-mq, c, 0)
+                }
+
+                t != 0L -> if (t < C_TINY) toDecimal(Q_MIN, 10 * t, -1) else toDecimal(Q_MIN, t, 0)
+
+                bits == 0L -> PLUS_ZERO
+
+                else -> MINUS_ZERO
+            }
+        }
+
+        return when {
+            t != 0L -> NAN
+            bits > 0L -> PLUS_INF
+            else -> MINUS_INF
+        }
     }
 
     private fun toDecimal(q: Int, c: Long, dk: Int): Int {
-        TODO("Not yet implemented")
+        val out = c.toInt() and 0x1
+        val cb = c shl 2
+        val cbr = cb + 2
+
+        val (cbl, k) = if (c != C_MIN || q == Q_MIN) {
+            (cb - 2) to MathUtils.flog10pow2(q)
+        } else {
+            (cb - 2) to MathUtils.flog10threeQuartersPow2(q)
+        }
+
+        val h = q + MathUtils.flog2pow10(-k) + 2
+        val g1 = MathUtils.g1(k)
+        val g0 = MathUtils.g0(k)
+
+        val vb = rop(g1, g0, cb shl h)
+        val vbl = rop(g1, g0, cbl shl h)
+        val vbr = rop(g1, g0, cbr shl h)
+
+        val s = vb shr 2
+
+        if (s >= 100) {
+            val sp10 = MathUtils.multiplyHigh(s, 115_292_150_460_684_698L shl 4)
+            val tp10 = sp10 + 10
+            val uPin = vbl + out <= sp10 shl 2
+            val wPin = (tp10 shl 2) + out <= vbr
+
+            if (uPin != wPin) {
+                return toChars(if (uPin) sp10 else tp10, k)
+            }
+        }
+
+        val t = s + 1
+        val uin = vbl + out <= s shl 2
+        val win = (t shl 2) + out <= vbr
+
+        if (uin != win) {
+            return toChars(if (uin) s else t, k + dk)
+        }
+
+        val cmp = vb - (s + t shl 1)
+        return toChars(if (cmp < 0L || cmp == 0L && s and 0x1L == 0L) s else t, k + dk)
     }
 
     /**
@@ -155,7 +251,7 @@ class DoubleToDecimal private constructor() {
         /**
          * Mask to extract the biased exponent.
          */
-        private const val BQ_MASK = (1L shl W) - 1
+        private const val BQ_MASK = (1 shl W) - 1
 
         /**
          * Mask to extract the fraction bits.
@@ -320,7 +416,12 @@ class DoubleToDecimal private constructor() {
          * Computes rop(cp g 2^(-127)), where g = g1 2^63 + g0 See section 9.10 and figure 5 of [1].
          */
         private fun rop(g1: Long, g0: Long, cp: Long): Long {
-            TODO("Not yet implemented")
+            val x1 = MathUtils.multiplyHigh(g0, cp)
+            val y0 = g1 * cp
+            val y1 = MathUtils.multiplyHigh(g1, cp)
+            val z = (y0 ushr 1) + x1
+            val vpb = y1 + (z ushr 63)
+            return ((z and MASK_63) + MASK_63 ushr 32 or vpb)
         }
 
     }

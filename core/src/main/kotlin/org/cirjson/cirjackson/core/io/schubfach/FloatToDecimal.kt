@@ -9,22 +9,117 @@ class FloatToDecimal private constructor() {
     private var myIndex = 0
 
     private fun toDecimalString(value: Float): String {
-        TODO("Not yet implemented")
+        return when (toDecimal(value)) {
+            NON_SPECIAL -> charsToString()
+            PLUS_ZERO -> "0.0"
+            MINUS_ZERO -> "-0.0"
+            PLUS_INF -> "Infinity"
+            MINUS_INF -> "-Infinity"
+            else -> "NaN"
+        }
     }
 
+    /**
+     * Returns
+     * | Value      | Condition                  |
+     * | :--------- | :------------------------- |
+     * | PLUS_ZERO  | iff v is 0.0               |
+     * | MINUS_ZERO | iff v is -0.0              |
+     * | PLUS_INF   | iff v is POSITIVE_INFINITY |
+     * | MINUS_INF  | iff v is NEGATIVE_INFINITY |
+     * | NAN        | iff v is NaN               |
+     */
     private fun toDecimal(v: Float): Int {
-        TODO("Not yet implemented")
+        val bits = v.toRawBits()
+        val t = bits and T_MASK
+        val bq = bits ushr DoubleToDecimal.P - 1 and BQ_MASK
+
+        if (bq < BQ_MASK) {
+            myIndex = -1
+
+            if (bits < 0) {
+                append('-'.code)
+            }
+
+            return when {
+                bq != 0 -> {
+                    val mq = -Q_MIN + 1 - bq
+                    val c = C_MIN or t
+
+                    if (mq in 1..<P) {
+                        val f = c shr mq
+
+                        if (f shl mq == c) {
+                            return toChars(f, 0)
+                        }
+                    }
+
+                    toDecimal(-mq, c, 0)
+                }
+
+                t != 0 -> if (t < C_TINY) toDecimal(Q_MIN, 10 * t, -1) else toDecimal(Q_MIN, t, 0)
+
+                bits == 0 -> PLUS_ZERO
+
+                else -> MINUS_ZERO
+            }
+        }
+
+        return when {
+            t != 0 -> NAN
+            bits > 0 -> PLUS_INF
+            else -> MINUS_INF
+        }
     }
 
-    private fun toDecimal(q: Int, c: Long, dk: Int): Int {
-        TODO("Not yet implemented")
+    private fun toDecimal(q: Int, c: Int, dk: Int): Int {
+        val out = c and 0x1
+        val cb = c.toLong() shl 2
+        val cbr = cb + 2
+
+        val (cbl, k) = if (c != C_MIN || q == Q_MIN) {
+            (cb - 2) to MathUtils.flog10pow2(q)
+        } else {
+            (cb - 2) to MathUtils.flog10threeQuartersPow2(q)
+        }
+
+        val h = q + MathUtils.flog2pow10(-k) + 33
+        val g = MathUtils.g1(k) + 1
+
+        val vb = rop(g, cb shl h)
+        val vbl = rop(g, cbl shl h)
+        val vbr = rop(g, cbr shl h)
+
+        val s = vb shr 2
+
+        if (s >= 100) {
+            val sp10 = 10 * (s * 1_717_986_919L ushr 34).toInt()
+            val tp10 = sp10 + 10
+            val uPin = vbl + out <= sp10 shl 2
+            val wPin = (tp10 shl 2) + out <= vbr
+
+            if (uPin != wPin) {
+                return toChars(if (uPin) sp10 else tp10, k)
+            }
+        }
+
+        val t = s + 1
+        val uin = vbl + out <= s shl 2
+        val win = (t shl 2) + out <= vbr
+
+        if (uin != win) {
+            return toChars(if (uin) s else t, k + dk)
+        }
+
+        val cmp = vb - (s + t shl 1)
+        return toChars(if (cmp < 0L || cmp == 0 && s and 0x1 == 0) s else t, k + dk)
     }
 
     /**
      * Formats the decimal f 10^e.
      */
     @Suppress("NAME_SHADOWING")
-    private fun toChars(f: Long, e: Int): Int {
+    private fun toChars(f: Int, e: Int): Int {
         var f = f
         var e = e
         TODO("Not yet implemented")
@@ -132,28 +227,27 @@ class FloatToDecimal private constructor() {
         /**
          * Minimum value of the significand of a normal value: 2^(P-1).
          */
-        private const val C_MIN = 1L shl P - 1
+        private const val C_MIN = 1 shl P - 1
 
         /**
          * Mask to extract the biased exponent.
          */
-        private const val BQ_MASK = (1L shl W) - 1
+        private const val BQ_MASK = (1 shl W) - 1
 
         /**
          * Mask to extract the fraction bits.
          */
-        private const val T_MASK = (1L shl P - 1) - 1
+        private const val T_MASK = (1 shl P - 1) - 1
 
         /**
          * Used in rop().
          */
-        @Suppress("INTEGER_OVERFLOW")
-        private const val MASK_63 = (1L shl 32) - 1
+        private const val MASK_32 = (1L shl 32) - 1
 
         /**
          * Used for left-to-tight digit extraction.
          */
-        private const val MASK_28 = (1L shl 28) - 1
+        private const val MASK_28 = (1 shl 28) - 1
 
         private const val NON_SPECIAL: Int = 0
 
@@ -300,8 +394,10 @@ class FloatToDecimal private constructor() {
         /**
          * Computes rop(cp g 2^(-95)) See section 9.10 and figure 5 of [1].
          */
-        private fun rop(g: Long, cp: Long): Long {
-            TODO("Not yet implemented")
+        private fun rop(g: Long, cp: Long): Int {
+            val x = MathUtils.multiplyHigh(g, cp)
+            val vpb = x ushr 31
+            return ((x and MASK_32) + MASK_32 ushr 32 or vpb).toInt()
         }
 
     }
