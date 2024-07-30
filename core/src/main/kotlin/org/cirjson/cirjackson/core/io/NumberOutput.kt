@@ -316,61 +316,225 @@ object NumberOutput {
     @Suppress("NAME_SHADOWING")
     private fun outputUptoBillion(v: Int, buffer: CharArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < MILLION) {
+            return if (v < 1000) {
+                leading(v, buffer, offset)
+            } else {
+                val thousands = divideBy1000(v)
+                val ones = v - thousands * 1000
+                outputUptoMillion(buffer, offset, thousands, ones)
+            }
+        }
+
+        var thousands = divideBy1000(v)
+        val ones = v - thousands * 1000
+        val millions = divideBy1000(thousands)
+        thousands -= millions * 1000
+
+        offset = leading(millions, buffer, offset)
+
+        var encoding = TRIPLET_TO_CHARS[thousands]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun outputFullBillion(v: Int, buffer: CharArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        var thousands = divideBy1000(v)
+        val ones = v - thousands * 1000
+        val millions = divideBy1000(thousands)
+
+        var encoding = TRIPLET_TO_CHARS[millions]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        thousands -= millions * 1000
+        encoding = TRIPLET_TO_CHARS[thousands]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun outputUptoBillion(v: Int, buffer: ByteArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < MILLION) {
+            return if (v < 1000) {
+                leading(v, buffer, offset)
+            } else {
+                val thousands = divideBy1000(v)
+                val ones = v - thousands * 1000
+                outputUptoMillion(buffer, offset, thousands, ones)
+            }
+        }
+
+        var thousands = divideBy1000(v)
+        val ones = v - thousands * 1000
+        val millions = divideBy1000(thousands)
+        thousands -= millions * 1000
+
+        offset = leading(millions, buffer, offset)
+
+        var encoding = TRIPLET_TO_CHARS[thousands]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun outputFullBillion(v: Int, buffer: ByteArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        var thousands = divideBy1000(v)
+        val ones = v - thousands * 1000
+        val millions = divideBy1000(thousands)
+
+        var encoding = TRIPLET_TO_CHARS[millions]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        thousands -= millions * 1000
+        encoding = TRIPLET_TO_CHARS[thousands]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun outputUptoMillion(buffer: CharArray, offset: Int, thousands: Int, ones: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        var encoding = TRIPLET_TO_CHARS[thousands]
+
+        if (thousands > 9) {
+            if (thousands > 99) {
+                buffer[offset++] = (encoding shr 16).toChar()
+            }
+
+            buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        }
+
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun outputUptoMillion(buffer: ByteArray, offset: Int, thousands: Int, ones: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        var encoding = TRIPLET_TO_CHARS[thousands]
+
+        if (thousands > 9) {
+            if (thousands > 99) {
+                buffer[offset++] = (encoding shr 16).toByte()
+            }
+
+            buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        }
+
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        encoding = TRIPLET_TO_CHARS[ones]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun leading(t: Int, buffer: CharArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        val encoding = TRIPLET_TO_CHARS[t]
+
+        if (t > 9) {
+            if (t > 99) {
+                buffer[offset++] = (encoding shr 16).toChar()
+            }
+
+            buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        }
+
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun leading(t: Int, buffer: ByteArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        val encoding = TRIPLET_TO_CHARS[t]
+
+        if (t > 9) {
+            if (t > 99) {
+                buffer[offset++] = (encoding shr 16).toByte()
+            }
+
+            buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        }
+
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun full(t: Int, buffer: CharArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        val encoding = TRIPLET_TO_CHARS[t]
+        buffer[offset++] = (encoding shr 16).toChar()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toChar()
+        buffer[offset++] = (encoding and 0x7F).toChar()
+
+        return offset
     }
 
     @Suppress("NAME_SHADOWING")
     private fun full(t: Int, buffer: ByteArray, offset: Int): Int {
         var offset = offset
-        TODO("Not yet implemented")
+        val encoding = TRIPLET_TO_CHARS[t]
+        buffer[offset++] = (encoding shr 16).toByte()
+        buffer[offset++] = (encoding shr 8 and 0x7F).toByte()
+        buffer[offset++] = (encoding and 0x7F).toByte()
+
+        return offset
     }
 
     private fun outputSmallestLong(buffer: CharArray, offset: Int): Int {
