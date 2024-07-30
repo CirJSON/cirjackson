@@ -128,4 +128,128 @@ object NumberOutput {
      *******************************************************************************************************************
      */
 
+    /**
+     * @param v Double
+     *
+     * @param useFastWriter whether to use Schubfach algorithm to write output (default `false`)
+     *
+     * @return Double as a string
+     */
+    fun toString(v: Double, useFastWriter: Boolean = false): String {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * @param v Float
+     *
+     * @param useFastWriter whether to use Schubfach algorithm to write output (default `false`)
+     *
+     * @return Float as a string
+     */
+    fun toString(v: Float, useFastWriter: Boolean = false): String {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal helper methods
+     *******************************************************************************************************************
+     */
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputUptoBillion(v: Int, buffer: CharArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputFullBillion(v: Int, buffer: CharArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputUptoBillion(v: Int, buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputFullBillion(v: Int, buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputUptoMillion(buffer: CharArray, offset: Int, thousands: Int, ones: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputUptoMillion(buffer: ByteArray, offset: Int, thousands: Int, ones: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun leading(t: Int, buffer: CharArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun leading(t: Int, buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun full(t: Int, buffer: CharArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun full(t: Int, buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        TODO("Not yet implemented")
+    }
+
+    private fun outputSmallestLong(buffer: CharArray, offset: Int): Int {
+        val length = SMALLEST_LONG.length
+        SMALLEST_LONG.toCharArray(buffer, offset, 0, length)
+        return offset + length
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputSmallestLong(buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        val length = SMALLEST_LONG.length
+
+        for (i in 0..<length) {
+            buffer[offset++] = SMALLEST_LONG[i].code.toByte()
+        }
+
+        return offset
+    }
+
+    private fun outputSmallestInt(buffer: CharArray, offset: Int): Int {
+        val length = SMALLEST_INT.length
+        SMALLEST_INT.toCharArray(buffer, offset, 0, length)
+        return offset + length
+    }
+
+    @Suppress("NAME_SHADOWING")
+    private fun outputSmallestInt(buffer: ByteArray, offset: Int): Int {
+        var offset = offset
+        val length = SMALLEST_INT.length
+
+        for (i in 0..<length) {
+            buffer[offset++] = SMALLEST_INT[i].code.toByte()
+        }
+
+        return offset
+    }
+
 }
