@@ -1172,12 +1172,60 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     private fun writeStringInternal(text: String) {
-        TODO("Not yet implemented")
+        val length = text.length
+
+        if (length > myOutputEnd) {
+            writeLongString(text)
+            return
+        }
+
+        if (myOutputTail + length >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        text.toCharArray(myOutputBuffer, myOutputTail, 0, length)
+
+        if (myCharacterEscapes != null) {
+            writeStringCustom(length)
+        } else if (highestNonEscapedChar != 0) {
+            writeStringASCII(length, highestNonEscapedChar)
+        } else {
+            writeString(length)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun writeString(length: Int) {
-        TODO("Not yet implemented")
+        val end = myOutputTail + length
+        val escapeCodes = myOutputEscapes
+        val escapeLength = escapeCodes.size
+
+        outputLoop@ while (myOutputTail < end) {
+            while (true) {
+                val c = myOutputBuffer[myOutputTail].code
+
+                if (c < escapeLength && escapeCodes[c] != 0) {
+                    break
+                }
+
+                if (++myOutputTail >= end) {
+                    break@outputLoop
+                }
+            }
+
+            val flushLength = myOutputTail - myOutputHead
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, myOutputHead, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            val c = myOutputBuffer[myOutputTail++]
+            prependOrWriteCharacterEscape(c, escapeCodes[c.code])
+        }
     }
 
     /**
@@ -1185,7 +1233,26 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     private fun writeLongString(text: String) {
-        TODO("Not yet implemented")
+        flushBuffer()
+
+        val textLength = text.length
+        var offset = 0
+
+        do {
+            val max = myOutputEnd
+            val segmentLength = if (offset + max > textLength) textLength - offset else max
+            text.toCharArray(myOutputBuffer, 0, offset, offset + segmentLength)
+
+            if (myCharacterEscapes != null) {
+                writeSegmentCustom(segmentLength)
+            } else if (highestNonEscapedChar != 0) {
+                writeSegmentASCII(segmentLength, highestNonEscapedChar)
+            } else {
+                writeSegment(segmentLength)
+            }
+
+            offset += segmentLength
+        } while (offset < textLength)
     }
 
     /**
@@ -1197,7 +1264,44 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     private fun writeSegment(end: Int) {
-        TODO("Not yet implemented")
+        val escapeCodes = myOutputEscapes
+        val escapeLength = escapeCodes.size
+
+        var pointer = 0
+        var start = 0
+
+        while (pointer < end) {
+            var c: Char
+
+            while (true) {
+                c = myOutputBuffer[pointer]
+
+                if (c.code < escapeLength && escapeCodes[c.code] != 0) {
+                    break
+                }
+
+                if (++pointer >= end) {
+                    break
+                }
+            }
+
+            val flushLength = pointer - start
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, start, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                if (pointer >= end) {
+                    break
+                }
+            }
+
+            ++pointer
+            start = prependOrWriteCharacterEscape(myOutputBuffer, pointer, end, c, escapeCodes[c.code])
+        }
     }
 
     /**
@@ -1208,7 +1312,62 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
     private fun writeStringInternal(text: CharArray, offset: Int, length: Int) {
         var offset = offset
         var length = length
-        TODO("Not yet implemented")
+
+        if (myCharacterEscapes != null) {
+            writeStringCustom(text, offset, length)
+            return
+        } else if (highestNonEscapedChar != 0) {
+            writeStringASCII(text, offset, length, highestNonEscapedChar)
+            return
+        }
+
+        length += offset
+        val escapeCodes = myOutputEscapes
+        val escapeLength = escapeCodes.size
+
+        while (offset < length) {
+            val start = offset
+
+            while (true) {
+                val c = text[offset].code
+
+                if (c < escapeLength && escapeCodes[c] != 0) {
+                    break
+                }
+
+                if (++offset >= length) {
+                    break
+                }
+            }
+
+            val newAmount = offset - start
+
+            if (newAmount < SHORT_WRITE) {
+                if (myOutputTail + newAmount >= myOutputEnd) {
+                    flushBuffer()
+                }
+
+                if (newAmount > 0) {
+                    text.copyInto(myOutputBuffer, myOutputTail, start, start + newAmount)
+                    myOutputTail += newAmount
+                }
+            } else {
+                flushBuffer()
+
+                try {
+                    myWriter!!.write(text, start, newAmount)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            if (offset >= length) {
+                break
+            }
+
+            val c = text[offset++]
+            appendCharacterEscape(c, escapeCodes[c.code])
+        }
     }
 
     /*
