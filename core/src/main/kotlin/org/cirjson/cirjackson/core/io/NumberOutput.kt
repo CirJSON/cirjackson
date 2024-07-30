@@ -1,5 +1,8 @@
 package org.cirjson.cirjackson.core.io
 
+import org.cirjson.cirjackson.core.io.schubfach.DoubleToDecimal
+import org.cirjson.cirjackson.core.io.schubfach.FloatToDecimal
+
 object NumberOutput {
 
     private const val MILLION = 1000000
@@ -52,7 +55,56 @@ object NumberOutput {
     fun outputInt(value: Int, buffer: CharArray, offset: Int): Int {
         var v = value
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < 0) {
+            if (v == Int.MIN_VALUE) {
+                return outputSmallestInt(buffer, offset)
+            }
+
+            buffer[offset++] = '-'
+            v = -v
+        }
+
+        if (v < MILLION) {
+            return when {
+                v < 10 -> {
+                    buffer[offset] = ('0'.code + v).toChar()
+                    offset + 1
+                }
+
+                v < 1000 -> leading(v, buffer, offset)
+
+                else -> {
+                    val thousands = divideBy1000(v)
+                    v -= thousands * 1000
+                    offset = leading(thousands, buffer, offset)
+                    offset = full(v, buffer, offset)
+                    offset
+                }
+            }
+        }
+
+        if (v >= BILLION) {
+            v -= BILLION
+
+            buffer[offset++] = if (v >= BILLION) {
+                v -= BILLION
+                '2'
+            } else {
+                '1'
+            }
+
+            return outputFullBillion(v, buffer, offset)
+        }
+
+        var newValue = divideBy1000(v)
+        val ones = v - newValue * 1000
+        v = newValue
+        newValue = divideBy1000(newValue)
+        val thousands = v - newValue * 1000
+        offset = leading(newValue, buffer, offset)
+        offset = full(thousands, buffer, offset)
+        return full(ones, buffer, offset)
     }
 
     /**
@@ -72,7 +124,56 @@ object NumberOutput {
     fun outputInt(value: Int, buffer: ByteArray, offset: Int): Int {
         var v = value
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < 0) {
+            if (v == Int.MIN_VALUE) {
+                return outputSmallestInt(buffer, offset)
+            }
+
+            buffer[offset++] = '-'.code.toByte()
+            v = -v
+        }
+
+        if (v < MILLION) {
+            return when {
+                v < 10 -> {
+                    buffer[offset] = ('0'.code + v).toByte()
+                    offset + 1
+                }
+
+                v < 1000 -> leading(v, buffer, offset)
+
+                else -> {
+                    val thousands = divideBy1000(v)
+                    v -= thousands * 1000
+                    offset = leading(thousands, buffer, offset)
+                    offset = full(v, buffer, offset)
+                    offset
+                }
+            }
+        }
+
+        if (v >= BILLION) {
+            v -= BILLION
+
+            buffer[offset++] = if (v >= BILLION) {
+                v -= BILLION
+                '2'.code.toByte()
+            } else {
+                '1'.code.toByte()
+            }
+
+            return outputFullBillion(v, buffer, offset)
+        }
+
+        var newValue = divideBy1000(v)
+        val ones = v - newValue * 1000
+        v = newValue
+        newValue = divideBy1000(newValue)
+        val thousands = v - newValue * 1000
+        offset = leading(newValue, buffer, offset)
+        offset = full(thousands, buffer, offset)
+        return full(ones, buffer, offset)
     }
 
     /**
@@ -92,7 +193,35 @@ object NumberOutput {
     fun outputLong(value: Long, buffer: CharArray, offset: Int): Int {
         var v = value
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < 0L) {
+            if (v > LONG_MIN_INT) {
+                return outputInt(v.toInt(), buffer, offset)
+            }
+
+            if (v == Long.MIN_VALUE) {
+                return outputSmallestLong(buffer, offset)
+            }
+
+            buffer[offset++] = '-'
+            v = -v
+        } else if (v <= LONG_MAX_INT) {
+            return outputInt(v.toInt(), buffer, offset)
+        }
+
+        var upper = v / BILLION_L
+        v -= upper * BILLION_L
+
+        offset = if (upper < BILLION_L) {
+            outputUptoBillion(upper.toInt(), buffer, offset)
+        } else {
+            val high = upper / BILLION_L
+            upper -= high * BILLION_L
+            offset = leading(high.toInt(), buffer, offset)
+            outputUptoBillion(upper.toInt(), buffer, offset)
+        }
+
+        return outputInt(v.toInt(), buffer, offset)
     }
 
     /**
@@ -112,7 +241,35 @@ object NumberOutput {
     fun outputLong(value: Long, buffer: ByteArray, offset: Int): Int {
         var v = value
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (v < 0L) {
+            if (v > LONG_MIN_INT) {
+                return outputInt(v.toInt(), buffer, offset)
+            }
+
+            if (v == Long.MIN_VALUE) {
+                return outputSmallestLong(buffer, offset)
+            }
+
+            buffer[offset++] = '-'.code.toByte()
+            v = -v
+        } else if (v <= LONG_MAX_INT) {
+            return outputInt(v.toInt(), buffer, offset)
+        }
+
+        var upper = v / BILLION_L
+        v -= upper * BILLION_L
+
+        offset = if (upper < BILLION_L) {
+            outputUptoBillion(upper.toInt(), buffer, offset)
+        } else {
+            val high = upper / BILLION_L
+            upper -= high * BILLION_L
+            offset = leading(high.toInt(), buffer, offset)
+            outputUptoBillion(upper.toInt(), buffer, offset)
+        }
+
+        return outputInt(v.toInt(), buffer, offset)
     }
 
     /**
@@ -136,7 +293,7 @@ object NumberOutput {
      * @return Double as a string
      */
     fun toString(v: Double, useFastWriter: Boolean = false): String {
-        TODO("Not yet implemented")
+        return if (useFastWriter) DoubleToDecimal.toString(v) else v.toString()
     }
 
     /**
@@ -147,7 +304,7 @@ object NumberOutput {
      * @return Float as a string
      */
     fun toString(v: Float, useFastWriter: Boolean = false): String {
-        TODO("Not yet implemented")
+        return if (useFastWriter) FloatToDecimal.toString(v) else v.toString()
     }
 
     /*
