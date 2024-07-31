@@ -264,7 +264,7 @@ class Base64Variant : Named {
      *
      * @return Pointer in output buffer after appending 4 encoded characters
      */
-    fun encodeBase64BitsAsChar(value: Int, buffer: CharArray, outputPointer: Int): Int {
+    fun encodeBase64Chunk(value: Int, buffer: CharArray, outputPointer: Int): Int {
         var pointer = outputPointer
         buffer[pointer++] = myBase64ToAsciiChar[(value shr 18) and 0x3F]
         buffer[pointer++] = myBase64ToAsciiChar[(value shr 12) and 0x3F]

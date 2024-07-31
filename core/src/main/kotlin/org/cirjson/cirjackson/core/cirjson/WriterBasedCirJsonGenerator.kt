@@ -1733,21 +1733,171 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     protected fun writeBinaryInternal(base64Variant: Base64Variant, input: ByteArray, inputPointer: Int,
             inputEnd: Int) {
-        TODO("Not yet implemented")
+        var inputPointer = inputPointer
+        val safeInputEnd = inputEnd - 3
+        val safeOutputEnd = myOutputEnd - 6
+        var chunksBeforeLF = base64Variant.maxLineLength shr 2
+
+        while (inputPointer <= safeInputEnd) {
+            if (myOutputTail > safeOutputEnd) {
+                flushBuffer()
+            }
+
+            var b24 = input[inputPointer++].toInt() shl 8
+            b24 = input[inputPointer++].toInt() and 0xFF or b24
+            b24 = b24 shl 8 or (input[inputPointer++].toInt() and 0xFF)
+            myOutputTail = base64Variant.encodeBase64Chunk(b24, myOutputBuffer, myOutputTail)
+
+            if (--chunksBeforeLF <= 0) {
+                myOutputBuffer[myOutputTail++] = '\\'
+                myOutputBuffer[myOutputTail++] = 'n'
+                chunksBeforeLF = base64Variant.maxLineLength shr 2
+            }
+        }
+
+        val inputLeft = inputEnd - inputPointer
+
+        if (inputLeft > 0) {
+            if (myOutputTail > safeOutputEnd) {
+                flushBuffer()
+            }
+
+            var b24 = input[inputPointer++].toInt() shl 16
+
+            if (inputLeft == 2) {
+                b24 = input[inputPointer].toInt() and 0xFF shl 8 or b24
+            }
+
+            myOutputTail = base64Variant.encodeBase64Partial(b24, inputLeft, myOutputBuffer, myOutputTail)
+        }
     }
 
     @Throws(CirJacksonException::class)
     @Suppress("NAME_SHADOWING")
     protected fun writeBinary(variant: Base64Variant, data: InputStream, readBuffer: ByteArray, bytesLeft: Int): Int {
         var bytesLeft = bytesLeft
-        TODO("Not yet implemented")
+        var inputPointer = 0
+        var inputEnd = 0
+        var lastFullOffset = -3
+
+        val safeOutputEnd = myOutputEnd - 6
+        var chunksBeforeLF = variant.maxLineLength shr 2
+
+        while (bytesLeft > 2) {
+            if (inputPointer > lastFullOffset) {
+                inputEnd = readMore(data, readBuffer, inputPointer, inputEnd, bytesLeft)
+                inputPointer = 0
+
+                if (inputEnd < 3) {
+                    break
+                }
+
+                lastFullOffset = inputEnd - 3
+            }
+
+            if (myOutputTail > safeOutputEnd) {
+                flushBuffer()
+            }
+
+            var b24 = readBuffer[inputPointer++].toInt() shl 8
+            b24 = readBuffer[inputPointer++].toInt() and 0xFF or b24
+            b24 = b24 shl 8 or (readBuffer[inputPointer++].toInt() and 0xFF)
+            myOutputTail = variant.encodeBase64Chunk(b24, myOutputBuffer, myOutputTail)
+
+            if (--chunksBeforeLF <= 0) {
+                myOutputBuffer[myOutputTail++] = '\\'
+                myOutputBuffer[myOutputTail++] = 'n'
+                chunksBeforeLF = variant.maxLineLength shr 2
+            }
+        }
+
+        if (bytesLeft > 0) {
+            inputEnd = readMore(data, readBuffer, inputPointer, inputEnd, bytesLeft)
+            inputPointer = 0
+
+            if (inputEnd > 0) {
+                if (myOutputTail > safeOutputEnd) {
+                    flushBuffer()
+                }
+
+                var b24 = readBuffer[inputPointer++].toInt() shl 16
+
+                val amount = if (inputPointer < inputEnd) {
+                    b24 = readBuffer[inputPointer].toInt() and 0xFF shl 8 or b24
+                    2
+                } else {
+                    1
+                }
+
+                myOutputTail = variant.encodeBase64Partial(b24, amount, myOutputBuffer, myOutputTail)
+                bytesLeft -= amount
+            }
+        }
+
+        return bytesLeft
     }
 
     @Throws(CirJacksonException::class)
     protected fun writeBinary(variant: Base64Variant, data: InputStream, readBuffer: ByteArray): Int {
-        TODO("Not yet implemented")
+        var inputPointer = 0
+        var inputEnd = 0
+        var lastFullOffset = -3
+        var bytesDone = 0
+
+        val safeOutputEnd = myOutputEnd - 6
+        var chunksBeforeLF = variant.maxLineLength shr 2
+
+        while (true) {
+            if (inputPointer > lastFullOffset) {
+                inputEnd = readMore(data, readBuffer, inputPointer, inputEnd, readBuffer.size)
+                inputPointer = 0
+
+                if (inputEnd < 3) {
+                    break
+                }
+
+                lastFullOffset = inputEnd - 3
+            }
+
+            if (myOutputTail > safeOutputEnd) {
+                flushBuffer()
+            }
+
+            var b24 = readBuffer[inputPointer++].toInt() shl 8
+            b24 = readBuffer[inputPointer++].toInt() and 0xFF or b24
+            b24 = b24 shl 8 or (readBuffer[inputPointer++].toInt() and 0xFF)
+            bytesDone += 3
+            myOutputTail = variant.encodeBase64Chunk(b24, myOutputBuffer, myOutputTail)
+
+            if (--chunksBeforeLF <= 0) {
+                myOutputBuffer[myOutputTail++] = '\\'
+                myOutputBuffer[myOutputTail++] = 'n'
+                chunksBeforeLF = variant.maxLineLength shr 2
+            }
+        }
+
+        if (inputPointer < inputEnd) {
+            if (myOutputTail > safeOutputEnd) {
+                flushBuffer()
+            }
+
+            var b24 = readBuffer[inputPointer++].toInt() shl 16
+
+            val amount = if (inputPointer < inputEnd) {
+                b24 = readBuffer[inputPointer].toInt() and 0xFF shl 8 or b24
+                2
+            } else {
+                1
+            }
+
+            myOutputTail = variant.encodeBase64Partial(b24, amount, myOutputBuffer, myOutputTail)
+            bytesDone += amount
+        }
+
+        return bytesDone
     }
 
     @Throws(CirJacksonException::class)
@@ -1757,7 +1907,36 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         var inputPointer = inputPointer
         var inputEnd = inputEnd
         var maxRead = maxRead
-        TODO("Not yet implemented")
+        var i = 0
+
+        while (inputPointer < inputEnd) {
+            readBuffer[i++] = readBuffer[inputPointer++]
+        }
+
+        inputEnd = i
+        maxRead = min(maxRead, readBuffer.size)
+
+        do {
+            val length = maxRead - inputEnd
+
+            if (length == 0) {
+                break
+            }
+
+            val count = try {
+                input.read(readBuffer, inputEnd, length)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            if (count < 0) {
+                return inputEnd
+            }
+
+            inputEnd += count
+        } while (inputEnd < 3)
+
+        return inputEnd
     }
 
     /*
@@ -1768,7 +1947,17 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     private fun writeNullInternal() {
-        TODO("Not yet implemented")
+        if (myOutputTail + 4 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        var pointer = myOutputTail
+        val buffer = myOutputBuffer
+        buffer[pointer] = 'n'
+        buffer[++pointer] = 'u'
+        buffer[++pointer] = 'l'
+        buffer[++pointer] = 'l'
+        myOutputTail = pointer + 1
     }
 
     /*
