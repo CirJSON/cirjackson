@@ -1381,20 +1381,162 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     private fun writeStringASCII(length: Int, maxNonEscaped: Int) {
-        TODO("Not yet implemented")
+        val end = myOutputTail + length
+        val escapeCodes = myOutputEscapes
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+        var escapeCode: Int
+
+        outputLoop@ while (myOutputTail < end) {
+            var ch: Char
+
+            while (true) {
+                ch = myOutputBuffer[myOutputTail]
+
+                if (ch.code < escapeLimit) {
+                    escapeCode = escapeCodes[ch.code]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (ch.code > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                }
+
+                if (++myOutputTail >= end) {
+                    break@outputLoop
+                }
+            }
+
+            val flushLength = myOutputTail - myOutputHead
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, myOutputHead, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            ++myOutputTail
+            prependOrWriteCharacterEscape(ch, escapeCode)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun writeSegmentASCII(end: Int, maxNonEscaped: Int) {
-        TODO("Not yet implemented")
+        val escapeCodes = myOutputEscapes
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+
+        var pointer = 0
+        var escapeCode = 0
+        var start = 0
+
+        while (pointer < end) {
+            var ch: Char
+            var c: Int
+
+            while (true) {
+                ch = myOutputBuffer[pointer]
+                c = ch.code
+
+                if (c < escapeLimit) {
+                    escapeCode = escapeCodes[c]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (c > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                }
+
+                if (++pointer >= end) {
+                    break
+                }
+            }
+
+            val flushLength = pointer - start
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, start, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                if (pointer >= end) {
+                    break
+                }
+            }
+
+            ++pointer
+            start = prependOrWriteCharacterEscape(myOutputBuffer, pointer, end, ch, escapeCode)
+        }
     }
 
     @Throws(CirJacksonException::class)
     @Suppress("NAME_SHADOWING")
     private fun writeStringASCII(text: CharArray, offset: Int, length: Int, maxNonEscaped: Int) {
         var offset = offset
-        var length = length
-        TODO("Not yet implemented")
+        val length = length + offset
+        val escapeCodes = myOutputEscapes
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+        var escapeCode = 0
+
+        while (offset < length) {
+            val start = offset
+            var ch: Char
+            var c: Int
+
+            while (true) {
+                ch = text[offset]
+                c = ch.code
+
+                if (c < escapeLimit) {
+                    escapeCode = escapeCodes[c]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (c > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                }
+
+                if (++offset >= length) {
+                    break
+                }
+            }
+
+            val newAmount = offset - start
+
+            if (newAmount < SHORT_WRITE) {
+                if (myOutputTail + newAmount >= myOutputEnd) {
+                    flushBuffer()
+                }
+
+                if (newAmount > 0) {
+                    text.copyInto(myOutputBuffer, myOutputTail, start, start + newAmount)
+                    myOutputTail += newAmount
+                }
+            } else {
+                flushBuffer()
+
+                try {
+                    myWriter!!.write(text, start, newAmount)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            if (offset >= length) {
+                break
+            }
+
+            ++offset
+            appendCharacterEscape(ch, escapeCode)
+        }
     }
 
     /*
@@ -1408,20 +1550,180 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     private fun writeStringCustom(length: Int) {
-        TODO("Not yet implemented")
+        val end = myOutputTail + length
+        val escapeCodes = myOutputEscapes
+        val maxNonEscaped = if (highestNonEscapedChar >= 1) highestNonEscapedChar else 0xFFFF
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+        var escapeCode: Int
+        val customEscapes = myCharacterEscapes!!
+
+        outputLoop@ while (myOutputTail < end) {
+            var ch: Char
+            var c: Int
+
+            while (true) {
+                ch = myOutputBuffer[myOutputTail]
+                c = ch.code
+
+                if (c < escapeLimit) {
+                    escapeCode = escapeCodes[c]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (c > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                } else if (customEscapes.getEscapeSequence(c).also { myCurrentEscape = it } != null) {
+                    escapeCode = CharacterEscapes.ESCAPE_CUSTOM
+                    break
+                }
+
+                if (++myOutputTail >= end) {
+                    break@outputLoop
+                }
+            }
+
+            val flushLength = myOutputTail - myOutputHead
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, myOutputHead, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            ++myOutputTail
+            prependOrWriteCharacterEscape(ch, escapeCode)
+        }
     }
 
     @Throws(CirJacksonException::class)
     private fun writeSegmentCustom(end: Int) {
-        TODO("Not yet implemented")
+        val escapeCodes = myOutputEscapes
+        val maxNonEscaped = if (highestNonEscapedChar >= 1) highestNonEscapedChar else 0xFFFF
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+        val customEscapes = myCharacterEscapes!!
+
+        var pointer = 0
+        var escapeCode = 0
+        var start = 0
+
+        while (pointer < end) {
+            var ch: Char
+            var c: Int
+
+            while (true) {
+                ch = myOutputBuffer[pointer]
+                c = ch.code
+
+                if (c < escapeLimit) {
+                    escapeCode = escapeCodes[c]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (c > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                } else if (customEscapes.getEscapeSequence(c).also { myCurrentEscape = it } != null) {
+                    escapeCode = CharacterEscapes.ESCAPE_CUSTOM
+                    break
+                }
+
+                if (++pointer >= end) {
+                    break
+                }
+            }
+
+            val flushLength = pointer - start
+
+            if (flushLength > 0) {
+                try {
+                    myWriter!!.write(myOutputBuffer, start, flushLength)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                if (pointer >= end) {
+                    break
+                }
+            }
+
+            ++pointer
+            start = prependOrWriteCharacterEscape(myOutputBuffer, pointer, end, ch, escapeCode)
+        }
     }
 
     @Throws(CirJacksonException::class)
     @Suppress("NAME_SHADOWING")
     private fun writeStringCustom(text: CharArray, offset: Int, length: Int) {
         var offset = offset
-        var length = length
-        TODO("Not yet implemented")
+        val length = length + offset
+        val escapeCodes = myOutputEscapes
+        val maxNonEscaped = if (highestNonEscapedChar >= 1) highestNonEscapedChar else 0xFFFF
+        val escapeLimit = min(escapeCodes.size, maxNonEscaped + 1)
+        val customEscapes = myCharacterEscapes!!
+
+        var escapeCode = 0
+
+        while (offset < length) {
+            val start = offset
+            var ch: Char
+            var c: Int
+
+            while (true) {
+                ch = text[offset]
+                c = ch.code
+
+                if (c < escapeLimit) {
+                    escapeCode = escapeCodes[c]
+
+                    if (escapeCode != 0) {
+                        break
+                    }
+                } else if (c > maxNonEscaped) {
+                    escapeCode = CharacterEscapes.ESCAPE_STANDARD
+                    break
+                } else if (customEscapes.getEscapeSequence(c).also { myCurrentEscape = it } != null) {
+                    escapeCode = CharacterEscapes.ESCAPE_CUSTOM
+                    break
+                }
+
+                if (++offset >= length) {
+                    break
+                }
+            }
+
+            val newAmount = offset - start
+
+            if (newAmount < SHORT_WRITE) {
+                if (myOutputTail + newAmount >= myOutputEnd) {
+                    flushBuffer()
+                }
+
+                if (newAmount > 0) {
+                    text.copyInto(myOutputBuffer, myOutputTail, start, start + newAmount)
+                    myOutputTail += newAmount
+                }
+            } else {
+                flushBuffer()
+
+                try {
+                    myWriter!!.write(text, start, newAmount)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            if (offset >= length) {
+                break
+            }
+
+            ++offset
+            appendCharacterEscape(ch, escapeCode)
+        }
     }
 
     /*
