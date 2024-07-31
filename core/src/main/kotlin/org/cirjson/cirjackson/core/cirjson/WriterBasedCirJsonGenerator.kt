@@ -1042,6 +1042,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      *******************************************************************************************************************
      */
 
+    @Throws(CirJacksonException::class)
     final override fun verifyValueWrite(typeMessage: String) {
         val status = streamWriteContext.writeValue()
 
@@ -1079,7 +1080,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     /*
      *******************************************************************************************************************
-     * Configuration access
+     * Low-level output handling
      *******************************************************************************************************************
      */
 
