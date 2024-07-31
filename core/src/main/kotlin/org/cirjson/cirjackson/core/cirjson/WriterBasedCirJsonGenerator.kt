@@ -1972,7 +1972,97 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
      */
     @Throws(CirJacksonException::class)
     private fun prependOrWriteCharacterEscape(char: Char, escapeCode: Int) {
-        TODO("Not yet implemented")
+        var ch = char.code
+
+        if (escapeCode >= 0) {
+            if (myOutputTail >= 2) {
+                var pointer = myOutputTail - 2
+                myOutputHead = pointer
+                myOutputBuffer[pointer++] = '\\'
+                myOutputBuffer[pointer] = escapeCode.toChar()
+                return
+            }
+
+            val buffer = myEntityBuffer
+            myOutputHead = myOutputTail
+            buffer[1] = escapeCode.toChar()
+
+            try {
+                myWriter!!.write(buffer, 0, 2)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            return
+        }
+
+        if (escapeCode != CharacterEscapes.ESCAPE_CUSTOM) {
+            val hexChars = hexChars
+
+            if (myOutputTail >= 6) {
+                val buffer = myOutputBuffer
+                var pointer = myOutputTail - 6
+                myOutputHead = pointer
+                buffer[pointer] = '\\'
+                buffer[++pointer] = 'u'
+
+                if (ch > 0xFF) {
+                    val high = ch shr 8 and 0xFF
+                    buffer[++pointer] = hexChars[high shr 4]
+                    buffer[++pointer] = hexChars[high and 0xF]
+                    ch = ch and 0xFF
+                } else {
+                    buffer[++pointer] = '0'
+                    buffer[++pointer] = '0'
+                }
+
+                buffer[++pointer] = hexChars[ch shr 4]
+                buffer[++pointer] = hexChars[ch and 0xF]
+                return
+            }
+
+            val buffer = myEntityBuffer
+            myOutputHead = myOutputTail
+
+            try {
+                if (ch > 0xFF) {
+                    val high = ch shr 8 and 0xFF
+                    val low = ch and 0xFF
+                    buffer[10] = hexChars[high shr 4]
+                    buffer[11] = hexChars[high and 0xF]
+                    buffer[12] = hexChars[low shr 4]
+                    buffer[13] = hexChars[low and 0xF]
+                    myWriter!!.write(buffer, 8, 6)
+                } else {
+                    buffer[6] = hexChars[ch shr 4]
+                    buffer[7] = hexChars[ch and 0xF]
+                    myWriter!!.write(buffer, 2, 6)
+                }
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            return
+        }
+
+        val escape = myCurrentEscape?.value?.also { myCurrentEscape = null } ?: myCharacterEscapes!!.getEscapeSequence(
+                ch)!!.value
+        val length = escape.length
+
+        if (myOutputTail >= length) {
+            val pointer = myOutputTail - length
+            myOutputHead = pointer
+            escape.toCharArray(myOutputBuffer, pointer, 0, length)
+            return
+        }
+
+        myOutputHead = myOutputTail
+
+        try {
+            myWriter!!.write(escape)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     /**
@@ -1986,16 +2076,156 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
     private fun prependOrWriteCharacterEscape(buffer: CharArray, pointer: Int, end: Int, char: Char,
             escapeCode: Int): Int {
         var pointer = pointer
-        TODO("Not yet implemented")
+        var ch = char.code
+
+        if (escapeCode >= 0) {
+            if (pointer in 2..<end) {
+                pointer -= 2
+                buffer[pointer] = '\\'
+                buffer[pointer + 1] = escapeCode.toChar()
+            } else {
+                val buffer = myEntityBuffer
+                myOutputHead = myOutputTail
+                buffer[1] = escapeCode.toChar()
+
+                try {
+                    myWriter!!.write(buffer, 0, 2)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            return pointer
+        }
+
+        if (escapeCode != CharacterEscapes.ESCAPE_CUSTOM) {
+            val hexChars = hexChars
+
+            if (myOutputTail >= 6) {
+                pointer -= 6
+                buffer[pointer++] = '\\'
+                buffer[pointer++] = 'u'
+
+                if (ch > 0xFF) {
+                    val high = ch shr 8 and 0xFF
+                    buffer[pointer++] = hexChars[high shr 4]
+                    buffer[pointer++] = hexChars[high and 0xF]
+                    ch = ch and 0xFF
+                } else {
+                    buffer[pointer++] = '0'
+                    buffer[pointer++] = '0'
+                }
+
+                buffer[pointer++] = hexChars[ch shr 4]
+                buffer[pointer] = hexChars[ch and 0xF]
+                pointer -= 5
+            } else {
+                val buffer = myEntityBuffer
+                myOutputHead = myOutputTail
+
+                try {
+                    if (ch > 0xFF) {
+                        val high = ch shr 8 and 0xFF
+                        val low = ch and 0xFF
+                        buffer[10] = hexChars[high shr 4]
+                        buffer[11] = hexChars[high and 0xF]
+                        buffer[12] = hexChars[low shr 4]
+                        buffer[13] = hexChars[low and 0xF]
+                        myWriter!!.write(buffer, 8, 6)
+                    } else {
+                        buffer[6] = hexChars[ch shr 4]
+                        buffer[7] = hexChars[ch and 0xF]
+                        myWriter!!.write(buffer, 2, 6)
+                    }
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+
+            return pointer
+        }
+
+        val escape = myCurrentEscape?.value?.also { myCurrentEscape = null } ?: myCharacterEscapes!!.getEscapeSequence(
+                ch)!!.value
+        val length = escape.length
+
+        if (pointer in length..<end) {
+            pointer -= length
+            escape.toCharArray(myOutputBuffer, pointer, 0, length)
+        } else {
+            try {
+                myWriter!!.write(escape)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+        }
+
+        return pointer
     }
 
     /**
-     * Method called to append escape sequence for given character, at the
-     * end of standard output buffer; or if not possible, write out directly.
+     * Method called to append escape sequence for given character, at the end of standard output buffer; or if not
+     * possible, write out directly.
      */
     @Throws(CirJacksonException::class)
     private fun appendCharacterEscape(char: Char, escapeCode: Int) {
-        TODO("Not yet implemented")
+        var ch = char.code
+
+        if (escapeCode >= 0) {
+            if (myOutputTail + 2 >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = '\\'
+            myOutputBuffer[myOutputTail++] = escapeCode.toChar()
+            return
+        }
+
+        if (escapeCode != CharacterEscapes.ESCAPE_CUSTOM) {
+            if (myOutputTail + 2 >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            var pointer = myOutputTail
+            val buffer = myOutputBuffer
+            val hexChars = hexChars
+            buffer[pointer++] = '\\'
+            buffer[pointer++] = 'u'
+
+            if (ch > 0xFF) {
+                val high = ch shr 8 and 0xFF
+                buffer[pointer++] = hexChars[high shr 4]
+                buffer[pointer++] = hexChars[high and 0xF]
+                ch = ch and 0xFF
+            } else {
+                buffer[pointer++] = '0'
+                buffer[pointer++] = '0'
+            }
+
+            buffer[pointer++] = hexChars[ch shr 4]
+            buffer[pointer++] = hexChars[ch and 0xF]
+            myOutputTail = pointer
+            return
+        }
+
+        val escape = myCurrentEscape?.value?.also { myCurrentEscape = null } ?: myCharacterEscapes!!.getEscapeSequence(
+                ch)!!.value
+        val length = escape.length
+
+        if (myOutputTail + length > myOutputEnd) {
+            flushBuffer()
+
+            if (length > myOutputEnd) {
+                try {
+                    myWriter!!.write(escape)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+            }
+        }
+
+        escape.toCharArray(myOutputBuffer, myOutputTail, 0, length)
+        myOutputTail += length
     }
 
     protected fun allocateCopyBuffer(): CharArray {
@@ -2004,7 +2234,21 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     protected open fun flushBuffer() {
-        TODO("Not yet implemented")
+        val length = myOutputTail - myOutputHead
+
+        if (length <= 0) {
+            return
+        }
+
+        val offset = myOutputHead
+        myOutputTail = 0
+        myOutputHead = 0
+
+        try {
+            myWriter!!.write(myOutputBuffer, offset, length)
+        } catch (e: IOException) {
+            throw wrapIOFailure(e)
+        }
     }
 
     companion object {
