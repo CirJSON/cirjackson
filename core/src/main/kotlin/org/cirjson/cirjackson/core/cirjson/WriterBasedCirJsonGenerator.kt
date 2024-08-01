@@ -1880,7 +1880,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
             }
         }
 
-        if (inputPointer < inputEnd) {
+        if (inputEnd > 0) {
             if (myOutputTail > safeOutputEnd) {
                 flushBuffer()
             }

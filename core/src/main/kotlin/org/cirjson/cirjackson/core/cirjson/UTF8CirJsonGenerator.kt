@@ -2,10 +2,7 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.extensions.isNotFinite
-import org.cirjson.cirjackson.core.io.CharTypes
-import org.cirjson.cirjackson.core.io.CharacterEscapes
-import org.cirjson.cirjackson.core.io.IOContext
-import org.cirjson.cirjackson.core.io.NumberOutput
+import org.cirjson.cirjackson.core.io.*
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -107,17 +104,112 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myConfigurationPrettyPrinter != null) {
+            writePrettyPrinterName(name)
+            return this
+        }
+
+        val status = streamWriteContext.writeName(name)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        if (status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = BYTE_COMMA
+        }
+
+        if (myConfigurationUnquoteNames) {
+            writeStringSegments(name, false)
+            return this
+        }
+
+        val length = name.length
+
+        if (length >= myCharBufferLength) {
+            writeStringSegments(name, true)
+            return this
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length <= myOutputMaxContiguous) {
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(name, 0, length)
+        } else {
+            writeStringSegments(name, 0, length)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myConfigurationPrettyPrinter != null) {
+            writePrettyPrinterName(name)
+            return this
+        }
+
+        val status = streamWriteContext.writeName(name.value)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        if (status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = BYTE_COMMA
+        }
+
+        if (myConfigurationUnquoteNames) {
+            writeUnquotedName(name)
+            return this
+        }
+
+        val length = name.appendQuotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(name.asQuotedUTF8())
+        } else {
+            myOutputTail += length
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     private fun writeUnquotedName(name: SerializableString) {
-        TODO("Not yet implemented")
+        val length = name.appendQuotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(name.asQuotedUTF8())
+        } else {
+            myOutputTail += length
+        }
     }
 
     /*
@@ -305,7 +397,51 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: String) {
-        TODO("Not yet implemented")
+        val status = streamWriteContext.writeName(name)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        if (status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA) {
+            myConfigurationPrettyPrinter!!.writeObjectEntrySeparator(this)
+        } else {
+            myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
+        }
+
+        if (myConfigurationUnquoteNames) {
+            writeStringSegments(name, false)
+            return
+        }
+
+        val length = name.length
+
+        if (length >= myCharBufferLength) {
+            writeStringSegments(name, true)
+            return
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length <= myOutputMaxContiguous) {
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(name, 0, length)
+        } else {
+            writeStringSegments(name, 0, length)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
     }
 
     /**
@@ -313,7 +449,43 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: SerializableString) {
-        TODO("Not yet implemented")
+        val status = streamWriteContext.writeName(name.value)
+
+        if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
+            return reportError("Cannot write a property name, expecting a value")
+        }
+
+        if (status == CirJsonWriteContext.STATUS_OK_AFTER_COMMA) {
+            myConfigurationPrettyPrinter!!.writeObjectEntrySeparator(this)
+        } else {
+            myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
+        }
+
+        val addQuotes = !myConfigurationUnquoteNames
+
+        if (addQuotes) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = myQuoteChar
+        }
+
+        val length = name.appendQuotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(name.asQuotedUTF8())
+        } else {
+            myOutputTail += length
+        }
+
+        if (addQuotes) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = myQuoteChar
+        }
     }
 
     /*
@@ -1109,7 +1281,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             }
         }
 
-        if (inputPointer < inputEnd) {
+        if (inputEnd > 0) {
             if (myOutputTail > safeOutputEnd) {
                 flushBuffer()
             }
@@ -1196,8 +1368,38 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * text (meaning it is not to be escaped or quoted)
      */
     @Throws(CirJacksonException::class)
-    private fun outputRawMultibyteChar(ch: Int, buffer: CharArray, inputOffset: Int, inputEnd: Int): Int {
-        TODO("Not yet implemented")
+    private fun outputRawMultibyteChar(ch: Int, buffer: CharArray?, inputOffset: Int, inputEnd: Int): Int {
+        if (ch in UTF8Writer.SURR1_FIRST..UTF8Writer.SURR2_LAST) {
+            return if (inputOffset < inputEnd && buffer != null) {
+                outputSurrogates(ch, buffer[inputOffset].code)
+                inputOffset + 1
+            } else {
+                reportError("Split surrogate on writeRaw() input (last character): first character 0x${
+                    ch.toString(16).padStart(4, '0')
+                }")
+            }
+        }
+
+        val byteBuffer = myOutputBuffer
+        byteBuffer[myOutputTail++] = (ch shr 12 or 0xE0).toByte()
+        byteBuffer[myOutputTail++] = (ch shr 6 and 0x3F or 0x80).toByte()
+        byteBuffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
+        return inputOffset
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun outputSurrogates(surrogate1: Int, surrogate2: Int) {
+        val ch = decodeSurrogate(surrogate1, surrogate2)
+
+        if (myOutputTail + 4 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        val buffer = myOutputBuffer
+        buffer[myOutputTail++] = (ch shr 18 or 0xF0).toByte()
+        buffer[myOutputTail++] = (ch shr 12 and 0x3F or 0x80).toByte()
+        buffer[myOutputTail++] = (ch shr 6 and 0x3F or 0x80).toByte()
+        buffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
     }
 
     /**
@@ -1213,8 +1415,27 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * @throws CirJacksonException Encoding or write I/O exception
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun outputMultibyteChar(ch: Int, outputPointer: Int): Int {
-        TODO("Not yet implemented")
+        var outputPointer = outputPointer
+        val hexBytes = hexBytes
+        val buffer = myOutputBuffer
+
+        if (ch in UTF8Writer.SURR1_FIRST..UTF8Writer.SURR2_LAST) {
+            buffer[outputPointer++] = BYTE_BACKSLASH
+            buffer[outputPointer++] = BYTE_U_LOWERCASE
+
+            buffer[outputPointer++] = hexBytes[ch shr 12 and 0xF]
+            buffer[outputPointer++] = hexBytes[ch shr 8 and 0xF]
+            buffer[outputPointer++] = hexBytes[ch shr 4 and 0xF]
+            buffer[outputPointer++] = hexBytes[ch and 0xF]
+        } else {
+            buffer[outputPointer++] = (ch shr 12 or 0xE0).toByte()
+            buffer[outputPointer++] = (ch shr 6 and 0x3F or 0x80).toByte()
+            buffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+        }
+
+        return outputPointer
     }
 
     /**
@@ -1223,8 +1444,28 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * @param charToEscape Character to escape using escape sequence (\\uXXXX)
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeGenericEscape(charToEscape: Int, outputPointer: Int): Int {
-        TODO("Not yet implemented")
+        var charToEscape = charToEscape
+        var outputPointer = outputPointer
+        val hexBytes = hexBytes
+        val buffer = myOutputBuffer
+        buffer[outputPointer++] = BYTE_BACKSLASH
+        buffer[outputPointer++] = BYTE_U_LOWERCASE
+
+        if (charToEscape > 0xFF) {
+            val high = charToEscape shr 8 and 0xFF
+            buffer[outputPointer++] = hexBytes[high shr 4]
+            buffer[outputPointer++] = hexBytes[high and 0xF]
+            charToEscape = charToEscape and 0xFF
+        } else {
+            buffer[outputPointer++] = BYTE_0
+            buffer[outputPointer++] = BYTE_0
+        }
+
+        buffer[outputPointer++] = hexBytes[charToEscape shr 4]
+        buffer[outputPointer++] = hexBytes[charToEscape and 0xF]
+        return outputPointer
     }
 
     @Throws(CirJacksonException::class)
