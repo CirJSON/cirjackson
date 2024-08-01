@@ -496,32 +496,179 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeString(value: String?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+
+        if (value == null) {
+            writeNullInternal()
+            return this
+        }
+
+        val length = value.length
+
+        if (length > myOutputMaxContiguous) {
+            writeStringSegments(value, true)
+            return this
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeStringSegment(value, 0, length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(reader: Reader?, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+        reader ?: return reportError("null reader")
+
+        var toRead = if (length >= 0) length else Int.MAX_VALUE
+        val buffer = myCharBuffer!!
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        while (toRead > 0) {
+            val toReadNow = min(toRead, buffer.size)
+            val read = try {
+                reader.read(buffer, 0, toReadNow)
+            } catch (e: IOException) {
+                throw wrapIOFailure(e)
+            }
+
+            if (read <= 0) {
+                break
+            }
+
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegments(buffer, 0, read)
+            toRead -= read
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length >= 0 && toRead > 0) {
+            return reportError("Didn't read enough from reader")
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length <= myOutputMaxContiguous) {
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(buffer, 0, length)
+        } else {
+            writeStringSegments(buffer, 0, length)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(value: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        val length = value.appendQuotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(value.asQuotedUTF8())
+        } else {
+            myOutputTail += length
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRawUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForByteArray(buffer, offset, length)
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeBytes(buffer, offset, length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForByteArray(buffer, offset, length)
+        verifyValueWrite(WRITE_STRING)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+
+        if (length <= myOutputMaxContiguous) {
+            writeUTF8Segment(buffer, offset, length)
+        } else {
+            writeUTF8Segments(buffer, offset, length)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     /*
@@ -532,48 +679,234 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(text: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val length = text.length
+        val buffer = myCharBuffer!!
+
+        if (length <= buffer.size) {
+            text.toCharArray(buffer, 0, 0, length)
+            writeRaw(buffer, 0, length)
+        } else {
+            writeRaw(text, 0, length)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     override fun writeRaw(text: String, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        var offset = offset
+        var length = length
+        checkRangeBoundsForString(text, offset, length)
+        val buffer = myCharBuffer!!
+        val bufferLength = buffer.size
+
+        if (length <= bufferLength) {
+            text.toCharArray(buffer, 0, 0, length)
+            writeRaw(buffer, 0, length)
+            return this
+        }
+
+        val maxChunk = min(bufferLength, myOutputEnd shr 2 + myOutputEnd shr 4)
+        val maxBytes = maxChunk * 3
+
+        while (length > 0) {
+            var length2 = min(maxChunk, length)
+            text.toCharArray(buffer, 0, offset, offset + length2)
+
+            if (myOutputTail + maxBytes >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            if (length2 > 1) {
+                val ch = buffer[length2 - 1]
+
+                if (ch in UTF8Writer.SURR1_FIRST.toChar()..UTF8Writer.SURR1_LAST.toChar()) {
+                    --length2
+                }
+            }
+
+            writeRawSegment(buffer, 0, length2)
+            offset += length2
+            length -= length2
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(raw: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val length = raw.appendUnquotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(raw.asUnquotedUTF8())
+        } else {
+            myOutputTail += length
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRawValue(raw: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_RAW)
+        val length = raw.appendUnquotedUTF8(myOutputBuffer, myOutputTail)
+
+        if (length < 0) {
+            writeBytes(raw.asUnquotedUTF8())
+        } else {
+            myOutputTail += length
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     override fun writeRaw(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        var offset = offset
+        var length = length
+        checkRangeBoundsForCharArray(buffer, offset, length)
+        val length3 = length * 3
+
+        if (myOutputTail + length3 >= myOutputEnd) {
+            if (myOutputEnd < length3) {
+                writeSegmentedRaw(buffer, offset, length)
+                return this
+            }
+
+            flushBuffer()
+        }
+
+        length += offset
+
+        mainLoop@ while (offset < length) {
+            while (true) {
+                val ch = buffer[offset].code
+
+                if (ch > 0x7F) {
+                    break
+                }
+
+                myOutputBuffer[myOutputTail++] = ch.toByte()
+
+                if (++offset >= length) {
+                    break@mainLoop
+                }
+            }
+
+            val ch = buffer[offset++].code
+
+            if (ch < 0x800) {
+                myOutputBuffer[myOutputTail++] = (ch shr 6 or 0xC0).toByte()
+                myOutputBuffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                offset = outputRawMultibyteChar(ch, buffer, offset, length)
+            }
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(char: Char): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myOutputTail + 3 >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        val ch = char.code
+        val buffer = myOutputBuffer
+
+        if (ch <= 0x7F) {
+            buffer[myOutputTail++] = ch.toByte()
+        } else if (ch < 0x800) {
+            buffer[myOutputTail++] = (ch shr 6 or 0xC0).toByte()
+            buffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
+        } else {
+            outputRawMultibyteChar(ch, null, 0, 0)
+        }
+
+        return this
     }
 
     /**
      * Helper method called when it is possible that output of raw section to output may cross buffer boundary
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeSegmentedRaw(buffer: CharArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+        val byteBuffer = myOutputBuffer
+        val inputEnd = offset + length
+
+        mainLoop@ while (offset < inputEnd) {
+            while (true) {
+                val ch = buffer[offset].code
+
+                if (ch > 0x7F) {
+                    break
+                }
+
+                if (myOutputTail >= myOutputEnd) {
+                    flushBuffer()
+                }
+
+                byteBuffer[myOutputTail++] = ch.toByte()
+
+                if (++offset >= inputEnd) {
+                    break@mainLoop
+                }
+            }
+
+            if (myOutputTail + 3 >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            val ch = buffer[offset++].code
+
+            if (ch < 0x800) {
+                byteBuffer[myOutputTail++] = (ch shr 6 or 0xC0).toByte()
+                byteBuffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                offset = outputRawMultibyteChar(ch, buffer, offset, inputEnd)
+            }
+        }
     }
 
     /**
-     * Helper method that is called for segmented write of raw content when explicitly outputting a segment of longer thing. Caller has to take care of ensuring there's no split surrogate pair at the end (that is, last char can not be first part of a surrogate char pair).
+     * Helper method that is called for segmented write of raw content when explicitly outputting a segment of longer
+     * thing. Caller has to take care of ensuring there's no split surrogate pair at the end (that is, last char can not
+     * be first part of a surrogate char pair).
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING", "SameParameterValue")
     private fun writeRawSegment(buffer: CharArray, offset: Int, end: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+
+        mainLoop@ while (offset < end) {
+            while (true) {
+                val ch = buffer[offset].code
+
+                if (ch > 0x7F) {
+                    break
+                }
+
+                myOutputBuffer[myOutputTail++] = ch.toByte()
+
+                if (++offset >= end) {
+                    break@mainLoop
+                }
+            }
+
+            val ch = buffer[offset++].code
+
+            if (ch < 0x800) {
+                myOutputBuffer[myOutputTail++] = (ch shr 6 or 0xC0).toByte()
+                myOutputBuffer[myOutputTail++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                offset = outputRawMultibyteChar(ch, buffer, offset, end)
+            }
+        }
     }
 
     /*
@@ -584,12 +917,58 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeBinary(variant: Base64Variant, data: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        checkRangeBoundsForByteArray(data, offset, length)
+
+        verifyValueWrite(WRITE_BINARY)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        writeBinaryInternal(variant, data, offset, offset + length)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int {
-        TODO("Not yet implemented")
+        verifyValueWrite(WRITE_BINARY)
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        val encodingBuffer = ioContext.allocateBase64Buffer()
+
+        val bytes = try {
+            if (dataLength < 0) {
+                writeBinary(variant, data, encodingBuffer)
+            } else {
+                val missing = writeBinary(variant, data, encodingBuffer, dataLength)
+
+                if (missing <= 0) {
+                    dataLength
+                } else {
+                    reportError("Too few bytes available: missing $missing bytes (out of $dataLength)")
+                }
+            }
+        } finally {
+            ioContext.releaseBase64Buffer(encodingBuffer)
+        }
+
+        if (myOutputTail >= myOutputEnd) {
+            flushBuffer()
+        }
+
+        myOutputBuffer[myOutputTail++] = myQuoteChar
+        return bytes
     }
 
     /*
