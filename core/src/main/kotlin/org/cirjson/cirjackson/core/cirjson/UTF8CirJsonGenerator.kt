@@ -426,15 +426,16 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
         }
 
         myOutputBuffer[myOutputTail++] = myQuoteChar
+        name.toCharArray(myCharBuffer!!, 0, 0, length)
 
         if (length <= myOutputMaxContiguous) {
             if (myOutputTail + length >= myOutputEnd) {
                 flushBuffer()
             }
 
-            writeStringSegment(name, 0, length)
+            writeStringSegment(myCharBuffer!!, 0, length)
         } else {
-            writeStringSegments(name, 0, length)
+            writeStringSegments(myCharBuffer!!, 0, length)
         }
 
         if (myOutputTail >= myOutputEnd) {
@@ -587,9 +588,9 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
                 flushBuffer()
             }
 
-            writeStringSegment(buffer, 0, length)
+            writeStringSegment(buffer, offset, length)
         } else {
-            writeStringSegments(buffer, 0, length)
+            writeStringSegments(buffer, offset, length)
         }
 
         if (myOutputTail >= myOutputEnd) {
@@ -1344,12 +1345,44 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     private fun writeBytes(buffer: ByteArray) {
-        TODO("Not yet implemented")
+        val length = buffer.size
+
+        if (myOutputTail + length >= myOutputEnd) {
+            flushBuffer()
+
+            if (length > MAX_BYTES_TO_BUFFER) {
+                try {
+                    myOutputStream!!.write(buffer, 0, length)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                return
+            }
+        }
+
+        buffer.copyInto(myOutputBuffer, myOutputTail, 0, length)
+        myOutputTail += length
     }
 
     @Throws(CirJacksonException::class)
     private fun writeBytes(buffer: ByteArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
+        if (myOutputTail + length >= myOutputEnd) {
+            flushBuffer()
+
+            if (length > MAX_BYTES_TO_BUFFER) {
+                try {
+                    myOutputStream!!.write(buffer, offset, length)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                return
+            }
+        }
+
+        buffer.copyInto(myOutputBuffer, myOutputTail, offset, offset + length)
+        myOutputTail += length
     }
 
     /*
@@ -1365,7 +1398,36 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
     @Throws(CirJacksonException::class)
     private fun writeStringSegments(text: String, addQuotes: Boolean) {
-        TODO("Not yet implemented")
+        if (addQuotes) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = myQuoteChar
+        }
+
+        var left = text.length
+        var offset = 0
+
+        while (left > 0) {
+            val length = min(myOutputMaxContiguous, left)
+
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(text, offset, length)
+            offset += length
+            left -= length
+        }
+
+        if (addQuotes) {
+            if (myOutputTail >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            myOutputBuffer[myOutputTail++] = myQuoteChar
+        }
     }
 
     /**
@@ -1373,8 +1435,22 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * guaranteed to fit in the output buffer. If so, we will need to choose smaller output chunks to write at a time.
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeStringSegments(buffer: CharArray, offset: Int, totalLength: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+        var totalLength = totalLength
+
+        do {
+            val length = min(myOutputMaxContiguous, totalLength)
+
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(buffer, offset, length)
+            offset += length
+            totalLength -= length
+        } while (totalLength > 0)
     }
 
     /**
@@ -1382,8 +1458,22 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * guaranteed to fit in the output buffer. If so, we will need to choose smaller output chunks to write at a time.
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING", "SameParameterValue")
     private fun writeStringSegments(text: String, offset: Int, totalLength: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+        var totalLength = totalLength
+
+        do {
+            val length = min(myOutputMaxContiguous, totalLength)
+
+            if (myOutputTail + length >= myOutputEnd) {
+                flushBuffer()
+            }
+
+            writeStringSegment(text, offset, length)
+            offset += length
+            totalLength -= length
+        } while (totalLength > 0)
     }
 
     /*
@@ -1399,7 +1489,10 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * necessarily flushed)
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeStringSegment(buffer: CharArray, offset: Int, length: Int) {
+        var offset = offset
+        var length = length
         TODO("Not yet implemented")
     }
 
@@ -1410,7 +1503,10 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * necessarily flushed)
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeStringSegment(text: String, offset: Int, length: Int) {
+        var offset = offset
+        var length = length
         TODO("Not yet implemented")
     }
 
@@ -1418,7 +1514,9 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * Secondary method called when content contains characters to escape, and/or multibyte UTF-8 characters.
      */
     @Throws(CirJacksonException::class)
-    private fun writeStringSegment(buffer: CharArray, offset: Int, length: Int, end: Int) {
+    @Suppress("NAME_SHADOWING")
+    private fun writeStringSegment2(buffer: CharArray, offset: Int, end: Int) {
+        var offset = offset
         TODO("Not yet implemented")
     }
 
@@ -1426,7 +1524,9 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * Secondary method called when content contains characters to escape, and/or multibyte UTF-8 characters.
      */
     @Throws(CirJacksonException::class)
-    private fun writeStringSegment(text: String, offset: Int, length: Int, end: Int) {
+    @Suppress("NAME_SHADOWING")
+    private fun writeStringSegment2(text: String, offset: Int, end: Int) {
+        var offset = offset
         TODO("Not yet implemented")
     }
 
