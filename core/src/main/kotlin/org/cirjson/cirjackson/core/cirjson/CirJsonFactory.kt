@@ -295,12 +295,23 @@ open class CirJsonFactory : TextualTSFactory {
 
     override fun createGenerator(writeContext: ObjectWriteContext, context: IOContext,
             writer: Writer): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator!!)
+        val characterEscapes = writeContext.characterEscapes ?: characterEscapes
+
+        return WriterBasedCirJsonGenerator(writeContext, context,
+                writeContext.getStreamWriteFeatures(streamWriteFeatures),
+                writeContext.getFormatWriteFeatures(formatWriteFeatures), writer, rootStep, writeContext.prettyPrinter,
+                characterEscapes, myMaximumNonEscapedCharCode, myQuoteChar)
     }
 
     override fun createUTF8Generator(writeContext: ObjectWriteContext, context: IOContext,
             output: OutputStream): CirJsonGenerator {
-        TODO("Not yet implemented")
+        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator!!)
+        val characterEscapes = writeContext.characterEscapes ?: characterEscapes
+
+        return UTF8CirJsonGenerator(writeContext, context, writeContext.getStreamWriteFeatures(streamWriteFeatures),
+                writeContext.getFormatWriteFeatures(formatWriteFeatures), output, rootStep, characterEscapes,
+                writeContext.prettyPrinter, myMaximumNonEscapedCharCode, myQuoteChar.code.toByte())
     }
 
     /*
