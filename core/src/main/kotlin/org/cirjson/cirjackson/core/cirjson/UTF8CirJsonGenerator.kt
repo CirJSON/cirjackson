@@ -1492,8 +1492,35 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Suppress("NAME_SHADOWING")
     private fun writeStringSegment(buffer: CharArray, offset: Int, length: Int) {
         var offset = offset
-        var length = length
-        TODO("Not yet implemented")
+        val length = length + offset
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < length) {
+            val ch = buffer[offset].code
+
+            if (ch > 0x7F || escapeCodes[ch] != 0) {
+                break
+            }
+
+            outputBuffer[outputPointer++] = ch.toByte()
+            ++offset
+        }
+
+        myOutputTail = outputPointer
+
+        if (offset >= length) {
+            return
+        }
+
+        if (myCharacterEscapes != null) {
+            writeCustomStringSegment(buffer, offset, length)
+        } else if (highestNonEscapedChar == 0) {
+            writeStringSegment2(buffer, offset, length)
+        } else {
+            writeStringSegmentASCII(buffer, offset, length)
+        }
     }
 
     /**
@@ -1506,8 +1533,35 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Suppress("NAME_SHADOWING")
     private fun writeStringSegment(text: String, offset: Int, length: Int) {
         var offset = offset
-        var length = length
-        TODO("Not yet implemented")
+        val length = length + offset
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < length) {
+            val ch = text[offset].code
+
+            if (ch > 0x7F || escapeCodes[ch] != 0) {
+                break
+            }
+
+            outputBuffer[outputPointer++] = ch.toByte()
+            ++offset
+        }
+
+        myOutputTail = outputPointer
+
+        if (offset >= length) {
+            return
+        }
+
+        if (myCharacterEscapes != null) {
+            writeCustomStringSegment(text, offset, length)
+        } else if (highestNonEscapedChar == 0) {
+            writeStringSegment2(text, offset, length)
+        } else {
+            writeStringSegmentASCII(text, offset, length)
+        }
     }
 
     /**
@@ -1517,7 +1571,45 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Suppress("NAME_SHADOWING")
     private fun writeStringSegment2(buffer: CharArray, offset: Int, end: Int) {
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < end) {
+            val ch = buffer[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /**
@@ -1527,7 +1619,45 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Suppress("NAME_SHADOWING")
     private fun writeStringSegment2(text: String, offset: Int, end: Int) {
         var offset = offset
-        TODO("Not yet implemented")
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < end) {
+            val ch = text[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /*
@@ -1540,16 +1670,106 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * Same as `writeStringSegment`, but with additional escaping for high-range code points
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeStringSegmentASCII(buffer: CharArray, offset: Int, end: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < end) {
+            val ch = buffer[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch > highestNonEscapedChar) {
+                outputPointer = writeGenericEscape(ch, outputPointer)
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /**
      * Same as `writeStringSegment`, but with additional escaping for high-range code points
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeStringSegmentASCII(text: String, offset: Int, end: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+
+        while (offset < end) {
+            val ch = text[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch > highestNonEscapedChar) {
+                outputPointer = writeGenericEscape(ch, outputPointer)
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /*
@@ -1562,28 +1782,185 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      * Same as `writeStringSegmentASCII`, but with additional escaping for high-range code points
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING", "DuplicatedCode")
     private fun writeCustomStringSegment(buffer: CharArray, offset: Int, end: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+        val maxUnescaped = if (highestNonEscapedChar > 0) highestNonEscapedChar else 0xFFFF
+        val customEscapes = myCharacterEscapes!!
+
+        while (offset < end) {
+            val ch = buffer[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else if (escape == CharacterEscapes.ESCAPE_CUSTOM) {
+                    val escapedString = customEscapes.getEscapeSequence(ch) ?: return reportError(
+                            "Invalid custom escape definitions; custom escape not found for character code 0x${
+                                ch.toString(16).uppercase()
+                            }, although was supposed to have one")
+                    outputPointer = writeCustomEscape(outputBuffer, outputPointer, escapedString, end - offset)
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch > maxUnescaped) {
+                outputPointer = writeGenericEscape(ch, outputPointer)
+                continue
+            }
+
+            val escape = customEscapes.getEscapeSequence(ch)
+
+            if (escape != null) {
+                outputPointer = writeCustomEscape(outputBuffer, outputPointer, escape, end - offset)
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /**
      * Same as `writeStringSegmentASCII`, but with additional escaping for high-range code points
      */
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING", "DuplicatedCode")
     private fun writeCustomStringSegment(text: String, offset: Int, end: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+
+        if (myOutputTail + 6 * (end - offset) > myOutputEnd) {
+            flushBuffer()
+        }
+
+        var outputPointer = myOutputTail
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+        val maxUnescaped = if (highestNonEscapedChar > 0) highestNonEscapedChar else 0xFFFF
+        val customEscapes = myCharacterEscapes!!
+
+        while (offset < end) {
+            val ch = text[offset++].code
+
+            if (ch <= 0x7F) {
+                if (escapeCodes[ch] == 0) {
+                    outputBuffer[outputPointer++] = ch.toByte()
+                    continue
+                }
+
+                val escape = escapeCodes[ch]
+
+                if (escape > 0) {
+                    outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                    outputBuffer[outputPointer++] = escape.toByte()
+                } else if (escape == CharacterEscapes.ESCAPE_CUSTOM) {
+                    val escapedString = customEscapes.getEscapeSequence(ch) ?: return reportError(
+                            "Invalid custom escape definitions; custom escape not found for character code 0x${
+                                ch.toString(16).uppercase()
+                            }, although was supposed to have one")
+                    outputPointer = writeCustomEscape(outputBuffer, outputPointer, escapedString, end - offset)
+                } else {
+                    outputPointer = writeGenericEscape(ch, outputPointer)
+                }
+
+                continue
+            }
+
+            if (ch > maxUnescaped) {
+                outputPointer = writeGenericEscape(ch, outputPointer)
+                continue
+            }
+
+            val escape = customEscapes.getEscapeSequence(ch)
+
+            if (escape != null) {
+                outputPointer = writeCustomEscape(outputBuffer, outputPointer, escape, end - offset)
+                continue
+            }
+
+            if (ch <= 0x7FF) {
+                outputBuffer[outputPointer++] = (ch shr 6 or 0xC0).toByte()
+                outputBuffer[outputPointer++] = (ch and 0x3F or 0x80).toByte()
+            } else {
+                outputPointer = outputMultibyteChar(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     @Throws(CirJacksonException::class)
     private fun writeCustomEscape(outputBuffer: ByteArray, outputPointer: Int, escape: SerializableString,
             remainingChars: Int): Int {
-        TODO("Not yet implemented")
+        val raw = escape.asUnquotedUTF8()
+        val length = raw.size
+
+        if (length > 6) {
+            handleLongCustomEscape(outputBuffer, outputPointer, myOutputEnd, raw, remainingChars)
+        }
+
+        raw.copyInto(outputBuffer, outputPointer, 0, length)
+        return outputPointer + length
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun handleLongCustomEscape(outputBuffer: ByteArray, outputPointer: Int, outputEnd: Int, raw: ByteArray,
             remainingChars: Int): Int {
-        TODO("Not yet implemented")
+        var outputPointer = outputPointer
+        val length = raw.size
+
+        if (outputPointer + length > outputEnd) {
+            myOutputTail = outputPointer
+            flushBuffer()
+            outputPointer = myOutputTail
+
+            if (length > outputBuffer.size) {
+                try {
+                    myOutputStream!!.write(raw, 0, length)
+                } catch (e: IOException) {
+                    throw wrapIOFailure(e)
+                }
+
+                return outputPointer
+            }
+        }
+
+        raw.copyInto(outputBuffer, outputPointer, 0, length)
+        outputPointer += length
+
+        return if (outputPointer + 6 * remainingChars > outputEnd) {
+            myOutputTail = outputPointer
+            flushBuffer()
+            myOutputTail
+        } else {
+            outputPointer
+        }
     }
 
     /*
@@ -1593,18 +1970,77 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeUTF8Segments(utf8: ByteArray, offset: Int, totalLength: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+        var totalLength = totalLength
+
+        do {
+            val length = min(myOutputMaxContiguous, totalLength)
+            writeUTF8Segment(utf8, offset, length)
+            offset += length
+            totalLength -= length
+        } while (totalLength > 0)
     }
 
     @Throws(CirJacksonException::class)
     private fun writeUTF8Segment(utf8: ByteArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
+        val escapeCodes = myOutputEscapes
+        var pointer = offset
+        val end = offset + length
+
+        while (pointer < end) {
+            val ch = utf8[pointer++].toInt()
+
+            if (ch >= 0 && escapeCodes[ch] != 0) {
+                writeUTF8Segment2(utf8, offset, length)
+                return
+            }
+        }
+
+        if (myOutputTail + length > myOutputEnd) {
+            flushBuffer()
+        }
+
+        utf8.copyInto(myOutputBuffer, myOutputTail, offset, offset + length)
+        myOutputTail += length
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("NAME_SHADOWING")
     private fun writeUTF8Segment2(utf8: ByteArray, offset: Int, length: Int) {
-        TODO("Not yet implemented")
+        var offset = offset
+        var length = length
+        var outputPointer = myOutputTail
+
+        if (outputPointer + length * 6 > myOutputEnd) {
+            flushBuffer()
+            outputPointer = myOutputTail
+        }
+
+        val outputBuffer = myOutputBuffer
+        val escapeCodes = myOutputEscapes
+        length += offset
+
+        while (offset < length) {
+            val ch = utf8[offset++].toInt()
+
+            if (ch < 0 || escapeCodes[ch] == 0) {
+                outputBuffer[outputPointer++] = ch.toByte()
+                continue
+            }
+
+            val escape = escapeCodes[ch]
+
+            if (escape > 0) {
+                outputBuffer[outputPointer++] = BYTE_BACKSLASH
+                outputBuffer[outputPointer++] = escape.toByte()
+            } else {
+                outputPointer = writeGenericEscape(ch, outputPointer)
+            }
+        }
+
+        myOutputTail = outputPointer
     }
 
     /*
