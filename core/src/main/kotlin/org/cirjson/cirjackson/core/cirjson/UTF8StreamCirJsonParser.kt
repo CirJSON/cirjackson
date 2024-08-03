@@ -671,6 +671,11 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         }
 
         if (streamReadContext!!.isExpectingComma) {
+            if (i != CODE_COMMA) {
+                return reportUnexpectedChar(i.toChar(),
+                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+            }
+
             i = skipWhitespace()
 
             if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
@@ -689,7 +694,15 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         updateNameLocation()
         val name = parseName(i)
         streamReadContext!!.currentName = name
-        myCurrentToken = CirJsonToken.PROPERTY_NAME
+        myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
+            if (name != idName) {
+                return reportInvalidToken(name!!, "Expected property name '$idName', received '$name'")
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME
+        } else {
+            CirJsonToken.PROPERTY_NAME
+        }
         i = skipColon()
         updateLocation()
 
@@ -3267,7 +3280,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             if (buffer[pointer++].toInt() == 'r'.code && buffer[pointer++].toInt() == 'u'.code &&
                     buffer[pointer++].toInt() == 'e'.code) {
-                val ch = buffer[pointer++].toInt() and 0xFF
+                val ch = buffer[pointer].toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
                     myInputPointer = pointer
@@ -3288,7 +3301,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             if (buffer[pointer++].toInt() == 'a'.code && buffer[pointer++].toInt() == 'l'.code &&
                     buffer[pointer++].toInt() == 's'.code && buffer[pointer++].toInt() == 'e'.code) {
-                val ch = buffer[pointer++].toInt() and 0xFF
+                val ch = buffer[pointer].toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
                     myInputPointer = pointer
@@ -3309,7 +3322,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             if (buffer[pointer++].toInt() == 'u'.code && buffer[pointer++].toInt() == 'l'.code &&
                     buffer[pointer++].toInt() == 'l'.code) {
-                val ch = buffer[pointer++].toInt() and 0xFF
+                val ch = buffer[pointer].toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
                     myInputPointer = pointer

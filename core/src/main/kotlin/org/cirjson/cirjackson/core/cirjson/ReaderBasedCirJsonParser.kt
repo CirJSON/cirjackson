@@ -685,7 +685,15 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             updateNameLocation()
             val name = if (i == CODE_QUOTE) parseName() else handleOddName(i)
             streamReadContext!!.currentName = name
-            myCurrentToken = CirJsonToken.PROPERTY_NAME
+            myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
+                if (name != idName) {
+                    return reportInvalidToken(name!!, "Expected property name '$idName', received '$name'")
+                }
+
+                CirJsonToken.CIRJSON_ID_PROPERTY_NAME
+            } else {
+                CirJsonToken.PROPERTY_NAME
+            }
             i = skipColon()
         }
 
