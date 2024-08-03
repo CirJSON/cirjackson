@@ -252,12 +252,10 @@ class ByteQuadsCanonicalizer {
      * information.
      */
     fun release() {
-        if (myParent == null || !isMaybeDirty) {
-            return
+        if (myParent != null && isMaybeDirty) {
+            myParent.mergeChild(TableInfo(this))
+            myIsHashShared = true
         }
-
-        myParent.mergeChild(TableInfo(this))
-        myIsHashShared = true
     }
 
     private fun mergeChild(state: TableInfo) {
@@ -866,7 +864,7 @@ class ByteQuadsCanonicalizer {
 
         myHashArea = IntArray(oldHashArea.size + (oldSize shl 3))
         bucketCount = newSize
-        mySpilloverEnd = newSize shl 2
+        mySecondaryStart = newSize shl 2
         myTertiaryStart = mySecondaryStart + (mySecondaryStart shr 1)
         myTertiaryShift = calculateTertiaryShift(newSize)
 
@@ -881,6 +879,7 @@ class ByteQuadsCanonicalizer {
             val length = oldHashArea[offset + 3]
 
             if (length == 0) {
+                offset += 4
                 continue
             }
 
@@ -1018,21 +1017,44 @@ class ByteQuadsCanonicalizer {
      */
     @Throws(StreamConstraintsException::class)
     fun addName(newName: String, quads: IntArray, qLength: Int): String {
+        verifySharing()
+
+        val name = myInterner?.intern(newName) ?: newName
+        val offset: Int
+
         when (qLength) {
-            3 -> return addName(newName, quads[0], quads[1], quads[2])
-            2 -> return addName(newName, quads[0], quads[1])
-            1 -> return addName(newName, quads[0])
+            1 -> {
+                offset = findOffsetForAdd(calculateHash(quads[0]))
+                myHashArea[offset] = quads[0]
+                myHashArea[offset + 3] = 1
+            }
+
+            2 -> {
+                offset = findOffsetForAdd(calculateHash(quads[0], quads[1]))
+                myHashArea[offset] = quads[0]
+                myHashArea[offset + 1] = quads[1]
+                myHashArea[offset + 3] = 2
+            }
+
+            3 -> {
+                offset = findOffsetForAdd(calculateHash(quads[0], quads[1], quads[2]))
+                myHashArea[offset] = quads[0]
+                myHashArea[offset + 1] = quads[1]
+                myHashArea[offset + 2] = 2
+                myHashArea[offset + 3] = 3
+            }
+
+            else -> {
+                val hash = calculateHash(quads, qLength)
+                offset = findOffsetForAdd(hash)
+
+                myHashArea[offset] = hash
+                val longStart = appendLongName(quads, qLength)
+                myHashArea[offset + 1] = longStart
+                myHashArea[offset + 3] = qLength
+            }
         }
 
-        verifySharing()
-        val name = myInterner?.intern(newName) ?: newName
-        val hash = calculateHash(quads, qLength)
-        val offset = findOffsetForAdd(hash)
-
-        myHashArea[offset] = hash
-        val longStart = appendLongName(quads, qLength)
-        myHashArea[offset + 1] = longStart
-        myHashArea[offset + 3] = qLength
         myNames[offset shr 2] = name
         ++myCount
         return name

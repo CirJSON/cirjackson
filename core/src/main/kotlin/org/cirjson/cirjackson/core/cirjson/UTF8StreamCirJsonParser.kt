@@ -666,7 +666,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
         if (i or 0x20 == CODE_R_CURLY) {
             closeScope(i)
-            val token = if (i == CODE_R_CURLY) CirJsonToken.END_ARRAY else CirJsonToken.END_OBJECT
+            val token = if (i == CODE_R_CURLY) CirJsonToken.END_OBJECT else CirJsonToken.END_ARRAY
             return token.also { myCurrentToken = it }
         }
 
@@ -2300,8 +2300,12 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                 }
             }
 
+            if (quadLength >= myQuadBuffer.size) {
+                myQuadBuffer = growNameDecodeBuffer(myQuadBuffer, quadLength)
+            }
+
             myQuadBuffer[quadLength++] = q
-            q = 1
+            q = i
         }
 
         return parseEscapedName(myQuadBuffer, quadLength, 0, q, 0)

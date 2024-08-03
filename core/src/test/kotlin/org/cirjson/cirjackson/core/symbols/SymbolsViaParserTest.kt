@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import java.nio.charset.StandardCharsets
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class SymbolsViaParserTest : TestBase() {
 
@@ -18,6 +19,16 @@ class SymbolsViaParserTest : TestBase() {
     @Test
     fun test17ByteSymbols() {
         test17Chars(true)
+    }
+
+    @Test
+    fun testSymbolTableExpansionChars() {
+        testSymbolTableExpansion(false)
+    }
+
+    @Test
+    fun testSymbolTableExpansionBytes() {
+        testSymbolTableExpansion(true)
     }
 
     /*
@@ -44,6 +55,7 @@ class SymbolsViaParserTest : TestBase() {
         for (i in 1..50) {
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
             symbols.add(parser.currentName!!)
+            assertEquals("lengthMatters${1000 + i}", parser.currentName!!)
             assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
         }
 
@@ -58,7 +70,7 @@ class SymbolsViaParserTest : TestBase() {
         stringBuilder.append("\"__cirJsonId__\": \"root\"")
 
         for (i in 1..50) {
-            stringBuilder.append(",\n\"lengthmatters").append(1000 * i).append("\": true")
+            stringBuilder.append(",\n\"lengthMatters").append(1000 + i).append("\": true")
         }
 
         stringBuilder.append("\n}")
@@ -66,7 +78,26 @@ class SymbolsViaParserTest : TestBase() {
     }
 
     private fun testSymbolTableExpansion(useBytes: Boolean) {
+        val cirJsonFactory = CirJsonFactory()
 
+        for (i in 1..200) {
+            val field = i.toString()
+            val doc = "{ \"__cirJsonId__\": \"root\", \"$field\" : \"test\" }"
+            val parser = if (useBytes) {
+                cirJsonFactory.createParser(ObjectReadContext.empty(), doc.toByteArray(StandardCharsets.UTF_8))
+            } else {
+                cirJsonFactory.createParser(ObjectReadContext.empty(), doc)
+            }
+            assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+            assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+            assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+            assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+            assertEquals(field, parser.currentName!!)
+            assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+            assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+            assertNull(parser.nextToken())
+            parser.close()
+        }
     }
 
 }

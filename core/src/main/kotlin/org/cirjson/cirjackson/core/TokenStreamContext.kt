@@ -45,7 +45,7 @@ abstract class TokenStreamContext protected constructor(protected var myType: In
      * without enclosing array or object structure.
      */
     val isInRoot
-        get() = myType == TYPE_ARRAY
+        get() = myType == TYPE_ROOT
 
     /**
      * Accessor that returns true if this context is an Object context; that is, content is being read from or written

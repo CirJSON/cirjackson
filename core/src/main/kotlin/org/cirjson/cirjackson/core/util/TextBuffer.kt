@@ -33,7 +33,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
     private var myInputLength = 0
 
     private val mySegmentsDelegate = lazy {
-        arrayListOf<CharArray>()
+        ArrayList<CharArray>(4)
     }
 
     /**
@@ -377,7 +377,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
 
         if (mySegmentsDelegate.isInitialized()) {
             for (segment in mySegments) {
-                stringBuilder.appendRange(segment, 0, currentSegmentSize)
+                stringBuilder.appendRange(segment, 0, segment.size)
             }
         }
 
@@ -619,6 +619,16 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
      */
 
     /**
+     * Method called to make sure that buffer is not using shared input
+     * buffer; if it is, it will copy such contents to private buffer.
+     */
+    fun ensureNotShared() {
+        if (myInputStart >= 0) {
+            unshare(16)
+        }
+    }
+
+    /**
      * Appends a character to the buffer.
      *
      * @param char char to append
@@ -652,7 +662,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
     private fun unshare(needExtra: Int) {
         val sharedLength = myInputLength
         myInputLength = 0
-        val inputBuffer = myInputBuffer!!
+        val inputBuffer = myInputBuffer
         myInputBuffer = null
         val start = myInputStart
         myInputStart = -1
@@ -664,7 +674,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
         }
 
         if (sharedLength > 0) {
-            inputBuffer.copyInto(myCurrentSegment!!, 0, start, start + sharedLength)
+            inputBuffer!!.copyInto(myCurrentSegment!!, 0, start, start + sharedLength)
         }
 
         mySegmentSize = 0
@@ -742,7 +752,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
         do {
             expand()
             val amount = min(myCurrentSegment!!.size, realLength)
-            chars.copyInto(current, 0, realStart, realStart + amount)
+            chars.copyInto(myCurrentSegment!!, 0, realStart, realStart + amount)
             currentSegmentSize += amount
             realStart += amount
             realLength -= amount
@@ -793,7 +803,7 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
         do {
             expand()
             val amount = min(myCurrentSegment!!.size, realLength)
-            string.toCharArray(current, 0, realOffset, realOffset + amount)
+            string.toCharArray(myCurrentSegment!!, 0, realOffset, realOffset + amount)
             currentSegmentSize += amount
             realOffset += amount
             realLength -= amount
