@@ -172,7 +172,7 @@ class ByteQuadsCanonicalizer {
         bucketCount = state.size
         mySecondaryStart = bucketCount shl 2
         myTertiaryStart = mySecondaryStart + (mySecondaryStart shr 1)
-        myTertiaryStart = state.myTertiaryShift
+        myTertiaryShift = state.myTertiaryShift
 
         myHashArea = state.mainHash
         myNames = state.myNames
@@ -261,7 +261,7 @@ class ByteQuadsCanonicalizer {
     private fun mergeChild(state: TableInfo) {
         var childState = state
 
-        val childCount = childState.size
+        val childCount = childState.myCount
         val currentState = myTableInfo!!.get()
 
         if (childCount == currentState.myCount) {
@@ -365,7 +365,7 @@ class ByteQuadsCanonicalizer {
      * Accessor mostly needed by unit tests; calculates number of entries in shared spill-over area
      */
     val spilloverCount
-        get() = (mySpilloverEnd - spilloverStart)
+        get() = (mySpilloverEnd - spilloverStart) shr 2
 
     /**
      * Helper accessor that calculates start of the spillover area
@@ -1040,7 +1040,7 @@ class ByteQuadsCanonicalizer {
                 offset = findOffsetForAdd(calculateHash(quads[0], quads[1], quads[2]))
                 myHashArea[offset] = quads[0]
                 myHashArea[offset + 1] = quads[1]
-                myHashArea[offset + 2] = 2
+                myHashArea[offset + 2] = quads[2]
                 myHashArea[offset + 3] = 3
             }
 

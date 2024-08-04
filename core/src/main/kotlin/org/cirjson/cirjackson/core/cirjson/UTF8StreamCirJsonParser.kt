@@ -90,6 +90,11 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
     protected var myNameStartColumn = 0
 
+    /**
+     * Accessor of [mySymbols] for tests
+     */
+    internal val symbols = mySymbols
+
     init {
         myInputPointer = start
         myInputEnd = end
@@ -1895,7 +1900,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
             return CODE_0
         }
 
-        var ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+        var ch = myInputBuffer[myInputPointer].toInt() and 0xFF
 
         if (ch !in CODE_0..CODE_9) {
             return CODE_0

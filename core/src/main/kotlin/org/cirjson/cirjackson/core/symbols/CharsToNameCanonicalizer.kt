@@ -341,7 +341,7 @@ class CharsToNameCanonicalizer {
         if (myIsHashShared) {
             copyArrays()
             myIsHashShared = false
-        } else {
+        } else if (mySize >= mySizeThreshold) {
             rehash()
             index = hashToIndex(calculateHash(buffer, start, length))
         }
@@ -378,9 +378,9 @@ class CharsToNameCanonicalizer {
      */
     private fun copyArrays() {
         val oldSymbols = mySymbols
-        mySymbols = oldSymbols.copyOf()
+        mySymbols = oldSymbols.copyOf(oldSymbols.size)
         val oldBuckets = myBuckets
-        myBuckets = oldBuckets.copyOf()
+        myBuckets = oldBuckets.copyOf(oldBuckets.size)
     }
 
     /**
@@ -486,6 +486,7 @@ class CharsToNameCanonicalizer {
         maxCollisionLength = -1
     }
 
+    @Suppress("SameParameterValue")
     private fun reportTooManyCollisions(maxLength: Int) {
         throw StreamConstraintsException("Longest collision chain in symbol table (of size $mySize) now exceeds " +
                 "maximum, $maxLength -- suspect a DoS attack based on hash collisions. You can disable the check via " +
