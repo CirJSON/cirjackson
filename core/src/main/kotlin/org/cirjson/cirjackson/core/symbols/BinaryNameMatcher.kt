@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.symbols
 
 import org.cirjson.cirjackson.core.util.Named
+import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -76,7 +77,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
      */
 
     fun addName(name: String): Int {
-        val ch = name.toByteArray(Charsets.UTF_8)
+        val ch = name.toByteArray(StandardCharsets.UTF_8)
         val length = ch.size
 
         if (length > 12) {
@@ -122,6 +123,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         val offset = findOffsetForAdd(calculateHash(q1, q2, q3))
         myHashArea[offset] = q1
         myHashArea[offset + 1] = q2
+        myHashArea[offset + 2] = q3
         myHashArea[offset + 3] = lengthAndIndex(3)
         return index
     }
@@ -164,12 +166,12 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return offset2
         }
 
-        offset2 = myTertiaryStart + (offset shr myTertiaryStart + 2 shl myTertiaryShift)
+        offset2 = myTertiaryStart + (offset shr myTertiaryShift + 2 shl myTertiaryShift)
         val bucketSize = 1 shl myTertiaryShift
         var end = offset2 + bucketSize
 
         while (offset2 < end) {
-            if (hashArea[offset2 + 2] == 0) {
+            if (hashArea[offset2 + 3] == 0) {
                 return offset2
             }
 
@@ -198,7 +200,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         }
 
         quads.copyInto(myHashArea, start, 0, quadLength)
-        myLongNameOffset = quadLength
+        myLongNameOffset += quadLength
         return start
     }
 
@@ -602,7 +604,7 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
             return false
         }
 
-        return quads[index] != hashArea[spillOffset]
+        return quads[index] == hashArea[spillOffset]
     }
 
     @Suppress("NAME_SHADOWING")
@@ -618,6 +620,95 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
         } while (index < quadLength)
 
         return true
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Hash calculation
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Calculates the hash based on the quad
+     *
+     * @param q1 Quad of name representation
+     *
+     * @return The calculated hash
+     */
+    private fun calculateHash(q1: Int): Int {
+        val hash = q1 + (q1 ushr 16) xor (q1 shl 3)
+        return hash + (hash ushr 11)
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @return The calculated hash
+     */
+    private fun calculateHash(q1: Int, q2: Int): Int {
+        var hash = q1 + (q1 ushr 15) xor (q1 ushr 9)
+        hash += q2 * MULT xor (q2 ushr 15)
+        hash += (hash ushr 7) + (hash ushr 3)
+        return hash
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param q1 First quad of name representation
+     *
+     * @param q2 Second quad of name representation
+     *
+     * @param q3 Third quad of name representation
+     *
+     * @return The calculated hash
+     */
+    private fun calculateHash(q1: Int, q2: Int, q3: Int): Int {
+        var hash = q1 + (q1 ushr 15) xor (q1 ushr 9)
+        hash = ((hash * MULT) + q2) xor ((q2 ushr 15) + (q2 shr 7))
+        hash = ((hash * MULT3) + q3) xor ((q3 ushr 13) + (q3 shr 9))
+        hash += hash ushr 4
+        return hash
+    }
+
+    /**
+     * Calculates the hash based on the quads
+     *
+     * @param quads Quads of name representation
+     *
+     * @param qLength Number of quads in `quads`
+     *
+     * @return The calculated hash
+     *
+     * @throws IllegalArgumentException if `qLength` is less than 4
+     */
+    private fun calculateHash(quads: IntArray, qLength: Int): Int {
+        if (qLength < 4) {
+            throw IllegalArgumentException("Quads length must be at least 4 (got $qLength)")
+        }
+
+        var hash = quads[0]
+        hash += hash ushr 9
+        hash += quads[1]
+        hash += hash ushr 15
+        hash *= MULT
+        hash = hash xor quads[2]
+        hash += hash ushr 4
+
+        for (i in 3..<qLength) {
+            var next = quads[i]
+            next = next xor (next shr 21)
+            hash += next
+        }
+
+        hash *= MULT2
+        hash += hash ushr 19
+        hash = hash xor (hash shl 5)
+        return hash
     }
 
     /*
@@ -719,100 +810,12 @@ class BinaryNameMatcher private constructor(matcher: SimpleNameMatcher, nameLook
 
         /*
          ***************************************************************************************************************
-         * Hash calculation
-         ***************************************************************************************************************
-         */
-
-        /**
-         * Calculates the hash based on the quad
-         *
-         * @param q1 Quad of name representation
-         *
-         * @return The calculated hash
-         */
-        private fun calculateHash(q1: Int): Int {
-            val hash = q1 + (q1 ushr 16) xor (q1 shl 3)
-            return hash + hash ushr 11
-        }
-
-        /**
-         * Calculates the hash based on the quads
-         *
-         * @param q1 First quad of name representation
-         *
-         * @param q2 Second quad of name representation
-         *
-         * @return The calculated hash
-         */
-        private fun calculateHash(q1: Int, q2: Int): Int {
-            var hash = q1 + (q1 ushr 15) xor (q1 ushr 9)
-            hash += q2 * MULT xor (q2 ushr 15)
-            hash += (hash ushr 7) + (hash ushr 3)
-            return hash
-        }
-
-        /**
-         * Calculates the hash based on the quads
-         *
-         * @param q1 First quad of name representation
-         *
-         * @param q2 Second quad of name representation
-         *
-         * @param q3 Third quad of name representation
-         *
-         * @return The calculated hash
-         */
-        private fun calculateHash(q1: Int, q2: Int, q3: Int): Int {
-            var hash = q1 + (q1 ushr 15) xor (q1 ushr 9)
-            hash += ((hash * MULT) + q2) xor ((q2 ushr 15) + (q2 ushr 7))
-            hash += ((hash * MULT3) + q3) xor ((q3 ushr 13) + (q3 ushr 9))
-            return hash
-        }
-
-        /**
-         * Calculates the hash based on the quads
-         *
-         * @param quads Quads of name representation
-         *
-         * @param qLength Number of quads in `quads`
-         *
-         * @return The calculated hash
-         *
-         * @throws IllegalArgumentException if `qLength` is less than 4
-         */
-        private fun calculateHash(quads: IntArray, qLength: Int): Int {
-            if (qLength < 4) {
-                throw IllegalArgumentException("Quads length must be at least 4 (got $qLength)")
-            }
-
-            var hash = quads[0]
-            hash += hash ushr 9
-            hash += quads[1]
-            hash += hash ushr 15
-            hash *= MULT
-            hash = hash xor quads[2]
-            hash += hash ushr 4
-
-            for (i in 3..<qLength) {
-                var next = quads[i]
-                next = next xor (next shr 21)
-                hash += next
-            }
-
-            hash *= MULT2
-            hash += hash ushr 19
-            hash = hash xor (hash shl 5)
-            return hash
-        }
-
-        /*
-         ***************************************************************************************************************
          * Helper methods
          ***************************************************************************************************************
          */
 
         fun quads(name: String): IntArray {
-            val bytes = name.toByteArray(Charsets.UTF_8)
+            val bytes = name.toByteArray(StandardCharsets.UTF_8)
             val length = bytes.size
             val buffer = IntArray(length + 3 shr 2)
 
