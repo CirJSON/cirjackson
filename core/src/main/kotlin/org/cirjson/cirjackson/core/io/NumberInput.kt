@@ -539,4 +539,35 @@ object NumberInput {
         }
     }
 
+    /**
+     * Method called to check whether given pattern looks like a valid Number (which is a bit looser definition than
+     * valid CirJSON Number). Used as pre-parsing check when parsing "Stringified numbers".
+     *
+     * The differences to stricter CirJSON Number are:
+     *
+     * * Positive sign is allowed
+     *
+     * * Leading zeroes are allowed
+     *
+     * Note: no trimming (`String.trim()`) nor null checks are performed on String passed.
+     *
+     * Note: this method returning `true` DOES NOT GUARANTEE String is valid number but just that it looks close enough.
+     *
+     * @param string String to validate
+     *
+     * @return `true` if String looks like valid Java number; `false` otherwise.
+     */
+    fun looksLikeValidNumber(string: String?): Boolean {
+        if (string.isNullOrEmpty()) {
+            return false
+        }
+
+        return if (string.length == 1) {
+            val c = string[0]
+            c in '0'..'9'
+        } else {
+            PATTERN_FLOAT.matches(string)
+        }
+    }
+
 }
