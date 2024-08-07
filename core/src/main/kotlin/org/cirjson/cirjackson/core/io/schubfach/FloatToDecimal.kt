@@ -32,7 +32,7 @@ class FloatToDecimal private constructor() {
     private fun toDecimal(v: Float): Int {
         val bits = v.toRawBits()
         val t = bits and T_MASK
-        val bq = bits ushr DoubleToDecimal.P - 1 and BQ_MASK
+        val bq = bits ushr P - 1 and BQ_MASK
 
         if (bq < BQ_MASK) {
             myIndex = -1
@@ -80,7 +80,7 @@ class FloatToDecimal private constructor() {
         val (cbl, k) = if (c != C_MIN || q == Q_MIN) {
             (cb - 2) to MathUtils.flog10pow2(q)
         } else {
-            (cb - 2) to MathUtils.flog10threeQuartersPow2(q)
+            (cb - 1) to MathUtils.flog10threeQuartersPow2(q)
         }
 
         val h = q + MathUtils.flog2pow10(-k) + 33
@@ -229,6 +229,7 @@ class FloatToDecimal private constructor() {
 
         if (e < 10) {
             appendDigit(e)
+            return
         }
 
         val d = e * 103 ushr 10
@@ -248,7 +249,7 @@ class FloatToDecimal private constructor() {
      * Using the deprecated constructor enhances performance.
      */
     private fun charsToString(): String {
-        return String(myBytes, 0, 0, myIndex + 1).toString()
+        return String(myBytes, 0, 0, myIndex + 1)
     }
 
     companion object {

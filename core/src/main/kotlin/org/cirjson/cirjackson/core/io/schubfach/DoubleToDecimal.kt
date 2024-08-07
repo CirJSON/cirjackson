@@ -94,7 +94,7 @@ class DoubleToDecimal private constructor() {
         val (cbl, k) = if (c != C_MIN || q == Q_MIN) {
             (cb - 2) to MathUtils.flog10pow2(q)
         } else {
-            (cb - 2) to MathUtils.flog10threeQuartersPow2(q)
+            (cb - 1) to MathUtils.flog10threeQuartersPow2(q)
         }
 
         val h = q + MathUtils.flog2pow10(-k) + 2
@@ -108,7 +108,7 @@ class DoubleToDecimal private constructor() {
         val s = vb shr 2
 
         if (s >= 100) {
-            val sp10 = MathUtils.multiplyHigh(s, 115_292_150_460_684_698L shl 4)
+            val sp10 = 10 * MathUtils.multiplyHigh(s, 115_292_150_460_684_698L shl 4)
             val tp10 = sp10 + 10
             val uPin = vbl + out <= sp10 shl 2
             val wPin = (tp10 shl 2) + out <= vbr
@@ -254,6 +254,7 @@ class DoubleToDecimal private constructor() {
 
         if (e < 10) {
             appendDigit(e)
+            return
         }
 
         var d: Int
@@ -281,7 +282,7 @@ class DoubleToDecimal private constructor() {
      * Using the deprecated constructor enhances performance.
      */
     private fun charsToString(): String {
-        return String(myBytes, 0, 0, myIndex + 1).toString()
+        return String(myBytes, 0, 0, myIndex + 1)
     }
 
     companion object {
@@ -514,7 +515,7 @@ class DoubleToDecimal private constructor() {
             val y1 = MathUtils.multiplyHigh(g1, cp)
             val z = (y0 ushr 1) + x1
             val vpb = y1 + (z ushr 63)
-            return ((z and MASK_63) + MASK_63 ushr 32 or vpb)
+            return (z and MASK_63) + MASK_63 ushr 63 or vpb
         }
 
     }
