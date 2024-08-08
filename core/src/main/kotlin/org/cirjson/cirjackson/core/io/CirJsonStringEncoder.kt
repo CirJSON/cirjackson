@@ -18,11 +18,11 @@ object CirJsonStringEncoder {
 
     private val HEX_BYTES = CharTypes.copyHexBytes(true)
 
-    private const val MIN_CHAR_BUFFER_SIZE = 16
+    internal const val MIN_CHAR_BUFFER_SIZE = 16
 
-    private const val MIN_BYTE_BUFFER_SIZE = 24
+    internal const val MIN_BYTE_BUFFER_SIZE = 24
 
-    private const val MAX_BUFFER_SIZE = 32000
+    internal const val MAX_BUFFER_SIZE = 32000
 
     /*
      *******************************************************************************************************************
@@ -43,8 +43,7 @@ object CirJsonStringEncoder {
         val escapeCodes = CharTypes.sevenBitOutputEscapes
         val escapeCodeCount = escapeCodes.size
         var inputPointer = 0
-        val textBufferDelegate = lazy { TextBuffer.fromInitial(outputBuffer) }
-        val textBuffer by textBufferDelegate
+        var textBuffer: TextBuffer? = null
         var outputPointer = 0
         val qBuffer by lazy { qBuffer() }
 
@@ -57,6 +56,10 @@ object CirJsonStringEncoder {
                 }
 
                 if (outputPointer >= outputBuffer.size) {
+                    if (textBuffer == null) {
+                        textBuffer = TextBuffer.fromInitial(outputBuffer)
+                    }
+
                     outputBuffer = textBuffer.finishCurrentSegment()
                     outputPointer = 0
                 }
@@ -79,6 +82,10 @@ object CirJsonStringEncoder {
                     qBuffer.copyInto(outputBuffer, outputPointer, 0, first)
                 }
 
+                if (textBuffer == null) {
+                    textBuffer = TextBuffer.fromInitial(outputBuffer)
+                }
+
                 outputBuffer = textBuffer.finishCurrentSegment()
                 val second = length - first
                 qBuffer.copyInto(outputBuffer, 0, first, second + first)
@@ -89,12 +96,12 @@ object CirJsonStringEncoder {
             }
         }
 
-        if (!textBufferDelegate.isInitialized()) {
-            return outputBuffer.copyOfRange(0, outputPointer)
+        return if (textBuffer == null) {
+            outputBuffer.copyOfRange(0, outputPointer)
+        } else {
+            textBuffer.currentSegmentSize = outputPointer
+            textBuffer.contentsAsArray()
         }
-
-        textBuffer.currentSegmentSize = outputPointer
-        return textBuffer.finishCurrentSegment()
     }
 
     /**
@@ -147,8 +154,7 @@ object CirJsonStringEncoder {
         val inputEnd = text.length
         var outputPointer = 0
         var outputBuffer = ByteArray(initialByteBufferSize(inputEnd))
-        val byteBuilderDelegate = lazy { ByteArrayBuilder.fromInitial(outputBuffer, outputPointer) }
-        val byteBuilder by byteBuilderDelegate
+        var byteBuilder: ByteArrayBuilder? = null
 
         main@ while (inputPointer < inputEnd) {
             val escapeCodes = CharTypes.sevenBitOutputEscapes
@@ -161,6 +167,10 @@ object CirJsonStringEncoder {
                 }
 
                 if (outputPointer >= outputBuffer.size) {
+                    if (byteBuilder == null) {
+                        byteBuilder = ByteArrayBuilder.fromInitial(outputBuffer, outputPointer)
+                    }
+
                     outputBuffer = byteBuilder.finishCurrentSegment()
                     outputPointer = 0
                 }
@@ -170,6 +180,10 @@ object CirJsonStringEncoder {
                 if (++inputPointer >= inputEnd) {
                     break@main
                 }
+            }
+
+            if (byteBuilder == null) {
+                byteBuilder = ByteArrayBuilder.fromInitial(outputBuffer, outputPointer)
             }
 
             if (outputPointer >= outputBuffer.size) {
@@ -234,11 +248,7 @@ object CirJsonStringEncoder {
             outputBuffer[outputPointer++] = ch.toByte()
         }
 
-        return if (!byteBuilderDelegate.isInitialized()) {
-            outputBuffer.copyOfRange(0, outputPointer)
-        } else {
-            byteBuilder.completeAndCoalesce(outputPointer)
-        }
+        return byteBuilder?.completeAndCoalesce(outputPointer) ?: outputBuffer.copyOfRange(0, outputPointer)
     }
 
     /**
@@ -254,14 +264,17 @@ object CirJsonStringEncoder {
         var outputPointer = 0
         var outputBuffer = ByteArray(initialByteBufferSize(inputEnd))
         var outputEnd = outputBuffer.size
-        val byteBuilderDelegate = lazy { ByteArrayBuilder.fromInitial(outputBuffer, outputPointer) }
-        val byteBuilder by byteBuilderDelegate
+        var byteBuilder: ByteArrayBuilder? = null
 
         main@ while (inputPointer < inputEnd) {
             var c = text[inputPointer++].code
 
             while (c <= 0x7F) {
                 if (outputPointer >= outputEnd) {
+                    if (byteBuilder == null) {
+                        byteBuilder = ByteArrayBuilder.fromInitial(outputBuffer, outputPointer)
+                    }
+
                     outputBuffer = byteBuilder.finishCurrentSegment()
                     outputEnd = outputBuffer.size
                     outputPointer = 0
@@ -274,6 +287,10 @@ object CirJsonStringEncoder {
                 }
 
                 c = text[inputPointer++].code
+            }
+
+            if (byteBuilder == null) {
+                byteBuilder = ByteArrayBuilder.fromInitial(outputBuffer, outputPointer)
             }
 
             if (outputPointer >= outputEnd) {
@@ -331,11 +348,7 @@ object CirJsonStringEncoder {
             outputBuffer[outputPointer++] = (0x80 or (c and 0x3F)).toByte()
         }
 
-        return if (!byteBuilderDelegate.isInitialized()) {
-            outputBuffer.copyOfRange(0, outputPointer)
-        } else {
-            byteBuilder.completeAndCoalesce(outputPointer)
-        }
+        return byteBuilder?.completeAndCoalesce(outputPointer) ?: outputBuffer.copyOfRange(0, outputPointer)
     }
 
     /*
@@ -347,8 +360,8 @@ object CirJsonStringEncoder {
     private fun qBuffer(): CharArray {
         val buf = CharArray(6)
         buf[0] = '\\'
-        buf[1] = '0'
         buf[2] = '0'
+        buf[3] = '0'
         return buf
     }
 

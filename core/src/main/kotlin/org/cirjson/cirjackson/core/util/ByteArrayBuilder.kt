@@ -173,7 +173,7 @@ class ByteArrayBuilder private constructor(private val myBufferRecycler: BufferR
 
         for (block in myPastBlocks) {
             val length = block.size
-            block.copyInto(result, offset, 0, offset + length)
+            block.copyInto(result, offset, 0, length)
             offset += length
         }
 
@@ -283,7 +283,7 @@ class ByteArrayBuilder private constructor(private val myBufferRecycler: BufferR
         /**
          * Maximum block size we will use for individual non-aggregated blocks. Limit is 128k chunks.
          */
-        private const val MAX_BLOCK_SIZE = (1 shr 17)
+        private const val MAX_BLOCK_SIZE = (1 shl 17)
 
         fun fromInitial(initialBlock: ByteArray, length: Int): ByteArrayBuilder {
             return ByteArrayBuilder(null, initialBlock, length)

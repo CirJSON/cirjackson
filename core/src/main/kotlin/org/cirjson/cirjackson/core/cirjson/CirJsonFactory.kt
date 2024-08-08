@@ -344,7 +344,7 @@ open class CirJsonFactory : TextualTSFactory {
         /**
          * Bitfield (set of flags) of all generator features that are enabled by default.
          */
-        internal val DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS = CirJsonReadFeature.collectDefaults()
+        internal val DEFAULT_CIRJSON_GENERATOR_FEATURE_FLAGS = CirJsonWriteFeature.collectDefaults()
 
         const val DEFAULT_QUOTE_CHAR = '"'
 

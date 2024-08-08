@@ -2102,7 +2102,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         if (escapeCode != CharacterEscapes.ESCAPE_CUSTOM) {
             val hexChars = hexChars
 
-            if (myOutputTail >= 6) {
+            if (pointer in 6..<end) {
                 pointer -= 6
                 buffer[pointer++] = '\\'
                 buffer[pointer++] = 'u'
