@@ -13,7 +13,7 @@ val cirJacksonVersion: String = properties.getProperty("cirjackson.version")
 plugins {
     kotlin("jvm")
     id("org.jetbrains.dokka")
-    id("org.jetbrains.kotlinx.kover") version "0.8.2"
+    id("org.jetbrains.kotlinx.kover") version "0.8.3"
 }
 
 group = "org.cirjson.cirjackson"
