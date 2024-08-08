@@ -1324,7 +1324,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     override fun releaseBuffers() {
         val buffer = myOutputBuffer
 
-        if (buffer !== FLUSHED_OUTPUT_BUFFER) {
+        if (buffer !== FLUSHED_OUTPUT_BUFFER && myIsBufferRecyclable) {
             myOutputBuffer = FLUSHED_OUTPUT_BUFFER
             ioContext.releaseWriteEncodingBuffer(buffer)
         }
@@ -1333,7 +1333,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
         if (charBuffer != null) {
             myCharBuffer = null
-            ioContext.releaseNameCopyBuffer(charBuffer)
+            ioContext.releaseConcatBuffer(charBuffer)
         }
     }
 

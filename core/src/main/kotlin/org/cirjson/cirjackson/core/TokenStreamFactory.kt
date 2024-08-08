@@ -108,7 +108,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
         this.streamReadConstraints = streamReadConstraints
         this.streamWriteConstraints = streamWriteConstraints
         this.errorReportConfiguration = errorReportConfiguration
-        recyclerPool = CirJsonRecyclerPools.newConcurrentDequePool()
+        recyclerPool = CirJsonRecyclerPools.defaultPool()
         factoryFeatures = DEFAULT_FACTORY_FEATURE_FLAGS
         streamReadFeatures = DEFAULT_STREAM_READ_FEATURE_FLAGS
         streamWriteFeatures = DEFAULT_STREAM_WRITE_FEATURE_FLAGS
@@ -129,7 +129,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
         streamWriteConstraints = baseBuilder.streamWriteConstraints
         errorReportConfiguration = baseBuilder.errorReportConfiguration
 
-        recyclerPool = baseBuilder.recyclerPool ?: CirJsonRecyclerPools.newConcurrentDequePool()
+        recyclerPool = baseBuilder.recyclerPool ?: CirJsonRecyclerPools.defaultPool()
 
         factoryFeatures = baseBuilder.factoryFeatures
         streamReadFeatures = baseBuilder.streamReadFeatures

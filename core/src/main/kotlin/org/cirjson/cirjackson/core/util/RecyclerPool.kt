@@ -1,7 +1,10 @@
 package org.cirjson.cirjackson.core.util
 
+import org.cirjson.cirjackson.core.util.RecyclerPool.*
+import org.cirjson.cirjackson.core.util.RecyclerPool.BoundedPoolBase.Companion.DEFAULT_CAPACITY
 import java.io.Serializable
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentLinkedDeque
 
 /**
@@ -22,7 +25,7 @@ import java.util.concurrent.ConcurrentLinkedDeque
  *
  * @param P Type of Objects pool recycles
  */
-interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
+interface RecyclerPool<P : WithPool<P>> : Serializable {
 
     /**
      * Method for subclasses to implement for actual acquire logic; called by [acquireAndLinkPooled].
@@ -54,6 +57,29 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
     fun releasePooled(pooled: P)
 
     /**
+     * Optional method that may allow dropping of all pooled Objects; mostly useful for unbounded pool implementations
+     * that may retain significant memory and that may then be cleared regularly.
+     *
+     * @return `true` if pool supports operation and dropped all pooled Objects; `false` otherwise.
+     */
+    fun clear(): Boolean {
+        return false
+    }
+
+    /**
+     * Diagnostic method for obtaining an estimate of number of pooled items this pool contains, available for
+     * recycling. Note that, in addition to this information possibly not being available (denoted by return value of
+     * `-1`), even when available, this may be just an approximation.
+     *
+     * Default method implementation simply returns `-1` and is meant to be overridden by concrete subclasses.
+     *
+     * @return Number of pooled entries available from this pool, if available; `-1` if not.
+     */
+    fun pooledCount(): Int {
+        return -1
+    }
+
+    /**
      * Simple add-on interface that poolable entities must implement.
      *
      * @param P Self type
@@ -83,6 +109,66 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
      */
 
     /**
+     * Default [RecyclerPool] implementation that uses [ThreadLocal] for recycling instances. Instances are stored using
+     * [java.lang.ref.SoftReference]s so that they may be Garbage Collected as needed by JVM.
+     *
+     * Note that this implementation may not work well on platforms where [java.lang.ref.SoftReference]s are not
+     * well-supported (like Android), or on platforms where [java.lang.Thread]s are not long-living or reused (like
+     * Project Loom).
+     */
+    abstract class ThreadLocalPoolBase<P : WithPool<P>> protected constructor() : RecyclerPool<P> {
+
+        abstract override fun acquirePooled(): P
+
+        override fun acquireAndLinkPooled(): P {
+            return acquirePooled()
+        }
+
+        override fun releasePooled(pooled: P) {
+            // no-op
+        }
+
+        override fun clear(): Boolean {
+            return false
+        }
+
+        override fun pooledCount(): Int {
+            return -1
+        }
+
+    }
+
+    /**
+     * [RecyclerPool] implementation that does not use any pool but simply creates new instances when necessary.
+     */
+    abstract class NonRecyclingPoolBase<P : WithPool<P>> : RecyclerPool<P> {
+
+        abstract override fun acquirePooled(): P
+
+        override fun acquireAndLinkPooled(): P {
+            return acquirePooled()
+        }
+
+        override fun releasePooled(pooled: P) {
+            // no-op
+        }
+
+        /**
+         * Although no pooling occurs, we consider clearing to succeed, so always returns `true`.
+         *
+         * @return Always returns `true`
+         */
+        override fun clear(): Boolean {
+            return true
+        }
+
+        override fun pooledCount(): Int {
+            return 0
+        }
+
+    }
+
+    /**
      * Intermediate base class for instances that are stateful and require special handling with respect to JDK
      * serialization, to retain "global" reference distinct from non-shared ones.
      *
@@ -93,6 +179,10 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
             RecyclerPool<P> {
 
         abstract fun createPooled(): P
+
+        protected open fun resolveToShared(shared: StatefulImplBase<P>): StatefulImplBase<P>? {
+            return shared.takeIf { serialization == SERIALIZATION_SHARED }
+        }
 
         companion object {
 
@@ -121,6 +211,55 @@ interface RecyclerPool<P : RecyclerPool.WithPool<P>> : Serializable {
 
         override fun releasePooled(pooled: P) {
             pool.offerLast(pooled)
+        }
+
+        override fun pooledCount(): Int {
+            return pool.size
+        }
+
+        override fun clear(): Boolean {
+            pool.clear()
+            return true
+        }
+
+    }
+
+    /**
+     * [RecyclerPool] implementation that uses a bounded queue ([ArrayBlockingQueue] for recycling instances. This is
+     * "bounded" pool since it will never hold on to more pooled instances than its size configuration: the default size
+     * is [DEFAULT_CAPACITY].
+     */
+    abstract class BoundedPoolBase<P : WithPool<P>> protected constructor(capacityAsId: Int) :
+            StatefulImplBase<P>(capacityAsId) {
+
+        val capacity = capacityAsId.takeIf { it > 0 } ?: DEFAULT_CAPACITY
+
+        private val pool = ArrayBlockingQueue<P>(capacity)
+
+        override fun acquirePooled(): P {
+            return pool.poll() ?: createPooled()
+        }
+
+        override fun releasePooled(pooled: P) {
+            pool.offer(pooled)
+        }
+
+        override fun pooledCount(): Int {
+            return pool.size
+        }
+
+        override fun clear(): Boolean {
+            pool.clear()
+            return true
+        }
+
+        companion object {
+
+            /**
+             * Default capacity which limits number of items that are ever retained for reuse.
+             */
+            const val DEFAULT_CAPACITY = 100
+
         }
 
     }
