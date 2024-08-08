@@ -5,6 +5,8 @@ import org.jetbrains.annotations.NotNull;
 
 public final class HardHolder {
 
+    public static final long DOUBLE_NEGATIVE_ZERO_BITS = 0x8000000000000000L;
+
     public static final int INT1 = 0xFFC0_0001;
 
     public static final int INT2 = 0xFF80_0001;
