@@ -281,7 +281,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     override fun writeArrayId(referenced: Any): CirJsonGenerator {
         val id = getArrayID(referenced)
-        writeStringInternal(id)
+        writeString(id)
         return this
     }
 
