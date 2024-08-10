@@ -1,6 +1,11 @@
 package org.cirjson.cirjackson.core.filter
 
+import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.CirJsonParser
+import java.io.Reader
+import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Strategy class that can be implemented to specify actual inclusion/exclusion criteria for filtering, used by
@@ -63,7 +68,7 @@ open class TokenFilter {
      * or in part) is completed, in cases where filter other that [INCLUDE_ALL] was returned. This occurs when
      * [CirJsonGenerator.writeEndObject] is called.
      */
-    open fun filterEndObject() {
+    open fun filterFinishObject() {
         // no-op
     }
 
@@ -72,7 +77,7 @@ open class TokenFilter {
      * or in part) is completed, in cases where filter other that [INCLUDE_ALL] was returned. This occurs when
      * [CirJsonGenerator.writeEndArray] is called.
      */
-    open fun filterEndArray() {
+    open fun filterFinishArray() {
         // no-op
     }
 
@@ -156,6 +161,203 @@ open class TokenFilter {
      * Public API, scalar values (being read)
      *******************************************************************************************************************
      */
+
+    /**
+     * Call made when verifying whether a scalar value is being read from a parser.
+     *
+     * Default action is to call `includeScalar()` and return whatever it indicates.
+     *
+     * @param parser Parser that points to the value (typically `delegate` parser, not filtering parser that wraps it)
+     *
+     * @return `true` if scalar value is to be included; `false` if not
+     *
+     * @throws CirJacksonException if there are any problems reading content (typically via calling passed-in
+     * `CirJsonParser`)
+     */
+    @Throws(CirJacksonException::class)
+    open fun includeValue(parser: CirJsonParser): Boolean {
+        return includeScalar()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, scalar values (being written)
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Call made to verify whether leaf-level boolean value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeBoolean(value: Boolean): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level `null` value should be included in output or not.
+     *
+     * @return `true` if (`null`) value is to be included; `false` if not
+     */
+    open fun includeNull(): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level String value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeString(value: String): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level "streaming" String value should be included in output or not.
+     *
+     * NOTE: note that any reads from passed in `Reader` may lead to actual loss of content to write; typically method
+     * should NOT access content passed via this method.
+     *
+     * @param reader Reader used to pass String value to parser
+     *
+     * @param maxLength indicated maximum length of String value
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeString(reader: Reader, maxLength: Int): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level `Int` value should be included in output or not.
+     *
+     * NOTE: also called for `Short`, `Byte`
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: Int): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level `Long` value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: Long): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level [BigInteger] value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: BigInteger): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level `Float` value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: Float): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level `Double` value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: Double): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level [BigDecimal] value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeNumber(value: BigDecimal): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level Binary value should be included in output or not.
+     *
+     * NOTE: no binary payload passed; assumption is this won't be of much use.
+     *
+     * @return `true` if the binary value is to be included; `false` if not
+     */
+    open fun includeBinary(): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level raw (pre-encoded, not quoted by generator) value should be included in
+     * output or not.
+     *
+     * NOTE: value itself not passed since it may come in multiple forms and is unlikely to be of much use in
+     * determining inclusion criteria.
+     *
+     * @return `true` if the raw value is to be included; `false` if not
+     */
+    open fun includeRawValue(): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level embedded (Opaque) value should be included in output or not.
+     *
+     * @param value Value to check
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeEmbeddedValue(value: Any): Boolean {
+        return includeScalar()
+    }
+
+    /**
+     * Call made to verify whether leaf-level empty Array value should be included in output or not.
+     *
+     * @param contentsFiltered `true` if Array had contents, but they were filtered out (NOT included); `false` if we
+     * had actual empty Array.
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeEmptyArray(contentsFiltered: Boolean): Boolean {
+        return false
+    }
+
+    /**
+     * Call made to verify whether leaf-level empty Object value should be included in output or not.
+     *
+     * @param contentsFiltered `true` if Object had contents, but they were filtered out (NOT included); `false` if we
+     * had actual empty Object.
+     *
+     * @return `true` if value is to be included; `false` if not
+     */
+    open fun includeEmptyObject(contentsFiltered: Boolean): Boolean {
+        return false
+    }
 
     /*
      *******************************************************************************************************************
