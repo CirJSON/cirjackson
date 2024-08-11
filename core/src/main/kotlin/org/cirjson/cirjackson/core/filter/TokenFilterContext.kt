@@ -156,7 +156,6 @@ open class TokenFilterContext protected constructor(type: Int, final override va
 
             if (myType == TYPE_OBJECT) {
                 generator.writeStartObject()
-                generator.writeName(generator.idName)
                 generator.writeObjectId(myCurrentValue!!)
 
                 if (myIsNeedingToHandleName) {
@@ -216,7 +215,6 @@ open class TokenFilterContext protected constructor(type: Int, final override va
                 if (filter!!.includeEmptyObject(hasCurrentName)) {
                     parent?.writePathInternal(generator)
                     generator.writeStartObject()
-                    generator.writeName(generator.idName)
                     generator.writeObjectId(myCurrentValue!!)
                     generator.writeEndObject()
                 }

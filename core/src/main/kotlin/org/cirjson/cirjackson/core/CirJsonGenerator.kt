@@ -261,7 +261,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * @return The array's ID
      */
-    protected abstract fun getID(target: Any, isArray: Boolean): String
+    abstract fun getID(target: Any, isArray: Boolean): String
 
     /*
      *******************************************************************************************************************
