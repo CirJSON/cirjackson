@@ -26,6 +26,88 @@ data class Separators(val rootSeparator: String?, val objectNameValueSeparator: 
             DEFAULT_ROOT_VALUE_SEPARATOR, objectNameValueSeparator, Spacing.BOTH, objectEntrySeparator, Spacing.NONE,
             DEFAULT_OBJECT_EMPTY_SEPARATOR, arrayElementSeparator, Spacing.NONE, DEFAULT_ARRAY_EMPTY_SEPARATOR)
 
+    fun withRootSeparator(separator: String): Separators {
+        return if (separator == rootSeparator) {
+            this
+        } else {
+            Separators(separator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator,
+                    objectEntrySpacing, objectEmptySeparator, arrayElementSeparator, arrayElementSpacing,
+                    arrayEmptySeparator)
+        }
+    }
+
+    fun withObjectNameValueSeparator(separator: Char): Separators {
+        return if (separator == objectNameValueSeparator) {
+            this
+        } else {
+            Separators(rootSeparator, separator, objectNameValueSpacing, objectEntrySeparator, objectEntrySpacing,
+                    objectEmptySeparator, arrayElementSeparator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withObjectNameValueSpacing(spacing: Spacing): Separators {
+        return if (spacing == objectNameValueSpacing) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, spacing, objectEntrySeparator, objectEntrySpacing,
+                    objectEmptySeparator, arrayElementSeparator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withObjectEntrySeparator(separator: Char): Separators {
+        return if (separator == objectEntrySeparator) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, separator, objectEntrySpacing,
+                    objectEmptySeparator, arrayElementSeparator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withObjectEntrySpacing(spacing: Spacing): Separators {
+        return if (spacing == objectEntrySpacing) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator, spacing,
+                    objectEmptySeparator, arrayElementSeparator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withObjectEmptySeparator(separator: String): Separators {
+        return if (separator == objectEmptySeparator) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator,
+                    objectEntrySpacing, separator, arrayElementSeparator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withArrayElementSeparator(separator: Char): Separators {
+        return if (separator == arrayElementSeparator) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator,
+                    objectEntrySpacing, objectEmptySeparator, separator, arrayElementSpacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withArrayElementSpacing(spacing: Spacing): Separators {
+        return if (spacing == arrayElementSpacing) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator,
+                    objectEntrySpacing, objectEmptySeparator, arrayElementSeparator, spacing, arrayEmptySeparator)
+        }
+    }
+
+    fun withArrayEmptySeparator(separator: String): Separators {
+        return if (separator == arrayEmptySeparator) {
+            this
+        } else {
+            Separators(rootSeparator, objectNameValueSeparator, objectNameValueSpacing, objectEntrySeparator,
+                    objectEntrySpacing, objectEmptySeparator, arrayElementSeparator, arrayElementSpacing, separator)
+        }
+    }
+
     /**
      * Define the spacing around elements like commas and colons.
      */
