@@ -121,87 +121,104 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartArray()
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartArray(currentValue)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?, size: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartArray(currentValue, size)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndArray(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeEndArray()
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartObject()
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartObject(currentValue)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?, size: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartObject(currentValue, size)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeStartObject()
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeObjectId(referenced: Any): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeObjectId(referenced)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArrayId(referenced: Any): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeArrayId(referenced)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeName(name)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeName(name: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeName(name)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writePropertyId(id: Long): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writePropertyId(id)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArray(array: IntArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeArray(array, offset, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArray(array: LongArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeArray(array, offset, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArray(array: DoubleArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeArray(array, offset, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeArray(array: Array<String>, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeArray(array, offset, length)
+        return this
     }
 
     /*
@@ -212,32 +229,38 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeString(value: String?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeString(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(reader: Reader?, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeString(reader, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeString(buffer, offset, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeString(value: SerializableString): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeString(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRawUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeRawUTF8String(buffer, offset, length)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeUTF8String(buffer: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeUTF8String(buffer, offset, length)
+        return this
     }
 
     /*
@@ -247,48 +270,61 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
      */
 
     @Throws(CirJacksonException::class)
-    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeBinary(variant: Base64Variant, data: ByteArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeRawValue(text: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeRawValue(text: String, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeRawValue(text: String): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeRaw(char: Char): CirJsonGenerator {
-        TODO("Not yet implemented")
-    }
-
-    @Throws(CirJacksonException::class)
-    override fun writeRaw(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeRaw(text: String): CirJsonGenerator {
+        delegate.writeRaw(text)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeRaw(text: String, offset: Int, length: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeRaw(text, offset, length)
+        return this
+    }
+
+    override fun writeRaw(raw: SerializableString): CirJsonGenerator {
+        delegate.writeRaw(raw)
+        return this
     }
 
     @Throws(CirJacksonException::class)
-    override fun writeRaw(text: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+    override fun writeRaw(char: Char): CirJsonGenerator {
+        delegate.writeRaw(char)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeRaw(buffer: CharArray, offset: Int, length: Int): CirJsonGenerator {
+        delegate.writeRaw(buffer, offset, length)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeRawValue(text: String): CirJsonGenerator {
+        delegate.writeRawValue(text)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeRawValue(text: String, offset: Int, length: Int): CirJsonGenerator {
+        delegate.writeRawValue(text, offset, length)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeRawValue(text: CharArray, offset: Int, length: Int): CirJsonGenerator {
+        delegate.writeRawValue(text, offset, length)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeBinary(variant: Base64Variant, data: ByteArray, offset: Int, length: Int): CirJsonGenerator {
+        delegate.writeBinary(variant, data, offset, length)
+        return this
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun writeBinary(variant: Base64Variant, data: InputStream, dataLength: Int): Int {
+        return delegate.writeBinary(variant, data, dataLength)
     }
 
     /*
@@ -299,52 +335,62 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Short): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Int): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Long): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: BigInteger?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Double): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: Float): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(value: BigDecimal?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(value)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNumber(encodedValue: String?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNumber(encodedValue)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeBoolean(state: Boolean): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeBoolean(state)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeNull(): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeNull()
+        return this
     }
 
     /*
@@ -355,7 +401,8 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeOmittedProperty(propertyName: String): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeOmittedProperty(propertyName)
+        return this
     }
 
     /*
@@ -366,12 +413,14 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeEmbeddedObject(obj: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeEmbeddedObject(obj)
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeTypeId(id: Any): CirJsonGenerator {
-        TODO("Not yet implemented")
+        delegate.writeTypeId(id)
+        return this
     }
 
     /*
@@ -382,12 +431,34 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writePOJO(pojo: Any?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myIsDelegateHandlingCopyMethods) {
+            delegate.writePOJO(pojo)
+            return this
+        }
+
+        if (pojo == null) {
+            writeNull()
+        } else {
+            objectWriteContext.writeValue(this, pojo)
+        }
+
+        return this
     }
 
     @Throws(CirJacksonException::class)
     override fun writeTree(rootNode: TreeNode?): CirJsonGenerator {
-        TODO("Not yet implemented")
+        if (myIsDelegateHandlingCopyMethods) {
+            delegate.writeTree(rootNode)
+            return this
+        }
+
+        if (rootNode == null) {
+            writeNull()
+        } else {
+            objectWriteContext.writeTree(this, rootNode)
+        }
+
+        return this
     }
 
     /*
@@ -398,12 +469,20 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun copyCurrentEvent(parser: CirJsonParser) {
-        TODO("Not yet implemented")
+        if (myIsDelegateHandlingCopyMethods) {
+            delegate.copyCurrentEvent(parser)
+        } else {
+            super.copyCurrentEvent(parser)
+        }
     }
 
     @Throws(CirJacksonException::class)
     override fun copyCurrentStructure(parser: CirJsonParser) {
-        TODO("Not yet implemented")
+        if (myIsDelegateHandlingCopyMethods) {
+            delegate.copyCurrentStructure(parser)
+        } else {
+            super.copyCurrentStructure(parser)
+        }
     }
 
     /*
