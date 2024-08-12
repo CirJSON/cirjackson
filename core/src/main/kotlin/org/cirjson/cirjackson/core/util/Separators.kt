@@ -1,10 +1,10 @@
 package org.cirjson.cirjackson.core.util
 
 /**
- * Value class used with some {@link org.cirjson.cirjackson.core.PrettyPrinter} implements
+ * Value class used with some [org.cirjson.cirjackson.core.PrettyPrinter] implementations
  *
- * @see org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
- * @see org.cirjson.cirjackson.core.util.MinimalPrettyPrinter
+ * @see DefaultPrettyPrinter
+ * @see MinimalPrettyPrinter
  */
 data class Separators(val rootSeparator: String?, val objectNameValueSeparator: Char,
         val objectNameValueSpacing: Spacing, val objectEntrySeparator: Char, val objectEntrySpacing: Spacing,
