@@ -51,5 +51,6 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
      * token and subtree starting (if structured type) are passed.
      */
     var matchCount = 0
+        protected set
 
 }
