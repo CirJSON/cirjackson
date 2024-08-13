@@ -212,7 +212,7 @@ open class TokenFilter {
      *
      * @return `true` if value is to be included; `false` if not
      */
-    open fun includeString(value: String): Boolean {
+    open fun includeString(value: String?): Boolean {
         return includeScalar()
     }
 
@@ -228,7 +228,7 @@ open class TokenFilter {
      *
      * @return `true` if value is to be included; `false` if not
      */
-    open fun includeString(reader: Reader, maxLength: Int): Boolean {
+    open fun includeString(reader: Reader?, maxLength: Int): Boolean {
         return includeScalar()
     }
 
@@ -263,7 +263,7 @@ open class TokenFilter {
      *
      * @return `true` if value is to be included; `false` if not
      */
-    open fun includeNumber(value: BigInteger): Boolean {
+    open fun includeNumber(value: BigInteger?): Boolean {
         return includeScalar()
     }
 
@@ -296,7 +296,7 @@ open class TokenFilter {
      *
      * @return `true` if value is to be included; `false` if not
      */
-    open fun includeNumber(value: BigDecimal): Boolean {
+    open fun includeNumber(value: BigDecimal?): Boolean {
         return includeScalar()
     }
 

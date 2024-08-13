@@ -52,7 +52,7 @@ open class TokenFilterContext protected constructor(type: Int, final override va
         nestingDepth = (parent?.nestingDepth ?: -1) + 1
     }
 
-    protected fun reset(type: Int, filter: TokenFilter, currentValue: Any?,
+    protected fun reset(type: Int, filter: TokenFilter?, currentValue: Any?,
             isStartWritten: Boolean): TokenFilterContext {
         myType = type
         this.filter = filter
@@ -70,12 +70,13 @@ open class TokenFilterContext protected constructor(type: Int, final override va
      *******************************************************************************************************************
      */
 
-    open fun createChildArrayContext(filter: TokenFilter, currentValue: Any?, writeStart: Boolean): TokenFilterContext {
+    open fun createChildArrayContext(filter: TokenFilter?, currentValue: Any?,
+            writeStart: Boolean): TokenFilterContext {
         return myChild?.reset(TYPE_ARRAY, filter, currentValue, writeStart) ?: TokenFilterContext(TYPE_ARRAY, this,
                 filter, currentValue, writeStart)
     }
 
-    open fun createChildObjectContext(filter: TokenFilter, currentValue: Any?,
+    open fun createChildObjectContext(filter: TokenFilter?, currentValue: Any?,
             writeStart: Boolean): TokenFilterContext {
         return myChild?.reset(TYPE_OBJECT, filter, currentValue, writeStart) ?: TokenFilterContext(TYPE_OBJECT, this,
                 filter, currentValue, writeStart)
@@ -315,7 +316,7 @@ open class TokenFilterContext protected constructor(type: Int, final override va
 
     companion object {
 
-        fun createRootContext(filter: TokenFilter): TokenFilterContext {
+        fun createRootContext(filter: TokenFilter?): TokenFilterContext {
             return TokenFilterContext(TYPE_ROOT, null, filter, null, true)
         }
 
