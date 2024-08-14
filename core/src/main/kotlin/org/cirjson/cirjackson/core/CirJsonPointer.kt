@@ -20,13 +20,7 @@ import org.cirjson.cirjackson.core.io.NumberInput
 class CirJsonPointer private constructor(private val myAsString: String, private val myAsStringOffset: Int,
         val matchingProperty: String?, val matchingIndex: Int, private val myNextSegment: CirJsonPointer?) {
 
-    private val myHead by lazy {
-        if (this === EMPTY) {
-            return@lazy null
-        } else {
-
-        }
-    }
+    private var myHead: CirJsonPointer? = null
 
     /**
      * Lazily-calculated hash code: need to retain hash code now that we can no longer rely on [myAsString] being the
@@ -87,7 +81,8 @@ class CirJsonPointer private constructor(private val myAsString: String, private
     val length
         get() = myAsString.length - myAsStringOffset
 
-    val isMatching = myNextSegment != null
+    val isMatching
+        get() = myNextSegment == null
 
     /**
      * True if the root selector matches property name (that is, could match Property value of Object node)
@@ -138,8 +133,20 @@ class CirJsonPointer private constructor(private val myAsString: String, private
      * Note that whereas [tail] is a very cheap operation to call (as "tail" already exists for single-linked forward
      * direction), this method has to fully construct a new instance by traversing the chain of segments.
      */
-    val head
-        get() = myHead
+    val head: CirJsonPointer?
+        get() {
+            var head = myHead
+
+            if (head == null) {
+                if (this !== EMPTY) {
+                    head = constructHead()
+                }
+
+                myHead = head
+            }
+
+            return head
+        }
 
     /**
      * Mutant factory method that will return
@@ -365,6 +372,18 @@ class CirJsonPointer private constructor(private val myAsString: String, private
          */
         private val EMPTY = CirJsonPointer()
 
+        /**
+         * Accessor for an "empty" expression, that is, one you can get by calling [compile] with "" (empty String).
+         *
+         * NOTE: this is different from expression for `"/"` which would instead match Object node property with empty
+         * String ("") as name.
+         *
+         * @return "Empty" pointer expression instance that matches given root value
+         */
+        fun empty(): CirJsonPointer {
+            return EMPTY
+        }
+
         private fun parseIndex(string: String): Int {
             val length = string.length
 
@@ -431,7 +450,7 @@ class CirJsonPointer private constructor(private val myAsString: String, private
                     approxLength += 2 + propName.length
                     next = PointerSegment(next, propName, -1)
                 } else if (context.isInArray || includeRoot) {
-                    val index = context.currentIndex
+                    val index = if (context.isInArray) context.currentIndex - 1 else context.currentIndex
                     approxLength += 6
                     next = PointerSegment(next, null, index)
                 }
@@ -482,7 +501,7 @@ class CirJsonPointer private constructor(private val myAsString: String, private
                             CirJsonPointer(fullPath, currentSegment.pathOffset, index.toString(), index, currentPointer)
                 }
 
-                currentSegment = currentSegment.next
+                currentSegment = currentSegment.prev
             }
 
             return currentPointer

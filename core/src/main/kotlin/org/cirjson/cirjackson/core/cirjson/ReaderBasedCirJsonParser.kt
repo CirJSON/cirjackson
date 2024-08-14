@@ -2522,7 +2522,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
     @Throws(CirJacksonException::class)
     private fun skipAfterComma(): Int {
-        while (myInputPointer < myInputEnd) {
+        while (myInputPointer < myInputEnd || loadMore()) {
             val i = myInputBuffer[myInputPointer++].code
 
             if (i > CODE_SPACE) {
