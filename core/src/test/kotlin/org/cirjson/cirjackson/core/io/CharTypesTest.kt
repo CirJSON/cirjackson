@@ -29,4 +29,14 @@ class CharTypesTest : TestBase() {
         }
     }
 
+    @Test
+    fun testQuoting() {
+        var stringBuilder = StringBuilder()
+        CharTypes.appendQuoted(stringBuilder, "\n")
+        assertEquals("\\n", stringBuilder.toString())
+        stringBuilder = StringBuilder()
+        CharTypes.appendQuoted(stringBuilder, "\u0000")
+        assertEquals("\\u0000", stringBuilder.toString())
+    }
+
 }

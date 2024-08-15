@@ -69,7 +69,7 @@ class ByteArrayBuilder private constructor(private val myBufferRecycler: BufferR
                 length -= toCopy
             }
 
-            if (length < 0) {
+            if (length <= 0) {
                 break
             }
 
