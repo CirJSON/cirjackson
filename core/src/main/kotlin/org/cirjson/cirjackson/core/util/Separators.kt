@@ -26,7 +26,7 @@ data class Separators(val rootSeparator: String?, val objectNameValueSeparator: 
             DEFAULT_ROOT_VALUE_SEPARATOR, objectNameValueSeparator, Spacing.BOTH, objectEntrySeparator, Spacing.NONE,
             DEFAULT_OBJECT_EMPTY_SEPARATOR, arrayElementSeparator, Spacing.NONE, DEFAULT_ARRAY_EMPTY_SEPARATOR)
 
-    fun withRootSeparator(separator: String): Separators {
+    fun withRootSeparator(separator: String?): Separators {
         return if (separator == rootSeparator) {
             this
         } else {

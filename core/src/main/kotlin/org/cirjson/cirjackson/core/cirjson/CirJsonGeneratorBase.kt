@@ -59,7 +59,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
      * Flag that is set if quoting is not to be added around CirJSON Object property names.
      */
     protected val myConfigurationUnquoteNames =
-            CirJsonWriteFeature.QUOTE_PROPERTY_NAMES.isEnabledIn(formatWriteFeatures)
+            !CirJsonWriteFeature.QUOTE_PROPERTY_NAMES.isEnabledIn(formatWriteFeatures)
 
     /**
      * Flag set to indicate that implicit conversion from number to JSON String is needed (as per
