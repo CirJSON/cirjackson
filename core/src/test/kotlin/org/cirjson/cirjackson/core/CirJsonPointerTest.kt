@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.exception.StreamReadException
+import java.io.StringWriter
 import kotlin.test.*
 
 class CirJsonPointerTest : TestBase() {
@@ -333,7 +334,315 @@ class CirJsonPointerTest : TestBase() {
         return stringBuilder.toString().removeSuffix(",")
     }
 
+    @Test
+    fun testViaParser() {
+        val simple = apostropheToQuote(
+                "{'__cirJsonId__':'root','a':123,'array':['root/a',1,2,['root/a/2',3],5,{'__cirJsonId__':'root/a/4','obInArray':4}],'ob':{'__cirJsonId__':'root/ob','first':['root/ob/first',false,true],'second':{'__cirJsonId__':'root/ob/second','sub':37}},'b':true}")
+        val parser = CIRJSON_FACTORY.createParser(ObjectReadContext.empty(), simple)
+
+        assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
+
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
+
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/a", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/a", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/array", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+        assertEquals("/array", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/array", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/array/0", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/array/1", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+        assertEquals("/array/2", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/array/2", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/array/2/0", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
+        assertEquals("/array/2", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/array/3", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertEquals("/array/4", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/array/4/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/array/4/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/array/4/obInArray", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/array/4/obInArray", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertEquals("/array/4", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
+        assertEquals("/array", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertEquals("/ob", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/ob/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob/first", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+        assertEquals("/ob/first", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/ob/first", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_FALSE, parser.nextToken())
+        assertEquals("/ob/first/0", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
+        assertEquals("/ob/first/1", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
+        assertEquals("/ob/first", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob/second", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertEquals("/ob/second", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob/second/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/ob/second/__cirJsonId__", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/ob/second/sub", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/ob/second/sub", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertEquals("/ob/second", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertEquals("/ob", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/b", parser.streamReadContext!!.pathAsPointer().toString())
+        assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
+        assertEquals("/b", parser.streamReadContext!!.pathAsPointer().toString())
+
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
+
+        assertNull(parser.nextToken())
+        parser.close()
+    }
+
+    @Test
+    fun testViaGenerator() {
+        val writer = StringWriter()
+        val generator = CIRJSON_FACTORY.createGenerator(ObjectWriteContext.empty(), writer)
+        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+
+        generator.writeStartArray()
+        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        generator.writeArrayId(listOf<String>())
+        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        generator.writeBoolean(true)
+        assertEquals("/0", generator.streamWriteContext.pathAsPointer().toString())
+
+        generator.writeStartObject()
+        assertEquals("/1", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeObjectId(Any())
+        assertEquals("/1/__cirJsonId__", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeName("x")
+        assertEquals("/1/x", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeString("foo")
+        assertEquals("/1/x", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeName("stats")
+        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeStartObject()
+        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeObjectId(Any())
+        assertEquals("/1/stats/__cirJsonId__", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeName("rate")
+        assertEquals("/1/stats/rate", generator.streamWriteContext.pathAsPointer().toString())
+        generator.writeNumber(13)
+        generator.writeEndObject()
+        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+
+        generator.writeEndObject()
+        assertEquals("/1", generator.streamWriteContext.pathAsPointer().toString())
+
+        generator.writeEndArray()
+        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+
+        generator.close()
+        writer.close()
+    }
+
+    @Test
+    fun testParserWithRoot() {
+        val cirJson = apostropheToQuote(
+                "{'__cirJsonId__':'0','a':1,'b':3}\n{'__cirJsonId__':'1','a':5,'c':['1/c',1,2]}\n['2',1,2]\n")
+        val parser = CIRJSON_FACTORY.createParser(ObjectReadContext.empty(), cirJson)
+        assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer(true))
+
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertEquals("/0", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/0/__cirJsonId__", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/0/__cirJsonId__", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/0/a", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/0/a", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/0/b", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/0/b", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertEquals("/0", parser.streamReadContext!!.pathAsPointer(true).toString())
+
+        assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
+        assertEquals("/1", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
+        assertEquals("/1/__cirJsonId__", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/1/__cirJsonId__", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/1/a", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/1/a", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
+        assertEquals("/1/c", parser.streamReadContext!!.pathAsPointer(true).toString())
+
+        assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+        assertEquals("/1/c", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/1/c", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/1/c/0", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/1/c/1", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
+        assertEquals("/1/c", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
+        assertEquals("/1", parser.streamReadContext!!.pathAsPointer(true).toString())
+
+        assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+        assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+        assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/2/0", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+        assertEquals("/2/1", parser.streamReadContext!!.pathAsPointer(true).toString())
+        assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
+        assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
+
+        assertNull(parser.nextToken())
+
+        assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
+
+        parser.close()
+    }
+
+    @Test
+    fun testGeneratorWithRoot() {
+        val writer = StringWriter()
+        val generator = CIRJSON_FACTORY.createGenerator(ObjectWriteContext.empty(), writer)
+        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer(true))
+
+        generator.writeStartArray()
+        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeArrayId(listOf<String>())
+        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeBoolean(true)
+        assertEquals("/0/0", generator.streamWriteContext.pathAsPointer(true).toString())
+
+        generator.writeStartObject()
+        assertEquals("/0/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeObjectId(Any())
+        assertEquals("/0/1/__cirJsonId__", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeName("x")
+        assertEquals("/0/1/x", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeString("foo")
+        assertEquals("/0/1/x", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeEndObject()
+        assertEquals("/0/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeEndArray()
+        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+
+        generator.writeBoolean(true)
+        assertEquals("/1", generator.streamWriteContext.pathAsPointer(true).toString())
+
+        generator.writeStartArray()
+        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeArrayId(listOf<String>())
+        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeString("foo")
+        assertEquals("/2/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeString("bar")
+        assertEquals("/2/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        generator.writeEndArray()
+        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+
+        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+
+        generator.close()
+        writer.close()
+    }
+
+    @Test
+    fun testCirJsonPointerParseTailSimple() {
+        cirJsonPointerTest(generatePath(false))
+    }
+
+    @Test
+    fun testCirJsonPointerParseTailWithQuoted() {
+        cirJsonPointerTest(generatePath(true))
+    }
+
+    private fun cirJsonPointerTest(pathExpression: String) {
+        val pointer = CirJsonPointer.compile(pathExpression)
+        assertNotNull(pointer)
+        assertEquals(pathExpression, pointer.toString())
+
+        var current: CirJsonPointer? = pointer
+
+        while (current!!.tail.also { current = it } != null) {
+            val actual = current!!.toString()
+            val expected = pathExpression.substring(pathExpression.length - actual.length)
+            assertEquals(expected, actual)
+        }
+    }
+
+    private fun generatePath(escaped: Boolean): String {
+        val stringBuilder = StringBuilder(4 * TOO_DEEP_PATH)
+
+        for (i in 0..<TOO_DEEP_PATH) {
+            stringBuilder.append('/').append(('a'.code + i.mod(25)).toChar()).append(i)
+
+            if (escaped) {
+                when (i and 7) {
+                    1 -> stringBuilder.append("~0x")
+                    4 -> stringBuilder.append("~1y")
+                }
+            }
+        }
+
+        return stringBuilder.toString()
+    }
+
     companion object {
+
+        private const val TOO_DEEP_PATH = 25_000
+
+        private val CIRJSON_FACTORY = CirJsonFactory()
 
         private val EMPTY_POINTER = CirJsonPointer.empty()
 

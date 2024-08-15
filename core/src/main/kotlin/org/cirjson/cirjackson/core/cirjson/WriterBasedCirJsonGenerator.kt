@@ -372,7 +372,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
-        if (!streamWriteContext.isInArray) {
+        if (!streamWriteContext.isInObject) {
             return reportError("Current context not Object but ${streamWriteContext.typeDescription}")
         }
 

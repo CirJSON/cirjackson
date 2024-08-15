@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
+import org.cirjson.cirjackson.core.CirJsonToken
 import org.cirjson.cirjackson.core.TokenStreamContext
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.io.ContentReference
@@ -146,7 +147,10 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
     }
 
     val isExpectingComma: Boolean
-        get() = myType != TYPE_ROOT && ++myIndex > 0
+        get() {
+            val index = ++myIndex
+            return myType != TYPE_ROOT && index > 0
+        }
 
     @Throws(StreamReadException::class)
     private fun checkDuplicates(duplicateDetector: DuplicateDetector, name: String) {
