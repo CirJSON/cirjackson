@@ -492,6 +492,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     open fun writeArray(array: IntArray, offset: Int, length: Int): CirJsonGenerator {
         verifyOffsets(array.size, offset, length)
         writeStartArray(array, length)
+        writeArrayId(array)
 
         for (i in offset..<offset + length) {
             writeNumber(array[i])
@@ -528,6 +529,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     open fun writeArray(array: LongArray, offset: Int, length: Int): CirJsonGenerator {
         verifyOffsets(array.size, offset, length)
         writeStartArray(array, length)
+        writeArrayId(array)
 
         for (i in offset..<offset + length) {
             writeNumber(array[i])
@@ -557,6 +559,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     open fun writeArray(array: DoubleArray, offset: Int, length: Int): CirJsonGenerator {
         verifyOffsets(array.size, offset, length)
         writeStartArray(array, length)
+        writeArrayId(array)
 
         for (i in offset..<offset + length) {
             writeNumber(array[i])
@@ -586,9 +589,10 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     open fun writeArray(array: Array<String>, offset: Int, length: Int): CirJsonGenerator {
         verifyOffsets(array.size, offset, length)
         writeStartArray(array, length)
+        writeArrayId(array)
 
         for (i in offset..<offset + length) {
-            writeNumber(array[i])
+            writeString(array[i])
         }
 
         writeEndArray()

@@ -39,7 +39,13 @@ class MockDataInput(private val myInput: InputStream) : DataInput {
     }
 
     override fun readUnsignedByte(): Int {
-        throw UnsupportedOperationException()
+        val ch = myInput.read()
+
+        if (ch < 0) {
+            throw EOFException("End-of-input for readByte()")
+        }
+
+        return ch
     }
 
     override fun readShort(): Short {

@@ -2118,22 +2118,22 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                         if (codes[i] == 0) {
                             myQuad1 = q
                             parseMediumName(i)
-                        } else if (q == CODE_QUOTE) {
+                        } else if (i == CODE_QUOTE) {
                             findName(q, 4)
                         } else {
                             parseName(q, i, 4)
                         }
-                    } else if (q == CODE_QUOTE) {
+                    } else if (i == CODE_QUOTE) {
                         findName(q, 3)
                     } else {
                         parseName(q, i, 3)
                     }
-                } else if (q == CODE_QUOTE) {
+                } else if (i == CODE_QUOTE) {
                     findName(q, 2)
                 } else {
                     parseName(q, i, 2)
                 }
-            } else if (q == CODE_QUOTE) {
+            } else if (i == CODE_QUOTE) {
                 findName(q, 1)
             } else {
                 parseName(q, i, 1)

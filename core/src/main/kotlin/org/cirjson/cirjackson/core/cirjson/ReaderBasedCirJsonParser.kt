@@ -2826,7 +2826,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
         }
 
-        matchToken("true", 1)
+        matchToken("false", 1)
     }
 
     @Throws(CirJacksonException::class)

@@ -48,7 +48,7 @@ open class TestBase {
 
     protected fun createParser(factory: TokenStreamFactory, mode: Int, doc: String): CirJsonParser {
         return when (mode) {
-            MODE_INPUT_STREAM -> createParserUsingStream(factory, doc, "UTF_8")
+            MODE_INPUT_STREAM -> createParserUsingStream(factory, doc, "UTF-8")
 
             MODE_INPUT_STREAM_THROTTLED -> factory.createParser(testObjectReadContext(),
                     ThrottledInputStream(utf8Bytes(doc), 1))
@@ -117,6 +117,28 @@ open class TestBase {
      * Generator construction
      *******************************************************************************************************************
      */
+
+    @Throws(IOException::class)
+    fun createGenerator(mode: Int): CirJsonGenerator {
+        return when (mode) {
+            MODE_OUTPUT_STREAM -> createGenerator(ByteArrayOutputStream())
+
+            MODE_WRITER -> createGenerator(StringWriter())
+
+            else -> throw RuntimeException("internal error")
+        }
+    }
+
+    @Throws(IOException::class)
+    fun createGenerator(factory: TokenStreamFactory, mode: Int): CirJsonGenerator {
+        return when (mode) {
+            MODE_OUTPUT_STREAM -> createGenerator(factory, ByteArrayOutputStream())
+
+            MODE_WRITER -> createGenerator(factory, StringWriter())
+
+            else -> throw RuntimeException("internal error")
+        }
+    }
 
     @Throws(IOException::class)
     fun createGenerator(output: OutputStream): CirJsonGenerator {
@@ -371,8 +393,14 @@ open class TestBase {
 
         const val MODE_DATA_INPUT: Int = 4
 
+        const val MODE_OUTPUT_STREAM: Int = 0
+
+        const val MODE_WRITER = 1
+
         val ALL_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_READER,
                 MODE_READER_THROTTLED, MODE_DATA_INPUT)
+
+        val ALL_NON_THROTTLED_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_READER, MODE_DATA_INPUT)
 
         val ALL_BINARY_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_DATA_INPUT)
 
@@ -380,6 +408,8 @@ open class TestBase {
 
         val ALL_STREAMING_PARSER_MODES =
                 intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_READER, MODE_READER_THROTTLED)
+
+        val ALL_GENERATOR_MODES = intArrayOf(MODE_OUTPUT_STREAM, MODE_WRITER)
 
         const val SAMPLE_SPEC_VALUE_WIDTH: Int = 800
 

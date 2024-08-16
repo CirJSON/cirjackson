@@ -163,7 +163,7 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
-        delegate.writeStartObject()
+        delegate.writeEndObject()
         return this
     }
 

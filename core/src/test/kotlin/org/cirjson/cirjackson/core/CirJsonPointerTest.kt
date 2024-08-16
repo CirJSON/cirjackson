@@ -2,7 +2,6 @@ package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.exception.StreamReadException
-import java.io.StringWriter
 import kotlin.test.*
 
 class CirJsonPointerTest : TestBase() {
@@ -338,8 +337,13 @@ class CirJsonPointerTest : TestBase() {
     fun testViaParser() {
         val simple = apostropheToQuote(
                 "{'__cirJsonId__':'root','a':123,'array':['root/a',1,2,['root/a/2',3],5,{'__cirJsonId__':'root/a/4','obInArray':4}],'ob':{'__cirJsonId__':'root/ob','first':['root/ob/first',false,true],'second':{'__cirJsonId__':'root/ob/second','sub':37}},'b':true}")
-        val parser = CIRJSON_FACTORY.createParser(ObjectReadContext.empty(), simple)
 
+        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+            viaParser(createParser(mode, simple))
+        }
+    }
+
+    private fun viaParser(parser: CirJsonParser) {
         assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
 
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
@@ -442,8 +446,12 @@ class CirJsonPointerTest : TestBase() {
 
     @Test
     fun testViaGenerator() {
-        val writer = StringWriter()
-        val generator = CIRJSON_FACTORY.createGenerator(ObjectWriteContext.empty(), writer)
+        for (mode in ALL_GENERATOR_MODES) {
+            viaGenerator(createGenerator(mode))
+        }
+    }
+
+    private fun viaGenerator(generator: CirJsonGenerator) {
         assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
 
         generator.writeStartArray()
@@ -480,14 +488,20 @@ class CirJsonPointerTest : TestBase() {
         assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
 
         generator.close()
-        writer.close()
+        (generator.streamWriteOutputTarget as AutoCloseable).close()
     }
 
     @Test
     fun testParserWithRoot() {
         val cirJson = apostropheToQuote(
                 "{'__cirJsonId__':'0','a':1,'b':3}\n{'__cirJsonId__':'1','a':5,'c':['1/c',1,2]}\n['2',1,2]\n")
-        val parser = CIRJSON_FACTORY.createParser(ObjectReadContext.empty(), cirJson)
+
+        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+            parserWithRoot(createParser(mode, cirJson))
+        }
+    }
+
+    private fun parserWithRoot(parser: CirJsonParser) {
         assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer(true))
 
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
@@ -553,8 +567,12 @@ class CirJsonPointerTest : TestBase() {
 
     @Test
     fun testGeneratorWithRoot() {
-        val writer = StringWriter()
-        val generator = CIRJSON_FACTORY.createGenerator(ObjectWriteContext.empty(), writer)
+        for (mode in ALL_GENERATOR_MODES) {
+            generatorWithRoot(createGenerator(mode))
+        }
+    }
+
+    private fun generatorWithRoot(generator: CirJsonGenerator) {
         assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer(true))
 
         generator.writeStartArray()
@@ -594,7 +612,7 @@ class CirJsonPointerTest : TestBase() {
         assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
 
         generator.close()
-        writer.close()
+        (generator.streamWriteOutputTarget as AutoCloseable).close()
     }
 
     @Test
@@ -641,8 +659,6 @@ class CirJsonPointerTest : TestBase() {
     companion object {
 
         private const val TOO_DEEP_PATH = 25_000
-
-        private val CIRJSON_FACTORY = CirJsonFactory()
 
         private val EMPTY_POINTER = CirJsonPointer.empty()
 

@@ -563,7 +563,15 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         val name = parseName(i)
         streamReadContext!!.currentName = name
-        myCurrentToken = CirJsonToken.PROPERTY_NAME
+        myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
+            if (name != idName) {
+                return reportInvalidToken(i, "Expected property name '$idName', received '$name'")
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME
+        } else {
+            CirJsonToken.PROPERTY_NAME
+        }
 
         i = skipColon()
 
@@ -1449,7 +1457,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             myQuadBuffer[quadLength++] = q
-            q = 1
+            q = i
         }
     }
 
