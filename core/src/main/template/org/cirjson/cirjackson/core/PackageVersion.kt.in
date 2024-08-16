@@ -10,7 +10,7 @@ class PackageVersion : Versioned {
 
     companion object {
 
-        val VERSION = VersionUtil.parseVersion("1.0-SNAPSHOT", "org.cirjson.cirjackson", "cirjackson-core")
+        val VERSION = VersionUtil.parseVersion("1.0.0-SNAPSHOT", "org.cirjson.cirjackson", "cirjackson-core")
 
     }
 
