@@ -84,7 +84,7 @@ open class CirJsonFactory : TextualTSFactory {
     /**
      * Alternative to the basic symbol table, some stream-based parsers use different name canonicalization method.
      */
-    protected val myByteSymbolCanonicalizer = ByteQuadsCanonicalizer.createRoot()
+    protected open val myByteSymbolCanonicalizer = ByteQuadsCanonicalizer.createRoot()
 
     /**
      * Default constructor used to create factory instances.

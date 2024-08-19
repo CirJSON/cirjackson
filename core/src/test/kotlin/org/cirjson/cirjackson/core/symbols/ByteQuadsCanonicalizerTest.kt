@@ -24,6 +24,7 @@ class ByteQuadsCanonicalizerTest : TestBase() {
     @Test
     fun testBasicPlaceholderLookups() {
         val root = ByteQuadsCanonicalizer.createRoot(137)
+        assertEquals(137, root.hashSeed)
 
         assertEquals(0, root.size)
         assertFalse(root.isCanonicalizing)

@@ -927,7 +927,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
          * Feature that determines whether CirJSON object property names are to be canonicalized using [String.intern]
          * or not.
          *
-         * If enabled, all property names will be intern()ed (and caller can count on this being true for all such
+         * If enabled, all property names will be `intern()`ed (and caller can count on this being true for all such
          * names). If disabled, no intern()ing is done. There may still be basic canonicalization (that is, same String
          * will be used to represent all identical object property names for a single document).
          *
