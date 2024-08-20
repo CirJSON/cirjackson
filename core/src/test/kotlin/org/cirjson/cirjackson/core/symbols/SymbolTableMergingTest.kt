@@ -19,7 +19,7 @@ class SymbolTableMergingTest : TestBase() {
 
     @Test
     fun testSymbolsWithClose() {
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             testWithClose(mode)
         }
     }
@@ -35,14 +35,14 @@ class SymbolTableMergingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
 
-        assertEquals(0, if (mode == MODE_READER) factory.charSymbolCount() else factory.byteSymbolCount())
+        assertEquals(0, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
         parser.close()
-        assertEquals(3, if (mode == MODE_READER) factory.charSymbolCount() else factory.byteSymbolCount())
+        assertEquals(3, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
     }
 
     @Test
     fun testSymbolsWithEOF() {
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             testWithEOF(mode)
         }
     }
@@ -52,12 +52,12 @@ class SymbolTableMergingTest : TestBase() {
         val parser = createParser(factory, mode, CIRJSON)
 
         while (parser.nextToken() != null) {
-            assertEquals(0, if (mode == MODE_READER) factory.charSymbolCount() else factory.byteSymbolCount())
+            assertEquals(0, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
         }
 
-        assertEquals(4, if (mode == MODE_READER) factory.charSymbolCount() else factory.byteSymbolCount())
+        assertEquals(4, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
         parser.close()
-        assertEquals(4, if (mode == MODE_READER) factory.charSymbolCount() else factory.byteSymbolCount())
+        assertEquals(4, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
     }
 
     /**

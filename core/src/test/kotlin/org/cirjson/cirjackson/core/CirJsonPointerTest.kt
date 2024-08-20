@@ -338,7 +338,7 @@ class CirJsonPointerTest : TestBase() {
         val simple = apostropheToQuote(
                 "{'__cirJsonId__':'root','a':123,'array':['root/a',1,2,['root/a/2',3],5,{'__cirJsonId__':'root/a/4','obInArray':4}],'ob':{'__cirJsonId__':'root/ob','first':['root/ob/first',false,true],'second':{'__cirJsonId__':'root/ob/second','sub':37}},'b':true}")
 
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             viaParser(createParser(mode, simple))
         }
     }
@@ -496,7 +496,7 @@ class CirJsonPointerTest : TestBase() {
         val cirJson = apostropheToQuote(
                 "{'__cirJsonId__':'0','a':1,'b':3}\n{'__cirJsonId__':'1','a':5,'c':['1/c',1,2]}\n['2',1,2]\n")
 
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             parserWithRoot(createParser(mode, cirJson))
         }
     }

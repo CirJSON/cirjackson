@@ -900,7 +900,15 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         updateNameLocation()
         val name = parseName(i)
         streamReadContext!!.currentName = name
-        myCurrentToken = CirJsonToken.PROPERTY_NAME
+        myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
+            if (name != idName) {
+                return reportInvalidToken(name!!, "Expected property name '$idName', received '$name'")
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME
+        } else {
+            CirJsonToken.PROPERTY_NAME
+        }
         i = skipColon()
 
         if (i == CODE_QUOTE) {
@@ -3014,7 +3022,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                     max = myInputEnd
                 }
 
-                while (pointer <= max) {
+                while (pointer < max) {
                     c = inputBuffer[pointer++].toInt() and 0xFF
 
                     if (codes[c] != 0) {

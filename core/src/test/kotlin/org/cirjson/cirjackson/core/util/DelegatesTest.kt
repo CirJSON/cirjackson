@@ -14,7 +14,7 @@ class DelegatesTest : TestBase() {
         val factory = CirJsonFactory.builder().streamReadConstraints(constraints).build()
         val content = "[ \"0\", 1, true, null, { \"__cirJsonId__\" : \"0/3\" , \"a\": \"foo\" }, \"AQI=\" ]"
 
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             parserDelegate(createParser(factory, mode, content))
         }
     }
@@ -238,7 +238,7 @@ class DelegatesTest : TestBase() {
     fun testNotDelegateCopyMethods() {
         val content =
                 "[\"0\",{\"__cirJsonId__\":\"1\",\"a\":[\"2\",1,2,{\"__cirJsonId__\":\"3\",\"b\":3}],\"c\":\"d\"},{\"__cirJsonId__\":\"4\",\"e\":false},null]"
-        for (parserMode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (parserMode in ALL_PARSER_MODES) {
             for (generatorMode in ALL_GENERATOR_MODES) {
                 notDelegateCopyMethods(createParser(parserMode, content), createGenerator(generatorMode))
             }

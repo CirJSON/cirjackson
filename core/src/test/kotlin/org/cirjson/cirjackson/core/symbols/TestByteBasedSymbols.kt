@@ -15,7 +15,7 @@ class TestByteBasedSymbols : TestBase() {
 
     @Test
     fun testSharedSymbols() {
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             sharedSymbols(mode)
         }
     }
@@ -86,7 +86,7 @@ class TestByteBasedSymbols : TestBase() {
 
     @Test
     fun testPerName() {
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             perName(mode)
         }
     }

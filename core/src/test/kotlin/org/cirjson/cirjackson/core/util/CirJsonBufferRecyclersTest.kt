@@ -36,7 +36,7 @@ class CirJsonBufferRecyclersTest : TestBase() {
         val factory = CirJsonFactory.builder().recyclerPool(pool).build()
         val content = apostropheToQuote("{'__cirJsonId__':'root','a':123,'b':'foobar'}")
 
-        for (mode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (mode in ALL_PARSER_MODES) {
             val parser = createParser(factory, mode, content)
             testParser(parser, pool, expectedSizeBefore, expectedSizeAfter)
         }
@@ -148,7 +148,7 @@ class CirJsonBufferRecyclersTest : TestBase() {
         val factory = CirJsonFactory.builder().recyclerPool(pool).build()
         val content = apostropheToQuote("{'__cirJsonId__':'root','a':123,'b':'foobar'}")
 
-        for (parserMode in ALL_NON_THROTTLED_PARSER_MODES) {
+        for (parserMode in ALL_PARSER_MODES) {
             for (generatorMode in ALL_GENERATOR_MODES) {
                 val parser = createParser(factory, parserMode, content)
                 val generator = createGenerator(factory, generatorMode)
