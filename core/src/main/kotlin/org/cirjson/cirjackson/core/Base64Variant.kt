@@ -178,6 +178,21 @@ class Base64Variant : Named {
     }
 
     /**
+     * Gives the variant based on the [writePadding]
+     *
+     * @param writePadding Determines if padding is output on write or not
+     *
+     * @return Base64Variant which writes padding or not depending on [writePadding]
+     */
+    fun withWritePadding(writePadding: Boolean): Base64Variant {
+        return if (writePadding != isUsingPadding) {
+            Base64Variant(this, name, writePadding, paddingChar, paddingReadBehaviour, maxLineLength)
+        } else {
+            this
+        }
+    }
+
+    /**
      * If this variant requires padding on content decoded
      */
     val isRequiringPaddingOnRead
@@ -243,7 +258,7 @@ class Base64Variant : Named {
      * @return 6-bit decoded value, if valid character;
      */
     fun decodeBase64Byte(byte: Byte): Int {
-        return decodeBase64Char(byte.toInt())
+        return if (byte >= 0) myAsciiToBase64[byte.toInt()] else BASE64_VALUE_INVALID
     }
 
     /*
@@ -251,6 +266,10 @@ class Base64Variant : Named {
      * Encoding support
      *******************************************************************************************************************
      */
+
+    fun encodeBase64BitsAsChar(value: Int): Char {
+        return myBase64ToAsciiChar[value]
+    }
 
     /**
      * Method that encodes given right-aligned (LSB) 24-bit value into 4 base64 characters, stored in given result
@@ -333,7 +352,7 @@ class Base64Variant : Named {
         if (isUsingPadding) {
             val toAppend = if (outputBytes == 2) myBase64ToAsciiChar[(bits shr 6) and 0x3F] else paddingChar
             stringBuilder.append(toAppend)
-            stringBuilder.append(paddingByte)
+            stringBuilder.append(paddingChar)
         } else if (outputBytes == 2) {
             stringBuilder.append(myBase64ToAsciiChar[(bits shr 6) and 0x3F])
         }
@@ -423,7 +442,47 @@ class Base64Variant : Named {
      * @return Base64 encoded String of encoded `input` bytes, possibly surrounded by quotes (if `addQuotes` enabled)
      */
     fun encode(input: ByteArray, addQuotes: Boolean): String {
-        return encode(input, addQuotes, "\\n")
+        val inputEnd = input.size
+        val stringBuilder = StringBuilder(inputEnd + (inputEnd shr 2) + (inputEnd shr 3))
+
+        if (addQuotes) {
+            stringBuilder.append('"')
+        }
+
+        var chunksBeforeLF = maxLineLength shr 2
+        var inputPointer = 0
+        val safeInputEnd = inputEnd - 3
+
+        while (inputPointer <= safeInputEnd) {
+            var value = input[inputPointer++].toInt() shl 8
+            value = value or (input[inputPointer++].toInt() and 0xFF)
+            value = (value shl 8) or (input[inputPointer++].toInt() and 0xFF)
+            encodeBase64Chunk(stringBuilder, value)
+
+            if (--chunksBeforeLF <= 0) {
+                stringBuilder.append('\\')
+                stringBuilder.append('n')
+                chunksBeforeLF = maxLineLength shr 2
+            }
+        }
+
+        val inputLeft = inputEnd - inputPointer
+
+        if (inputLeft > 0) {
+            var value = input[inputPointer++].toInt() shl 16
+
+            if (inputLeft == 2) {
+                value = value or (input[inputPointer].toInt() and 0xFF shl 8)
+            }
+
+            encodeBase64Partial(stringBuilder, value, inputLeft)
+        }
+
+        if (addQuotes) {
+            stringBuilder.append('"')
+        }
+
+        return stringBuilder.toString()
     }
 
     /**
@@ -577,6 +636,8 @@ class Base64Variant : Named {
                 builder.append(decodedData)
                 continue
             }
+
+            decodedData = decodedData shl 6 or bits
 
             if (pointer >= length) {
                 if (!isRequiringPaddingOnRead) {

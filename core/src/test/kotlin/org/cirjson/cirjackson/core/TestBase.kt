@@ -451,6 +451,10 @@ open class TestBase {
 
         val CIRJSON_FACTORY = CirJsonFactory()
 
+        val BASE64_VARIANTS =
+                arrayOf(Base64Variants.MIME, Base64Variants.MIME_NO_LINEFEEDS, Base64Variants.MODIFIED_FOR_URL,
+                        Base64Variants.PEM)
+
     }
 
 }

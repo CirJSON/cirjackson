@@ -468,6 +468,8 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
                         break
                     }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 3)
                 }
 
                 if (bits == Base64Variant.BASE64_VALUE_PADDING) {

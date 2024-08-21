@@ -551,6 +551,13 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             decodedData = decodedData shl 6 or bits
 
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
+            bits = base64Variant.decodeBase64Char(ch)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == CODE_QUOTE) {
@@ -596,6 +603,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
             ch = myInputBuffer[myInputPointer++].toInt() and 0xFF
             bits = base64Variant.decodeBase64Char(ch)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == CODE_QUOTE) {
@@ -610,6 +618,8 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
                         break
                     }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 3)
                 }
 
                 if (bits == Base64Variant.BASE64_VALUE_PADDING) {

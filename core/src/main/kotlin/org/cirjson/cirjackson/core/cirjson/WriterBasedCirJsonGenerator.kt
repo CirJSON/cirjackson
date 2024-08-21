@@ -1806,6 +1806,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
             var b24 = readBuffer[inputPointer++].toInt() shl 8
             b24 = readBuffer[inputPointer++].toInt() and 0xFF or b24
             b24 = b24 shl 8 or (readBuffer[inputPointer++].toInt() and 0xFF)
+            bytesLeft -= 3
             myOutputTail = variant.encodeBase64Chunk(b24, myOutputBuffer, myOutputTail)
 
             if (--chunksBeforeLF <= 0) {

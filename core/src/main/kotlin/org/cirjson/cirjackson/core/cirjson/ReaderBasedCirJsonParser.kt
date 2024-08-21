@@ -545,6 +545,13 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
             decodedData = decodedData shl 6 or bits
 
+            if (myInputPointer >= myInputEnd) {
+                loadMoreGuaranteed()
+            }
+
+            ch = myInputBuffer[myInputPointer++]
+            bits = base64Variant.decodeBase64Char(ch.code)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == '"') {
@@ -590,6 +597,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
             ch = myInputBuffer[myInputPointer++]
             bits = base64Variant.decodeBase64Char(ch.code)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == '"') {
@@ -604,6 +612,8 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
                         break
                     }
+
+                    bits = decodeBase64Escape(base64Variant, ch, 2)
                 }
 
                 if (bits == Base64Variant.BASE64_VALUE_PADDING) {
@@ -2760,20 +2770,44 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             else -> return handleUnrecognizedCharacterEscape(c)
         }
 
+        if (myInputPointer >= myInputEnd) {
+            if (!loadMore()) {
+                return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+            }
+        }
+
         var ch = myInputBuffer[myInputPointer++]
         var digit = CharTypes.charToHex(ch)
         var result = digit
 
         if (digit >= 0) {
+            if (myInputPointer >= myInputEnd) {
+                if (!loadMore()) {
+                    return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+                }
+            }
+
             ch = myInputBuffer[myInputPointer++]
             digit = CharTypes.charToHex(ch)
 
             if (digit >= 0) {
+                if (myInputPointer >= myInputEnd) {
+                    if (!loadMore()) {
+                        return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+                    }
+                }
+
                 result = result shl 4 or digit
                 ch = myInputBuffer[myInputPointer++]
                 digit = CharTypes.charToHex(ch)
 
                 if (digit >= 0) {
+                    if (myInputPointer >= myInputEnd) {
+                        if (!loadMore()) {
+                            return reportInvalidEOF("in character escape sequence", CirJsonToken.VALUE_STRING)
+                        }
+                    }
+
                     result = result shl 4 or digit
                     ch = myInputBuffer[myInputPointer++]
                     digit = CharTypes.charToHex(ch)
@@ -3020,6 +3054,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
             ch = myInputBuffer[myInputPointer++]
             bits = base64Variant.decodeBase64Char(ch)
+
             if (bits < 0) {
                 if (bits != Base64Variant.BASE64_VALUE_PADDING) {
                     if (ch == '"') {
