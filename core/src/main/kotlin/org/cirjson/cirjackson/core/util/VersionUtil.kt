@@ -20,7 +20,7 @@ object VersionUtil {
      * If the class could not be found or does not have a public static Version field named "VERSION", returns "empty"
      * [Version] returned by [Version.unknownVersion].
      *
-     * @param c Class for which to look version information
+     * @param clazz Class for which to look version information
      *
      * @return Version information discovered if any; [Version.unknownVersion] if none
      */
