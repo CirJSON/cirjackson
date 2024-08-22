@@ -1,6 +1,9 @@
 package org.cirjson.cirjackson.core.util
 
-import org.cirjson.cirjackson.core.TestBase
+import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.exception.StreamConstraintsException
+import org.cirjson.cirjackson.core.io.ContentReference
+import org.cirjson.cirjackson.core.io.IOContext
 import kotlin.test.*
 
 class TextBufferTest : TestBase() {
@@ -215,6 +218,57 @@ class TextBufferTest : TestBase() {
         val textBuffer = TextBuffer(null)
         textBuffer.resetWithString("1.234567890123456789")
         assertEquals(1.2345678901234567, textBuffer.contentsAsDouble(true))
+    }
+
+    @Test
+    fun testAppendCharArray() {
+        makeConstrainedContext().use { context ->
+            val constrained = context.constructReadConstrainedTextBuffer()
+            val chars = CharArray(SEGMENT_SIZE) { 'A' }
+            constrained.append(chars, 0, SEGMENT_SIZE)
+            assertFailsWith(StreamConstraintsException::class) {
+                constrained.append(chars, 0, SEGMENT_SIZE)
+                constrained.contentsAsString()
+            }
+        }
+    }
+
+    @Test
+    fun testAppendString() {
+        makeConstrainedContext().use { context ->
+            val constrained = context.constructReadConstrainedTextBuffer()
+            val chars = CharArray(SEGMENT_SIZE) { 'A' }
+            constrained.append(String(chars), 0, SEGMENT_SIZE)
+            assertFailsWith(StreamConstraintsException::class) {
+                constrained.append(String(chars), 0, SEGMENT_SIZE)
+                constrained.contentsAsString()
+            }
+        }
+    }
+
+    @Test
+    fun testAppendSingle() {
+        makeConstrainedContext().use { context ->
+            val constrained = context.constructReadConstrainedTextBuffer()
+            val chars = CharArray(SEGMENT_SIZE) { 'A' }
+            constrained.append(chars, 0, SEGMENT_SIZE)
+            assertFailsWith(StreamConstraintsException::class) {
+                constrained.append('x')
+                constrained.contentsAsString()
+            }
+        }
+    }
+
+    private fun makeConstrainedContext(): IOContext {
+        val constraints = StreamReadConstraints.builder().maxStringLength(SEGMENT_SIZE).build()
+        return IOContext(constraints, StreamWriteConstraints.defaults(), ErrorReportConfiguration.defaults(),
+                BufferRecycler(), ContentReference.rawReference("N/A"), true, CirJsonEncoding.UTF8)
+    }
+
+    companion object {
+
+        const val SEGMENT_SIZE = TextBuffer.MIN_SEGMENT_LEN
+
     }
 
 }

@@ -1,5 +1,7 @@
-package org.cirjson.cirjackson.core
+package org.cirjson.cirjackson.core.cirjson
 
+import org.cirjson.cirjackson.core.Version
+import org.cirjson.cirjackson.core.Versioned
 import org.cirjson.cirjackson.core.util.VersionUtil
 
 class PackageVersion : Versioned {
