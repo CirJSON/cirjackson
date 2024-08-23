@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.core.util
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingCirJsonParserBase
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.*
@@ -23,9 +24,20 @@ class DelegatesTest : TestBase() {
         val delegate = CirJsonParserDelegate(parser)
         val token = "foo"
 
-        assertFalse(delegate.isParsingAsyncPossible)
+        if (parser !is NonBlockingCirJsonParserBase) {
+            assertFalse(delegate.isParsingAsyncPossible)
+        } else {
+            assertTrue(delegate.isParsingAsyncPossible)
+        }
+
         assertFalse(delegate.isReadingTypeIdPossible)
-        assertFalse(delegate.isParsingAsyncPossible)
+
+        if (parser !is NonBlockingCirJsonParserBase) {
+            assertFalse(delegate.isParsingAsyncPossible)
+        } else {
+            assertTrue(delegate.isParsingAsyncPossible)
+        }
+
         assertEquals(parser.version(), delegate.version())
         assertSame(parser.streamReadConstraints, delegate.streamReadConstraints)
         assertEquals(MAX_NUMBER_LENGTH, parser.streamReadConstraints.maxNumberLength)

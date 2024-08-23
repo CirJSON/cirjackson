@@ -25,7 +25,7 @@ class TestSymbolsWithMediaItem : TestBase() {
 
         var token: CirJsonToken?
 
-        while (parser.nextToken().also { token = it } != null) {
+        while (parser.nextToken().also { token = it } != null && token != CirJsonToken.NOT_AVAILABLE) {
             if (token != CirJsonToken.CIRJSON_ID_PROPERTY_NAME && token != CirJsonToken.PROPERTY_NAME) {
                 continue
             }
@@ -57,7 +57,7 @@ class TestSymbolsWithMediaItem : TestBase() {
 
         var token: CirJsonToken?
 
-        while (parser.nextToken().also { token = it } != null) {
+        while (parser.nextToken().also { token = it } != null && token != CirJsonToken.NOT_AVAILABLE) {
             if (token != CirJsonToken.CIRJSON_ID_PROPERTY_NAME && token != CirJsonToken.PROPERTY_NAME) {
                 continue
             }

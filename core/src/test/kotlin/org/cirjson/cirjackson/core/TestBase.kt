@@ -2,12 +2,15 @@ package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactoryBuilder
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteArrayCirJsonParser
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteBufferCirJsonParser
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.support.MockDataInput
 import org.cirjson.cirjackson.core.support.TestSupport
 import org.cirjson.cirjackson.core.support.ThrottledInputStream
 import org.cirjson.cirjackson.core.support.ThrottledReader
 import java.io.*
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -59,6 +62,10 @@ open class TestBase {
 
             MODE_DATA_INPUT -> createParserForDataInput(factory, MockDataInput(doc))
 
+            MODE_NON_BLOCKING_BYTE_ARRAY -> createParserForNonBlockingByteArray(factory, doc.toByteArray())
+
+            MODE_NON_BLOCKING_BYTE_BUFFER -> createParserForNonBlockingByteBuffer(factory, doc.toByteArray())
+
             else -> throw RuntimeException("internal error")
         }
     }
@@ -76,6 +83,10 @@ open class TestBase {
                     ThrottledReader(String(doc, StandardCharsets.UTF_8), 1))
 
             MODE_DATA_INPUT -> createParserForDataInput(factory, MockDataInput(doc))
+
+            MODE_NON_BLOCKING_BYTE_ARRAY -> createParserForNonBlockingByteArray(factory, doc)
+
+            MODE_NON_BLOCKING_BYTE_BUFFER -> createParserForNonBlockingByteBuffer(factory, doc)
 
             else -> throw RuntimeException("internal error")
         }
@@ -110,6 +121,23 @@ open class TestBase {
 
     protected fun createParserForDataInput(factory: TokenStreamFactory, input: DataInput): CirJsonParser {
         return factory.createParser(testObjectReadContext(), input)
+    }
+
+    protected fun createParserForNonBlockingByteArray(factory: TokenStreamFactory, input: ByteArray): CirJsonParser {
+        return factory.createNonBlockingByteArrayParser<NonBlockingByteArrayCirJsonParser>(ObjectReadContext.empty())
+                .also {
+                    it.feedInput(input, 0, input.size)
+                }
+    }
+
+    protected fun createParserForNonBlockingByteBuffer(factory: TokenStreamFactory, input: ByteArray): CirJsonParser {
+        return factory.createNonBlockingByteBufferParser<NonBlockingByteBufferCirJsonParser>(ObjectReadContext.empty())
+                .also {
+                    val buffer = ByteBuffer.allocate(input.size)
+                    buffer.put(input)
+                    buffer.rewind()
+                    it.feedInput(buffer)
+                }
     }
 
     /*
@@ -383,28 +411,35 @@ open class TestBase {
 
         const val FIELD_BASENAME = "f"
 
-        const val MODE_INPUT_STREAM: Int = 0
+        const val MODE_INPUT_STREAM = 0
 
-        const val MODE_INPUT_STREAM_THROTTLED: Int = 1
+        const val MODE_INPUT_STREAM_THROTTLED = 1
 
-        const val MODE_READER: Int = 2
+        const val MODE_READER = 2
 
-        const val MODE_READER_THROTTLED: Int = 3
+        const val MODE_READER_THROTTLED = 3
 
-        const val MODE_DATA_INPUT: Int = 4
+        const val MODE_DATA_INPUT = 4
 
-        const val MODE_OUTPUT_STREAM: Int = 0
+        const val MODE_NON_BLOCKING_BYTE_ARRAY = 5
+
+        const val MODE_NON_BLOCKING_BYTE_BUFFER = 6
+
+        const val MODE_OUTPUT_STREAM = 0
 
         const val MODE_WRITER = 1
 
         val ALL_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_READER,
-                MODE_READER_THROTTLED, MODE_DATA_INPUT)
+                MODE_READER_THROTTLED, MODE_DATA_INPUT, MODE_NON_BLOCKING_BYTE_ARRAY, MODE_NON_BLOCKING_BYTE_BUFFER)
 
         val ALL_THROTTLED_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM_THROTTLED, MODE_READER_THROTTLED)
 
-        val ALL_BINARY_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_DATA_INPUT)
+        val ALL_BINARY_PARSER_MODES = intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_DATA_INPUT,
+                MODE_NON_BLOCKING_BYTE_ARRAY, MODE_NON_BLOCKING_BYTE_BUFFER)
 
         val ALL_TEXT_PARSER_MODES = intArrayOf(MODE_READER, MODE_READER_THROTTLED)
+
+        val ALL_ASYNC_PARSER_MODES = intArrayOf(MODE_NON_BLOCKING_BYTE_ARRAY, MODE_NON_BLOCKING_BYTE_BUFFER)
 
         val ALL_STREAMING_PARSER_MODES =
                 intArrayOf(MODE_INPUT_STREAM, MODE_INPUT_STREAM_THROTTLED, MODE_READER, MODE_READER_THROTTLED)

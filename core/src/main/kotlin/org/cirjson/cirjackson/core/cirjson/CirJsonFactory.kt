@@ -4,7 +4,8 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.async.ByteArrayFeeder
 import org.cirjson.cirjackson.core.async.ByteBufferFeeder
 import org.cirjson.cirjackson.core.base.TextualTSFactory
-import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteArrayJsonParser
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteArrayCirJsonParser
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingByteBufferCirJsonParser
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 import org.cirjson.cirjackson.core.io.ContentReference
 import org.cirjson.cirjackson.core.io.IOContext
@@ -211,7 +212,7 @@ open class CirJsonFactory : TextualTSFactory {
             readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteArrayFeeder {
         val ioContext = createNonBlockingContext(null)
         val canonicalizer = myByteSymbolCanonicalizer.makeChildOrPlaceholder(factoryFeatures)
-        return NonBlockingByteArrayJsonParser(readContext, ioContext,
+        return NonBlockingByteArrayCirJsonParser(readContext, ioContext,
                 readContext.getStreamReadFeatures(streamReadFeatures),
                 readContext.getFormatReadFeatures(formatReadFeatures), canonicalizer) as P
     }
@@ -221,7 +222,7 @@ open class CirJsonFactory : TextualTSFactory {
             readContext: ObjectReadContext): P where P : CirJsonParser, P : ByteBufferFeeder {
         val ioContext = createNonBlockingContext(null)
         val canonicalizer = myByteSymbolCanonicalizer.makeChildOrPlaceholder(factoryFeatures)
-        return NonBlockingByteArrayJsonParser(readContext, ioContext,
+        return NonBlockingByteBufferCirJsonParser(readContext, ioContext,
                 readContext.getStreamReadFeatures(streamReadFeatures),
                 readContext.getFormatReadFeatures(formatReadFeatures), canonicalizer) as P
     }

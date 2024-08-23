@@ -16,6 +16,10 @@ class TestByteBasedSymbols : TestBase() {
     @Test
     fun testSharedSymbols() {
         for (mode in ALL_PARSER_MODES) {
+            if (mode in ALL_ASYNC_PARSER_MODES) {
+                continue
+            }
+
             sharedSymbols(mode)
         }
     }
@@ -95,7 +99,9 @@ class TestByteBasedSymbols : TestBase() {
         val factory = MyFactory()
         val parser = createParser(factory, mode, createPerNameDoc())
 
-        while (parser.nextToken() != null) {
+        var next = parser.nextToken()
+        while (next != null && next != CirJsonToken.NOT_AVAILABLE) {
+            next = parser.nextToken()
         }
 
         parser.close()

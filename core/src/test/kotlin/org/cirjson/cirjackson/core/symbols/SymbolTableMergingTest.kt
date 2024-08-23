@@ -51,11 +51,15 @@ class SymbolTableMergingTest : TestBase() {
         val factory = MyCirJsonFactory()
         val parser = createParser(factory, mode, CIRJSON)
 
-        while (parser.nextToken() != null) {
+        var next: CirJsonToken?
+
+        while (parser.nextToken().also { next = it } != null && next != CirJsonToken.NOT_AVAILABLE) {
             assertEquals(0, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
         }
 
-        assertEquals(4, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
+        val expectedBeforeClose = if (mode !in ALL_ASYNC_PARSER_MODES) 4 else 0
+        assertEquals(expectedBeforeClose,
+                if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
         parser.close()
         assertEquals(4, if (mode in ALL_TEXT_PARSER_MODES) factory.charSymbolCount() else factory.byteSymbolCount())
     }

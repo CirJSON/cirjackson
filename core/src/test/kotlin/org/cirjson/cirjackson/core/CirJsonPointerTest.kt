@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
+import org.cirjson.cirjackson.core.cirjson.async.NonBlockingCirJsonParserBase
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import kotlin.test.*
 
@@ -440,7 +441,11 @@ class CirJsonPointerTest : TestBase() {
         assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
         assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
 
-        assertNull(parser.nextToken())
+        if (parser !is NonBlockingCirJsonParserBase) {
+            assertNull(parser.nextToken())
+        } else {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        }
         parser.close()
     }
 
@@ -558,7 +563,11 @@ class CirJsonPointerTest : TestBase() {
         assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
         assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
 
-        assertNull(parser.nextToken())
+        if (parser !is NonBlockingCirJsonParserBase) {
+            assertNull(parser.nextToken())
+        } else {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        }
 
         assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
 

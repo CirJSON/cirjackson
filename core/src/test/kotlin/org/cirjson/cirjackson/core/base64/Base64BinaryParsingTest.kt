@@ -46,7 +46,9 @@ class Base64BinaryParsingTest : TestBase() {
                 assertNotNull(data)
                 assertContentEquals(data, input)
 
-                if (parserMode != MODE_DATA_INPUT) {
+                if (parserMode in ALL_ASYNC_PARSER_MODES) {
+                    assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+                } else if (parserMode != MODE_DATA_INPUT) {
                     assertNull(parser.nextToken())
                 }
 
@@ -89,7 +91,9 @@ class Base64BinaryParsingTest : TestBase() {
             assertContentEquals(data, result.toByteArray())
             assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
 
-            if (parserMode != MODE_DATA_INPUT) {
+            if (parserMode in ALL_ASYNC_PARSER_MODES) {
+                assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+            } else if (parserMode != MODE_DATA_INPUT) {
                 assertNull(parser.nextToken())
             }
 
@@ -195,7 +199,9 @@ class Base64BinaryParsingTest : TestBase() {
         var bytes = parser.binaryValue
         assertEquals("Test!", String(bytes, Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 
@@ -207,7 +213,9 @@ class Base64BinaryParsingTest : TestBase() {
         bytes = parser.binaryValue
         assertEquals("Test!", String(bytes, Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 
@@ -228,7 +236,9 @@ class Base64BinaryParsingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("Test!", String(parser.binaryValue, Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 
@@ -238,7 +248,9 @@ class Base64BinaryParsingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("Test!", String(readBinary(parser), Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 
@@ -250,7 +262,9 @@ class Base64BinaryParsingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("X", String(parser.binaryValue, Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 
@@ -260,7 +274,9 @@ class Base64BinaryParsingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("X", String(readBinary(parser), Charsets.US_ASCII))
 
-        if (mode != MODE_DATA_INPUT) {
+        if (mode in ALL_ASYNC_PARSER_MODES) {
+            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
+        } else if (mode != MODE_DATA_INPUT) {
             assertNull(parser.nextToken())
         }
 

@@ -11,6 +11,7 @@ import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.core.symbols.SimpleNameMatcher
 import org.cirjson.cirjackson.core.util.*
 import java.io.*
+import java.net.URISyntaxException
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -780,9 +781,11 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
 
                 if (path.indexOf('%') < 0) {
                     try {
-                        return Files.newInputStream(Paths.get(url.path))
+                        return Files.newInputStream(Paths.get(url.toURI()))
                     } catch (e: IOException) {
                         throw wrapIOFailure(e)
+                    } catch (e: URISyntaxException) {
+                        throw wrapIOFailure(IOException(e))
                     }
                 }
             }

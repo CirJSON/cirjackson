@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.core.cirjson.async
 
+import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.ObjectReadContext
 import org.cirjson.cirjackson.core.async.ByteArrayFeeder
 import org.cirjson.cirjackson.core.async.NonBlockingInputFeeder
@@ -14,7 +15,7 @@ import java.io.OutputStream
  * NOTE: only supports parsing of UTF-8 encoded content (and 7-bit US-ASCII since it is strict subset of UTF-8): other
  * encodings are not supported.
  */
-open class NonBlockingByteArrayJsonParser(objectReadContext: ObjectReadContext, ioContext: IOContext,
+open class NonBlockingByteArrayCirJsonParser(objectReadContext: ObjectReadContext, ioContext: IOContext,
         streamReadFeatures: Int, formatReadFeatures: Int, symbols: ByteQuadsCanonicalizer) :
         NonBlockingUtf8CirJsonParserBase(objectReadContext, ioContext, streamReadFeatures, formatReadFeatures, symbols),
         ByteArrayFeeder {
@@ -80,6 +81,29 @@ open class NonBlockingByteArrayJsonParser(objectReadContext: ObjectReadContext, 
         myInputPointer = offset
         myInputEnd = end
         myOriginalBufferLen = end - offset
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun <T> reportInvalidToken(matchedPart: String, message: String): T {
+        val stringBuilder = StringBuilder(matchedPart)
+
+        while (myInputPointer < myInputEnd) {
+            val i = myInputBuffer[myInputPointer++]
+            val c = decodeCharForError(i.toInt()).toChar()
+
+            if (!c.isJavaIdentifierPart()) {
+                break
+            }
+
+            stringBuilder.append(c)
+
+            if (stringBuilder.length >= myIOContext!!.errorReportConfiguration.maxErrorTokenLength) {
+                stringBuilder.append("...")
+                break
+            }
+        }
+
+        throw constructReadException("Unrecognized token '$stringBuilder': was expecting $message")
     }
 
 }

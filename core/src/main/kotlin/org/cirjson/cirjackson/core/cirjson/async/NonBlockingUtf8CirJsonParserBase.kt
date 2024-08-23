@@ -502,6 +502,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         updateTokenLocation()
+        streamReadContext!!.isExpectingComma
 
         return if (ch == CODE_QUOTE) {
             startString()
@@ -1043,7 +1044,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 val ch = getByteFromBuffer(pointer).toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
-                    myInputEnd = pointer
+                    myInputPointer = pointer
                     return valueComplete(CirJsonToken.VALUE_FALSE)
                 }
             }
@@ -1063,7 +1064,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 val ch = getByteFromBuffer(pointer).toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
-                    myInputEnd = pointer
+                    myInputPointer = pointer
                     return valueComplete(CirJsonToken.VALUE_TRUE)
                 }
             }
@@ -1083,7 +1084,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 val ch = getByteFromBuffer(pointer).toInt() and 0xFF
 
                 if (ch < CODE_0 || ch or 0x20 == CODE_R_CURLY) {
-                    myInputEnd = pointer
+                    myInputPointer = pointer
                     return valueComplete(CirJsonToken.VALUE_NULL)
                 }
             }
@@ -1478,7 +1479,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 return startFloat(outputBuffer, 1, ch)
             }
 
-            if (ch or 0x20 != CODE_R_CURLY) {
+            if (ch or 0x20 != CODE_R_CURLY && ch > CODE_9) {
                 return reportUnexpectedChar(ch.toChar(),
                         "expected digit (0-9) to follow minus sign, for valid numeric value")
             }
@@ -2128,6 +2129,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     }
 
                     quads[realQuadLength++] = realCurrentQuad
+                    realCurrentQuad = ch
                     realCurrentQuadBytes = 1
                 }
 
@@ -2196,7 +2198,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             realCurrentQuadBytes = 1
         }
 
-        if (currentQuadBytes > 0) {
+        if (realCurrentQuadBytes > 0) {
             if (realQuadLength >= quads.size) {
                 quads = growNameDecodeBuffer(quads, quads.size)
                 myQuadBuffer = quads
@@ -2554,7 +2556,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             outputBuffer[outputPointer++] = c.toChar()
         }
 
-        myInputPointer = pointer + 1
+        myInputPointer = pointer
         myTextBuffer.currentSegmentSize = outputPointer
         return finishRegularString()
     }
@@ -3051,6 +3053,64 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         return (c shl 6 or (f and 0x3F)) - 0x10000
+    }
+
+    @Throws(CirJacksonException::class)
+    protected open fun decodeCharForError(firstByte: Int): Int {
+        var c = firstByte and 0xFF
+
+        if (c > 0x7F) {
+            val needed = when {
+                c and 0xE0 == 0xC0 -> {
+                    c = c and 0x1F
+                    1
+                }
+
+                c and 0xF0 == 0xE0 -> {
+                    c = c and 0x0F
+                    2
+                }
+
+                c and 0xF8 == 0xF0 -> {
+                    c = c and 0x07
+                    3
+                }
+
+                else -> {
+                    return reportInvalidInitial(c and 0xFF)
+                }
+            }
+
+            var d = nextUnsignedByteFromBuffer
+
+            if (d and 0xC0 != 0x080) {
+                return reportInvalidOther(d and 0xFF)
+            }
+
+            c = c shl 6 or (d and 0x3F)
+
+            if (needed > 1) {
+                d = nextUnsignedByteFromBuffer
+
+                if (d and 0xC0 != 0x080) {
+                    return reportInvalidOther(d and 0xFF)
+                }
+
+                c = c shl 6 or (d and 0x3F)
+
+                if (needed > 2) {
+                    d = nextUnsignedByteFromBuffer
+
+                    if (d and 0xC0 != 0x080) {
+                        return reportInvalidOther(d and 0xFF)
+                    }
+
+                    c = c shl 6 or (d and 0x3F)
+                }
+            }
+        }
+
+        return c
     }
 
     companion object {

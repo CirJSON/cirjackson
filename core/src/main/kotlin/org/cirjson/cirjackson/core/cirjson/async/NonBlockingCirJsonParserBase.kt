@@ -297,7 +297,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun startArrayScope(): CirJsonToken {
         createChildArrayContext(-1, -1)
         myMajorState = MAJOR_ARRAY_ELEMENT_FIRST
-        myMinorStateAfterSplit = MAJOR_ARRAY_ELEMENT_NEXT
+        myMajorStateAfterValue = MAJOR_ARRAY_ELEMENT_NEXT
         return CirJsonToken.START_ARRAY.also { myCurrentToken = it }
     }
 
@@ -305,7 +305,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun startObjectScope(): CirJsonToken {
         createChildObjectContext(-1, -1)
         myMajorState = MAJOR_OBJECT_PROPERTY_FIRST
-        myMinorStateAfterSplit = MAJOR_OBJECT_PROPERTY_NEXT
+        myMajorStateAfterValue = MAJOR_OBJECT_PROPERTY_NEXT
         return CirJsonToken.START_OBJECT.also { myCurrentToken = it }
     }
 
@@ -327,7 +327,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         }
 
         myMajorState = state
-        myMinorStateAfterSplit = state
+        myMajorStateAfterValue = state
         return CirJsonToken.END_ARRAY.also { myCurrentToken = it }
     }
 
@@ -349,7 +349,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         }
 
         myMajorState = state
-        myMinorStateAfterSplit = state
+        myMajorStateAfterValue = state
         return CirJsonToken.END_OBJECT.also { myCurrentToken = it }
     }
 
@@ -542,7 +542,15 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun fieldComplete(name: String): CirJsonToken {
         myMajorState = MAJOR_OBJECT_VALUE
         streamReadContext!!.currentName = name
-        return CirJsonToken.PROPERTY_NAME.also { myCurrentToken = it }
+        return if (myCurrentToken == CirJsonToken.START_OBJECT) {
+            if (name != idName) {
+                return reportInvalidToken(name, "Expected property name '$idName', received '$name'")
+            }
+
+            CirJsonToken.CIRJSON_ID_PROPERTY_NAME
+        } else {
+            CirJsonToken.PROPERTY_NAME
+        }.also { myCurrentToken = it }
     }
 
     @Throws(CirJacksonException::class)
@@ -619,6 +627,9 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun <T> reportInvalidOther(mask: Int): T {
         return reportError("Invalid UTF-8 middle byte 0x${mask.toString(16)}")
     }
+
+    @Throws(CirJacksonException::class)
+    protected abstract fun <T> reportInvalidToken(matchedPart: String, message: String): T
 
     companion object {
 

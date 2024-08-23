@@ -158,7 +158,9 @@ class CirJsonBufferRecyclersTest : TestBase() {
     }
 
     private fun testCopy(parser: CirJsonParser, generator: CirJsonGenerator) {
-        while (parser.nextToken() != null) {
+        var next: CirJsonToken?
+
+        while (parser.nextToken().also { next = it } != null && next != CirJsonToken.NOT_AVAILABLE) {
             generator.copyCurrentEvent(parser)
         }
 
