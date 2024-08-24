@@ -1,0 +1,140 @@
+package org.cirjson.cirjackson.core.constraints
+
+import org.cirjson.cirjackson.core.CirJsonToken
+import org.cirjson.cirjackson.core.StreamReadConstraints
+import org.cirjson.cirjackson.core.TestBase
+import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
+import org.cirjson.cirjackson.core.exception.StreamConstraintsException
+import java.math.BigDecimal
+import java.math.BigInteger
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.fail
+
+class LargeNumberReadTest : TestBase() {
+
+    private val factory = newStreamFactory()
+
+    @Test
+    fun testBigDecimalParse() {
+        for (mode in ALL_NON_ASYNC_PARSER_MODES) {
+            for (fraction in FRACTIONS) {
+                bigDecimalParse(mode, fraction, true)
+
+                try {
+                    bigDecimalParse(mode, fraction, false)
+                    fail("expected StreamConstraintsException")
+                } catch (e: StreamConstraintsException) {
+                    verifyException(e, "Invalid numeric value ", "exceeds the maximum")
+                }
+            }
+        }
+    }
+
+    private fun bigDecimalParse(mode: Int, fraction: String, enableUnlimitedNumberLen: Boolean) {
+        val factory = if (enableUnlimitedNumberLen) {
+            CirJsonFactory.builder()
+                    .streamReadConstraints(StreamReadConstraints.builder().maxNumberLength(Int.MAX_VALUE).build())
+                    .build()
+        } else {
+            factory
+        }
+
+        val doc = "[ \"root\", $fraction ]"
+
+        createParser(factory, mode, doc).use { parser ->
+            assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+            assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+            assertToken(CirJsonToken.VALUE_NUMBER_FLOAT, parser.nextToken())
+            val expected = BigDecimal(fraction)
+            assertEquals(expected, parser.bigDecimalValue)
+        }
+    }
+
+    @Test
+    fun testBigIntegerParse() {
+        for (mode in ALL_NON_ASYNC_PARSER_MODES) {
+            for (integer in INTEGERS) {
+                bigIntegerParse(mode, integer, true)
+
+                try {
+                    bigIntegerParse(mode, integer, false)
+                    fail("expected StreamConstraintsException")
+                } catch (e: StreamConstraintsException) {
+                    verifyException(e, "Invalid numeric value ", "exceeds the maximum")
+                }
+            }
+        }
+    }
+
+    private fun bigIntegerParse(mode: Int, integer: String, enableUnlimitedNumberLen: Boolean) {
+        val factory = if (enableUnlimitedNumberLen) {
+            CirJsonFactory.builder()
+                    .streamReadConstraints(StreamReadConstraints.builder().maxNumberLength(Int.MAX_VALUE).build())
+                    .build()
+        } else {
+            factory
+        }
+
+        val doc = "[ \"root\", $integer ]"
+
+        createParser(factory, mode, doc).use { parser ->
+            assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
+            assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
+            assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
+            val expected = BigInteger(integer)
+            assertEquals(expected, parser.bigIntegerValue)
+        }
+    }
+
+    companion object {
+
+        private const val BASE_FRACTION = "01610253934481930774151441507943554511027782188707463024288149352877602369" +
+                "0905378058352283823814945584087486290764920313665152884137840533937075179853255596515758851877960056" +
+                "8494688799331229080900215711624279349155673306126272677013004925358178583610721697907834341963458636" +
+                "2681098115326893982589327952357032253344676618872460059526528654291804585035337152001845129563560924" +
+                "8478721067200812355632099802713302132804777044107393832707173313768807959788098545050700242134577863" +
+                "5696363674398675669233347927749405692735857349640083102450105843483849205741033067330205253901363979" +
+                "2877766708820229643354170617588600662633352500768039735140539092742082585103654847451923942529864942" +
+                "0795296781692303253055152441850691276044546565109657012938963181532017974206315159305959543881191233" +
+                "7331797353214615798082783837703457594081457456170327054949003909864767732479812702835339599792873405" +
+                "1339894411356699983988929073389687443968224932762146373537586840819043559009416657547396736841298397" +
+                "5580104741004390308453023021214626015068027388545767003666342291064051883531202983476423138817666738" +
+                "3460332729485083952142460470270121052469394888775064758246516888122459628160867190501924768788865439" +
+                "9644177875182567721341248717748470311640539074162707667828429599333423142914551517616580884277651528" +
+                "7299275536932744066126348489439143701880784521312311735178716650919024092723485314329094064704170548" +
+                "5514683182501795615082930770566118774884179621959653192193523146647646498022317802621697424848183330" +
+                "5571329110328660864318433253572997833038335632174050981747563310524775762280529871176578487487324067" +
+                "9024286215940395303989612556865748135450980540945799394622053158729350598632915060818702520420240989" +
+                "9086781413793009041699367766188612218399382838762223321248148302070738168640764282731777787880536133" +
+                "45444299361357958409716099682468768353446625063"
+
+        private val FRACTIONS =
+                arrayOf("50.$BASE_FRACTION", "-37.$BASE_FRACTION", "0.00$BASE_FRACTION", "-0.012$BASE_FRACTION",
+                        "9999998.$BASE_FRACTION", "-8888392.$BASE_FRACTION")
+
+        private const val BASE_INTEGER = "421610253934481930774151441507943554511027782188707463024288149352877602369" +
+                "0905378058352283823814945584087486290764920313665152884137840533937075179853255596515758851877960056" +
+                "8494688799331229080900215711624279349155673306126272677013004925358178583610721697907834341963458636" +
+                "2681098115326893982589327952357032253344676618872460059526528654291804585035337152001845129563560924" +
+                "8478721067200812355632099802713302132804777044107393832707173313768807959788098545050700242134577863" +
+                "5696363674398675669233347927749405692735857349640083102450105843483849205741033067330205253901363979" +
+                "2877766708820229643354170617588600662633352500768039735140539092742082585103654847451923942529864942" +
+                "0795296781692303253055152441850691276044546565109657012938963181532017974206315159305959543881191233" +
+                "7331797353214615798082783837703457594081457456170327054949003909864767732479812702835339599792873405" +
+                "1339894411356699983988929073389687443968224932762146373537586840819043559009416657547396736841298397" +
+                "5580104741004390308453023021214626015068027388545767003666342291064051883531202983476423138817666738" +
+                "3460332729485083952142460470270121052469394888775064758246516888122459628160867190501924768788865439" +
+                "9644177875182567721341248717748470311640539074162707667828429599333423142914551517616580884277651528" +
+                "7299275536932744066126348489439143701880784521312311735178716650919024092723485314329094064704170548" +
+                "5514683182501795615082930770566118774884179621959653192193523146647646498022317802621697424848183330" +
+                "5571329110328660864318433253572997833038335632174050981747563310524775762280529871176578487487324067" +
+                "9024286215940395303989612556865748135450980540945799394622053158729350598632915060818702520420240989" +
+                "9086781413793009041699367766188612218399382838762223321248148302070738168640764282731777787880536133" +
+                "45444299361357958409716099682468768353446625063"
+
+        private val INTEGERS = arrayOf(BASE_INTEGER, "-$BASE_INTEGER")
+
+    }
+
+}

@@ -1803,7 +1803,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     @Throws(CirJacksonException::class)
     private fun parseSignedNumber(negative: Boolean): CirJsonToken? {
         val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
-        var outputPointer = 1
+        var outputPointer = 0
 
         if (negative) {
             outputBuffer[outputPointer++] = '-'
@@ -1831,7 +1831,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
         outputBuffer[outputPointer++] = c.toChar()
         var integralLength = 1
-        val end = min(myInputEnd, myInputPointer + outputBuffer.size - 1)
+        val end = min(myInputEnd, myInputPointer + outputBuffer.size - outputPointer)
 
         while (true) {
             if (myInputPointer >= end) {
@@ -1973,7 +1973,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                     break
                 }
 
-                c = myInputBuffer[myInputPointer].toInt() and 0xFF
+                c = myInputBuffer[myInputPointer++].toInt() and 0xFF
 
                 if (c !in CODE_0..CODE_9) {
                     break

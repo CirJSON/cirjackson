@@ -1055,7 +1055,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
     @Throws(CirJacksonException::class, IOException::class)
     private fun parseSignedNumber(negative: Boolean): CirJsonToken? {
         var outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
-        var outputPointer = 1
+        var outputPointer = 0
 
         if (negative) {
             outputBuffer[outputPointer++] = '-'
@@ -1092,6 +1092,10 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
             outputBuffer[outputPointer++] = c.toChar()
             c = myInputData.readUnsignedByte()
+        }
+
+        if (c == CODE_PERIOD || c or 0x20 == CODE_E_LOWERCASE) {
+            return parseFloat(outputBuffer, outputPointer, c, negative, integralLength)
         }
 
         myTextBuffer.currentSegmentSize = outputPointer
