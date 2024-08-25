@@ -21,7 +21,7 @@ class FactoryBaseImplementationsTest {
             return this
         }
 
-        override fun createParser(readContext: ObjectReadContext, ioContext: IOContext, data: ByteArray, offset: Int,
+        override fun createParser(readContext: ObjectReadContext, ioContext: IOContext, data: ByteArray?, offset: Int,
                 length: Int): CirJsonParser {
             throw UnsupportedOperationException()
         }
@@ -73,12 +73,12 @@ class FactoryBaseImplementationsTest {
             return this
         }
 
-        override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
+        override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray?, offset: Int,
                 len: Int): CirJsonParser {
             throw UnsupportedOperationException()
         }
 
-        override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray, offset: Int,
+        override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray?, offset: Int,
                 len: Int, recyclable: Boolean): CirJsonParser {
             throw UnsupportedOperationException()
         }

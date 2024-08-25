@@ -53,7 +53,7 @@ abstract class TextualTSFactory : DecorableTSFactory {
      */
 
     @Throws(CirJacksonException::class)
-    override fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, data: ByteArray?, offset: Int,
             length: Int): CirJsonParser {
         val context = createContext(createContentReference(data, offset, length), true)
 
@@ -69,7 +69,7 @@ abstract class TextualTSFactory : DecorableTSFactory {
     }
 
     @Throws(CirJacksonException::class)
-    override fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, content: CharArray?, offset: Int,
             length: Int): CirJsonParser {
         if (inputDecorator != null) {
             return createParser(readContext, CharArrayReader(content, offset, length))
@@ -87,12 +87,12 @@ abstract class TextualTSFactory : DecorableTSFactory {
 
     @Throws(CirJacksonException::class)
     override fun createParser(readContext: ObjectReadContext, file: File): CirJsonParser {
-        val context = createContext(createContentReference(file), false)
+        val context = createContext(createContentReference(file), true)
         return createParser(readContext, context, decorate(context, fileInputStream(file)))
     }
 
     override fun createParser(readContext: ObjectReadContext, path: Path): CirJsonParser {
-        val context = createContext(createContentReference(path), false)
+        val context = createContext(createContentReference(path), true)
         return createParser(readContext, context, decorate(context, pathInputStream(path)))
     }
 
@@ -135,11 +135,11 @@ abstract class TextualTSFactory : DecorableTSFactory {
      */
 
     @Throws(CirJacksonException::class)
-    protected abstract fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray,
+    protected abstract fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray?,
             offset: Int, len: Int): CirJsonParser
 
     @Throws(CirJacksonException::class)
-    protected abstract fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray,
+    protected abstract fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray?,
             offset: Int, len: Int, recyclable: Boolean): CirJsonParser
 
     @Throws(CirJacksonException::class)
@@ -262,11 +262,11 @@ abstract class TextualTSFactory : DecorableTSFactory {
      *******************************************************************************************************************
      */
 
-    override fun createContentReference(contentReference: Any): ContentReference {
+    override fun createContentReference(contentReference: Any?): ContentReference {
         return ContentReference.construct(true, contentReference, errorReportConfiguration)
     }
 
-    override fun createContentReference(contentReference: Any, offset: Int, length: Int): ContentReference {
+    override fun createContentReference(contentReference: Any?, offset: Int, length: Int): ContentReference {
         return ContentReference.construct(true, contentReference, offset, length, errorReportConfiguration)
     }
 

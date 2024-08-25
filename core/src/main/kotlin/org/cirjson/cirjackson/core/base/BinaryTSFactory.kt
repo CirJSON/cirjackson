@@ -35,7 +35,7 @@ abstract class BinaryTSFactory : DecorableTSFactory {
      */
 
     @Throws(CirJacksonException::class)
-    override fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, data: ByteArray?, offset: Int,
             length: Int): CirJsonParser {
         val ioContext = createContext(createContentReference(data, offset, length), true, null)
 
@@ -51,7 +51,7 @@ abstract class BinaryTSFactory : DecorableTSFactory {
     }
 
     @Throws(CirJacksonException::class)
-    override fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, content: CharArray?, offset: Int,
             length: Int): CirJsonParser {
         return nonByteSource()
     }
@@ -100,7 +100,7 @@ abstract class BinaryTSFactory : DecorableTSFactory {
     }
 
     @Throws(CirJacksonException::class)
-    abstract fun createParser(readContext: ObjectReadContext, ioContext: IOContext, data: ByteArray, offset: Int,
+    abstract fun createParser(readContext: ObjectReadContext, ioContext: IOContext, data: ByteArray?, offset: Int,
             length: Int): CirJsonParser
 
     @Throws(CirJacksonException::class)
@@ -148,11 +148,11 @@ abstract class BinaryTSFactory : DecorableTSFactory {
      * Factory methods: context objects
      *******************************************************************************************************************
      */
-    override fun createContentReference(contentReference: Any): ContentReference {
+    override fun createContentReference(contentReference: Any?): ContentReference {
         return ContentReference.construct(false, contentReference, errorReportConfiguration)
     }
 
-    override fun createContentReference(contentReference: Any, offset: Int, length: Int): ContentReference {
+    override fun createContentReference(contentReference: Any?, offset: Int, length: Int): ContentReference {
         return ContentReference.construct(false, contentReference, offset, length, errorReportConfiguration)
     }
 

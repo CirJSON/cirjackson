@@ -350,7 +350,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray, offset: Int, length: Int): CirJsonParser
+    abstract fun createParser(readContext: ObjectReadContext, data: ByteArray?, offset: Int, length: Int): CirJsonParser
 
     /**
      * Method for constructing parser for parsing contents of given char array.
@@ -380,7 +380,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      * @throws CirJacksonException If there are problems constructing parser
      */
     @Throws(CirJacksonException::class)
-    abstract fun createParser(readContext: ObjectReadContext, content: CharArray, offset: Int,
+    abstract fun createParser(readContext: ObjectReadContext, content: CharArray?, offset: Int,
             length: Int): CirJsonParser
 
     /**
@@ -738,7 +738,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      *
      * @return InputSourceReference instance to use
      */
-    protected abstract fun createContentReference(contentReference: Any): ContentReference
+    protected abstract fun createContentReference(contentReference: Any?): ContentReference
 
     /**
      * Overridable factory method for constructing [ContentReference] to pass to parser or generator being created; used
@@ -750,7 +750,7 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
      *
      * @return InputSourceReference instance to use
      */
-    protected abstract fun createContentReference(contentReference: Any, offset: Int, length: Int): ContentReference
+    protected abstract fun createContentReference(contentReference: Any?, offset: Int, length: Int): ContentReference
 
     /**
      * Method that creates an OutputStream from a DataOutput, so that all writing operations use the DataOutput
@@ -862,12 +862,12 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
 
     @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForByteArray(data: ByteArray?, offset: Int, len: Int) {
-        data ?: return reportRangeError("Invalid `data` argument: `null`")
-        checkRange(data.size, offset, len)
+        data ?: return reportRangeError("Invalid `ByteArray` argument: `null`")
+        checkRange(data.size, offset, len, "ByteArray")
     }
 
     @Throws(CirJacksonException::class)
-    private fun checkRange(dataLen: Int, offset: Int, len: Int) {
+    private fun checkRange(dataLen: Int, offset: Int, len: Int, type: String) {
         val end = offset + len
 
         // Note: we are checking that:
@@ -882,14 +882,14 @@ abstract class TokenStreamFactory : Versioned, Snapshottable<TokenStreamFactory>
 
         if (anyNegs < 0) {
             reportRangeError<Nothing>(
-                    "Invalid 'offset' ($offset) and/or 'len' ($len) arguments for `data` of length $dataLen")
+                    "Invalid 'offset' ($offset) and/or 'len' ($len) arguments for `$type` of length $dataLen")
         }
     }
 
     @Throws(CirJacksonException::class)
     protected fun checkRangeBoundsForCharArray(data: CharArray?, offset: Int, len: Int) {
-        data ?: return reportRangeError("Invalid `data` argument: `null`")
-        checkRange(data.size, offset, len)
+        data ?: return reportRangeError("Invalid `CharArray` argument: `null`")
+        checkRange(data.size, offset, len, "CharArray")
     }
 
     /**

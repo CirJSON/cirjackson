@@ -24,12 +24,13 @@ abstract class InputDecorator {
      *
      * @param length Number of bytes available in the input buffer
      *
-     * @return Either [InputStream] to use as input source; or null to indicate that contents are to be processed as-is by caller
+     * @return Either [InputStream] to use as input source; or `null` to indicate that contents are to be processed
+     * as-is by caller
      *
      * @throws CirJacksonException if construction of [InputStream] fails
      */
     @Throws(CirJacksonException::class)
-    abstract fun decorate(context: IOContext, data: ByteArray, offset: Int, length: Int): InputStream?
+    abstract fun decorate(context: IOContext, data: ByteArray?, offset: Int, length: Int): InputStream?
 
     /**
      * Method called by [org.cirjson.cirjackson.core.cirjson.CirJsonFactory] instance when creating parser given an

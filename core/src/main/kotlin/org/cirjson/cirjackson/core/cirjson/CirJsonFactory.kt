@@ -238,22 +238,22 @@ open class CirJsonFactory : TextualTSFactory {
      *******************************************************************************************************************
      */
 
-    override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, data: ByteArray?, offset: Int,
             len: Int): CirJsonParser {
         checkRangeBoundsForByteArray(data, offset, len)
 
-        return ByteSourceCirJsonBootstrapper(context, data, offset, len).constructParser(readContext,
+        return ByteSourceCirJsonBootstrapper(context, data!!, offset, len).constructParser(readContext,
                 readContext.getStreamReadFeatures(streamReadFeatures),
                 readContext.getFormatReadFeatures(formatReadFeatures), myByteSymbolCanonicalizer, myRootCharSymbols,
                 factoryFeatures)
     }
 
-    override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray, offset: Int,
+    override fun createParser(readContext: ObjectReadContext, context: IOContext, content: CharArray?, offset: Int,
             len: Int, recyclable: Boolean): CirJsonParser {
         checkRangeBoundsForCharArray(content, offset, len)
 
         return ReaderBasedCirJsonParser(readContext, context, readContext.getStreamReadFeatures(streamReadFeatures),
-                readContext.getFormatReadFeatures(formatReadFeatures), null, myRootCharSymbols.makeChild(), content,
+                readContext.getFormatReadFeatures(formatReadFeatures), null, myRootCharSymbols.makeChild(), content!!,
                 offset, offset + len, recyclable)
     }
 
