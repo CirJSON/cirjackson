@@ -40,7 +40,7 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
     override var currentName: String?
         get() = myCurrentName
         set(value) {
-            myCurrentName = value!!
+            myCurrentName = value
             if (myDuplicateDetector != null) {
                 checkDuplicates(myDuplicateDetector!!, value)
             }
@@ -153,7 +153,7 @@ class CirJsonReadContext(override val parent: CirJsonReadContext?, nestingDepth:
         }
 
     @Throws(StreamReadException::class)
-    private fun checkDuplicates(duplicateDetector: DuplicateDetector, name: String) {
+    private fun checkDuplicates(duplicateDetector: DuplicateDetector, name: String?) {
         if (!duplicateDetector.isDuplicate(name)) {
             return
         }

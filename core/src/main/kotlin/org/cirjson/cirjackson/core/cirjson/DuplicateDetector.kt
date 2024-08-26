@@ -13,9 +13,9 @@ import org.cirjson.cirjackson.core.CirJsonParser
  *
  * @property source Source object (parser/generator) used to construct this detector.
  */
-class DuplicateDetector private constructor(val source: Any) {
+class DuplicateDetector private constructor(val source: Any?) {
 
-    private var mySeen: HashSet<String>? = null
+    private var mySeen: HashSet<String?>? = null
 
     private var myFirstName: String? = null
 
@@ -43,21 +43,21 @@ class DuplicateDetector private constructor(val source: Any) {
      *
      * @return `true` if the property had already been seen before in this context
      */
-    fun isDuplicate(name: String): Boolean {
+    fun isDuplicate(name: String?): Boolean {
         return when {
             myFirstName == null -> {
                 myFirstName = name
                 false
             }
 
-            name == myFirstName -> true
+            myFirstName == name -> true
 
             mySecondName == null -> {
                 mySecondName = name
                 false
             }
 
-            name == mySecondName -> true
+            mySecondName == name -> true
 
             else -> {
                 if (mySeen == null) {
@@ -66,18 +66,18 @@ class DuplicateDetector private constructor(val source: Any) {
                     mySeen!!.add(mySecondName!!)
                 }
 
-                mySeen!!.add(name)
+                !mySeen!!.add(name)
             }
         }
     }
 
     companion object {
 
-        fun rootDetector(parser: CirJsonParser): DuplicateDetector {
+        fun rootDetector(parser: CirJsonParser?): DuplicateDetector {
             return DuplicateDetector(parser)
         }
 
-        fun rootDetector(generator: CirJsonGenerator): DuplicateDetector {
+        fun rootDetector(generator: CirJsonGenerator?): DuplicateDetector {
             return DuplicateDetector(generator)
         }
 
