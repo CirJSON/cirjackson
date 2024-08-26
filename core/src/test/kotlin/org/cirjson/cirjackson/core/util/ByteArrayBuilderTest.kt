@@ -27,6 +27,7 @@ class ByteArrayBuilderTest : TestBase() {
         }
 
         builder.release()
+        builder.flush()
         builder.close()
     }
 

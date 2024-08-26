@@ -2070,6 +2070,8 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
             c = myInputData.readUnsignedByte()
         }
+
+        myTextBuffer.currentSegmentSize = outputPointer
     }
 
     /**
