@@ -2975,7 +2975,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
                 4 -> {
                     c = decodeUTF8V4(c)
-                    outputBuffer[outputPointer++] = (c shr 10 or 0x0800).toChar()
+                    outputBuffer[outputPointer++] = (c shr 10 or 0xD800).toChar()
 
                     if (outputPointer >= outputBuffer.size) {
                         outputBuffer = myTextBuffer.finishCurrentSegment()
@@ -3199,7 +3199,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
                 4 -> {
                     c = decodeUTF8V4(c)
-                    outputBuffer[outputPointer++] = (c shr 10 or 0x0800).toChar()
+                    outputBuffer[outputPointer++] = (c shr 10 or 0xD800).toChar()
 
                     if (outputPointer >= outputBuffer.size) {
                         outputBuffer = myTextBuffer.finishCurrentSegment()
@@ -3931,7 +3931,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
             return reportInvalidOther(d and 0xFF, myInputPointer)
         }
 
-        return c shl 6 or (d and 0x3F)
+        return c and 0x1F shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class)

@@ -2235,7 +2235,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
                 4 -> {
                     c = decodeUTF8V4(c)
-                    outputBuffer[outputPointer++] = (c shr 10 or 0x0800).toChar()
+                    outputBuffer[outputPointer++] = (c shr 10 or 0xD800).toChar()
 
                     if (outputPointer >= outputBuffer.size) {
                         outputBuffer = myTextBuffer.finishCurrentSegment()
@@ -2772,7 +2772,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             return reportInvalidOther(d and 0xFF)
         }
 
-        return c shl 6 or (d and 0x3F)
+        return c and 0x1F shl 6 or (d and 0x3F)
     }
 
     @Throws(CirJacksonException::class, IOException::class)
@@ -2804,7 +2804,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             return reportInvalidOther(d and 0xFF)
         }
 
-        c = c shl 6 or (d and 0x3F)
+        c = c and 0x07 shl 6 or (d and 0x3F)
         d = myInputData.readUnsignedByte()
 
         if (d and 0xC0 != 0x080) {

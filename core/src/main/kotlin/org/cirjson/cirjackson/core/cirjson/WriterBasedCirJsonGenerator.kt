@@ -2184,7 +2184,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         }
 
         if (escapeCode != CharacterEscapes.ESCAPE_CUSTOM) {
-            if (myOutputTail + 2 >= myOutputEnd) {
+            if (myOutputTail + 5 >= myOutputEnd) {
                 flushBuffer()
             }
 
