@@ -1,32 +1,40 @@
 package org.cirjson.cirjackson.core.cirjson
 
 import org.cirjson.cirjackson.core.CirJsonToken
-import java.io.StringReader
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.fail
 
-class StringGenerationFromReaderTest : StringGenerationTestBase() {
+class StringGenerationTest : StringGenerationTestBase() {
 
     @Test
     fun testBasicEscaping() {
         for (generatorMode in ALL_GENERATOR_MODES) {
             for (parserMode in ALL_NON_ASYNC_PARSER_MODES) {
-                for (value in SAMPLES) {
-                    basicEscaping(generatorMode, parserMode, value)
+                for (valueIndex in SAMPLES.indices) {
+                    basicEscaping(generatorMode, parserMode, valueIndex, true)
+                    basicEscaping(generatorMode, parserMode, valueIndex, false)
                 }
             }
         }
     }
 
-    private fun basicEscaping(generatorMode: Int, parserMode: Int, value: String) {
+    private fun basicEscaping(generatorMode: Int, parserMode: Int, valueIndex: Int, useChars: Boolean) {
+        val value = SAMPLES[valueIndex]
         val generator = createGenerator(generatorMode)
         generator.writeStartArray()
         generator.writeArrayId(Any())
-        val reader = StringReader(value)
-        generator.writeString(reader, -1)
+
+        if (useChars) {
+            val ch = CharArray(value.length + valueIndex)
+            value.toCharArray(ch, valueIndex, 0, value.length)
+            generator.writeString(ch, valueIndex, value.length)
+        } else {
+            generator.writeString(value)
+        }
+
         generator.writeEndArray()
         generator.close()
         val doc = generator.streamWriteOutputTarget!!.toString()
@@ -45,19 +53,27 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
         for (generatorMode in ALL_GENERATOR_MODES) {
             for (parserMode in ALL_NON_ASYNC_PARSER_MODES) {
                 for (size in SIZES) {
-                    mediumStrings(generatorMode, parserMode, size)
+                    mediumStrings(generatorMode, parserMode, size, true)
+                    mediumStrings(generatorMode, parserMode, size, false)
                 }
             }
         }
     }
 
-    private fun mediumStrings(generatorMode: Int, parserMode: Int, size: Int) {
+    private fun mediumStrings(generatorMode: Int, parserMode: Int, size: Int, useChars: Boolean) {
         val text = generateMediumText(size)
         val generator = createGenerator(generatorMode)
         generator.writeStartArray()
         generator.writeArrayId(Any())
-        val reader = StringReader(text)
-        generator.writeString(reader, -1)
+
+        if (useChars) {
+            val ch = CharArray(text.length)
+            text.toCharArray(ch, 0, 0, text.length)
+            generator.writeString(ch, 0, text.length)
+        } else {
+            generator.writeString(text)
+        }
+
         generator.writeEndArray()
         generator.close()
         val doc = generator.streamWriteOutputTarget!!.toString()
@@ -77,18 +93,26 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
             for (parserMode in ALL_NON_ASYNC_PARSER_MODES) {
                 for (size in 0..<80) {
                     val text = generateRandom(size + 75000)
-                    longerRandomSingleChunk(generatorMode, parserMode, text)
+                    longerRandomSingleChunk(generatorMode, parserMode, text, true)
+                    longerRandomSingleChunk(generatorMode, parserMode, text, false)
                 }
             }
         }
     }
 
-    private fun longerRandomSingleChunk(generatorMode: Int, parserMode: Int, text: String) {
+    private fun longerRandomSingleChunk(generatorMode: Int, parserMode: Int, text: String, useChars: Boolean) {
         val generator = createGenerator(generatorMode)
         generator.writeStartArray()
         generator.writeArrayId(Any())
-        val reader = StringReader(text)
-        generator.writeString(reader, -1)
+
+        if (useChars) {
+            val ch = CharArray(text.length)
+            text.toCharArray(ch, 0, 0, text.length)
+            generator.writeString(ch, 0, text.length)
+        } else {
+            generator.writeString(text)
+        }
+
         generator.writeEndArray()
         generator.close()
         val doc = generator.streamWriteOutputTarget!!.toString().toByteArray()
@@ -127,17 +151,17 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
             for (parserMode in ALL_NON_ASYNC_PARSER_MODES) {
                 for (size in 0..<70) {
                     val text = generateRandom(size + 73000)
-                    longerRandomMultiChunk(generatorMode, parserMode, text)
+                    longerRandomMultiChunk(generatorMode, parserMode, text, true)
+                    longerRandomMultiChunk(generatorMode, parserMode, text, false)
                 }
             }
         }
     }
 
-    private fun longerRandomMultiChunk(generatorMode: Int, parserMode: Int, text: String) {
+    private fun longerRandomMultiChunk(generatorMode: Int, parserMode: Int, text: String, useChars: Boolean) {
         val generator = createGenerator(generatorMode)
         generator.writeStartArray()
         generator.writeArrayId(Any())
-        var reader: StringReader
 
         val random = Random(text.length.toLong())
         var offset = 0
@@ -156,8 +180,14 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
                 }
             }
 
-            reader = StringReader(text.substring(offset, offset + length))
-            generator.writeString(reader, -1)
+            if (useChars) {
+                val ch = CharArray(length)
+                text.toCharArray(ch, 0, offset, offset + length)
+                generator.writeString(ch, 0, length)
+            } else {
+                generator.writeString(text.substring(offset, offset + length))
+            }
+
             offset += length
         }
 
@@ -202,11 +232,12 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
     @Test
     fun testNamingStrategy() {
         for (mode in ALL_GENERATOR_MODES) {
-            namingStrategy(mode)
+            namingStrategy(mode, true)
+            namingStrategy(mode, false)
         }
     }
 
-    private fun namingStrategy(mode: Int) {
+    private fun namingStrategy(mode: Int, useChars: Boolean) {
         val stringBuilder = StringBuilder(8000)
         stringBuilder.append('"')
 
@@ -218,9 +249,20 @@ class StringGenerationFromReaderTest : StringGenerationTestBase() {
         val generator = createGenerator(mode)
         generator.writeStartArray()
         generator.writeArrayId(Any())
-        generator.writeString(StringReader(stringBuilder.toString()), -1)
-        generator.writeString(StringReader("b"), -1)
-        generator.writeString(StringReader("c"), -1)
+        val text = stringBuilder.toString()
+
+        if (useChars) {
+            val ch = CharArray(text.length)
+            text.toCharArray(ch, 0, 0, text.length)
+            generator.writeString(ch, 0, text.length)
+            generator.writeString(charArrayOf('b'), 0, 1)
+            generator.writeString(charArrayOf('c'), 0, 1)
+        } else {
+            generator.writeString(text)
+            generator.writeString("b")
+            generator.writeString("c")
+        }
+
         generator.writeEndArray()
         generator.close()
     }
