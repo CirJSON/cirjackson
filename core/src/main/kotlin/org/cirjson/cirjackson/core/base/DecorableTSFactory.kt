@@ -188,8 +188,9 @@ abstract class DecorableTSFactory : TokenStreamFactory {
             return getThis()
         }
 
-        fun generatorDecorators(generatorDecorators: List<CirJsonGeneratorDecorator>?): T {
-            this.generatorDecorators = generatorDecorators ?: arrayListOf()
+        fun generatorDecorator(generatorDecorator: CirJsonGeneratorDecorator): T {
+            generatorDecorators = generatorDecorators ?: arrayListOf()
+            (generatorDecorators as MutableList<CirJsonGeneratorDecorator>).add(generatorDecorator)
             return getThis()
         }
 

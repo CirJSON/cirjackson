@@ -57,7 +57,7 @@ abstract class CharacterEscapes {
          * @return Set of escapes, similar to [escapeCodesForAscii] (array of 128 `Int`s), but a copy that caller
          * owns and is free to modify
          */
-        val standardAsciiEscapesForJSON
+        val standardAsciiEscapesForCirJSON
             get() = CharTypes.sevenBitOutputEscapes
 
     }
