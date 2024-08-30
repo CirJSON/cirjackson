@@ -2311,7 +2311,9 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     @Throws(CirJacksonException::class)
     protected fun skipCR() {
         if (myInputPointer < myInputEnd || loadMore()) {
-            ++myInputPointer
+            if (myInputBuffer[myInputPointer] == CODE_LF.toChar()) {
+                ++myInputPointer
+            }
         }
 
         ++myCurrentInputRow
@@ -3181,7 +3183,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     protected fun <T> reportInvalidToken(matchedPart: String, message: String): T {
         val stringBuilder = StringBuilder(matchedPart)
 
-        while (myInputPointer < myInputEnd) {
+        while (myInputPointer < myInputEnd || loadMore()) {
             val c = myInputBuffer[myInputPointer++]
 
             if (!c.isJavaIdentifierPart()) {

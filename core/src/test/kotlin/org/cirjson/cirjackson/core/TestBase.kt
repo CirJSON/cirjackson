@@ -409,6 +409,8 @@ open class TestBase {
 
     companion object {
 
+        val BOOLEAN_OPTIONS = booleanArrayOf(true, false)
+
         const val FIELD_BASENAME = "f"
 
         const val MODE_INPUT_STREAM = 0

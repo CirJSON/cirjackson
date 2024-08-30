@@ -3048,7 +3048,11 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
     @Throws(CirJacksonException::class)
     protected fun <T> reportInvalidToken(code: Int, matchedPart: String, message: String): T {
-        var ch = code
+        var ch = if (code.toChar().toString() != matchedPart) {
+            code
+        } else {
+            myInputData.readUnsignedByte()
+        }
 
         val stringBuilder = StringBuilder(matchedPart)
 
@@ -3061,6 +3065,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
 
                 stringBuilder.append(c)
+
+                if (stringBuilder.length >= myIOContext!!.errorReportConfiguration.maxErrorTokenLength) {
+                    stringBuilder.append("...")
+                    break
+                }
+
                 ch = myInputData.readUnsignedByte()
             }
         } catch (_: IOException) {

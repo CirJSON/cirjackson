@@ -4103,7 +4103,9 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     @Throws(CirJacksonException::class)
     protected fun skipCR() {
         if (myInputPointer < myInputEnd || loadMore()) {
-            ++myInputPointer
+            if (myInputBuffer[myInputPointer] == CODE_LF.toByte()) {
+                ++myInputPointer
+            }
         }
 
         ++myCurrentInputRow
@@ -4358,7 +4360,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     protected fun <T> reportInvalidToken(matchedPart: String, message: String): T {
         val stringBuilder = StringBuilder(matchedPart)
 
-        while (myInputPointer < myInputEnd) {
+        while (myInputPointer < myInputEnd || loadMore()) {
             val i = myInputBuffer[myInputPointer++]
             val c = decodeCharForError(i.toInt()).toChar()
 
