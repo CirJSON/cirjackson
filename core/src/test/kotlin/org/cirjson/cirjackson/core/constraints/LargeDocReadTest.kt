@@ -46,7 +46,7 @@ class LargeDocReadTest : AsyncTestBase() {
 
     @Test
     fun testLargeNameWithSmallLimitAsync() {
-        val doc = cirJsonDoc(generateCirJSON(12_000))
+        val doc = utf8Bytes(generateCirJSON(12_000))
 
         try {
             asyncForBytes(factory10k, 1000, doc, 1).use { parser ->

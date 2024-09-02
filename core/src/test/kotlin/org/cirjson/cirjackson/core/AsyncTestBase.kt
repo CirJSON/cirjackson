@@ -8,11 +8,24 @@ import org.cirjson.cirjackson.core.support.AsyncReaderWrapperBase
 
 abstract class AsyncTestBase : TestBase() {
 
-    protected fun cirJsonDoc(doc: String): ByteArray {
-        return utf8Bytes(doc)
+    protected fun createAsync(factory: TokenStreamFactory, mode: Int, bytesPerFeed: Int, doc: ByteArray,
+            padding: Int): AsyncReaderWrapperBase {
+        return when (mode) {
+            MODE_ASYNC_BYTES -> asyncForBytes(factory, bytesPerFeed, doc, padding)
+
+            MODE_ASYNC_BYTE_BUFFER -> asyncForByteBuffer(factory, bytesPerFeed, doc, padding)
+
+            else -> throw RuntimeException("internal error")
+        }
     }
 
     companion object {
+
+        const val MODE_ASYNC_BYTES = 0
+
+        const val MODE_ASYNC_BYTE_BUFFER = 1
+
+        val ALL_ASYNC_MODES = intArrayOf(MODE_ASYNC_BYTES, MODE_ASYNC_BYTE_BUFFER)
 
         const val UNICODE_2_BYTES = 167.toChar()
 

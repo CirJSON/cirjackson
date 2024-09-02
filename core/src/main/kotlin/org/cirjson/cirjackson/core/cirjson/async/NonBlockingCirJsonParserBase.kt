@@ -540,9 +540,10 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
     @Throws(CirJacksonException::class)
     protected fun fieldComplete(name: String): CirJsonToken {
+        val isFirstName = myMajorState == MAJOR_OBJECT_PROPERTY_FIRST
         myMajorState = MAJOR_OBJECT_VALUE
         streamReadContext!!.currentName = name
-        return if (myCurrentToken == CirJsonToken.START_OBJECT) {
+        return if (isFirstName) {
             if (name != idName) {
                 return reportInvalidToken(name, "Expected property name '$idName', received '$name'")
             }

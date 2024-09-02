@@ -54,7 +54,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         if (myCurrentToken == CirJsonToken.NOT_AVAILABLE) {
-            finishCurrentToken()
+            return finishCurrentToken()
         }
 
         myNumberTypesValid = NUMBER_UNKNOWN
@@ -422,7 +422,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = skipWhitespace(ch)
 
             if (ch <= 0) {
-                myMinorState = MINOR_PROPERTY_LEADING_WS
+                myMinorState = MINOR_PROPERTY_LEADING_COMMA
                 return myCurrentToken
             }
         }
@@ -553,7 +553,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '0' -> startNumberLeadingZero()
 
-            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber()
+            '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber(ch)
 
             'f' -> startFalseToken()
 
@@ -1670,7 +1670,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
                     myIntegralLength = realOutputPointer + negMod
                     ++myInputPointer
-                    return startFloat(outputBuffer, 2, ch)
+                    return startFloat(realOutputBuffer, 2, ch)
                 }
 
                 break
@@ -2151,7 +2151,6 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     myQuadLength = realQuadLength
                     myPending32 = realCurrentQuad
                     myPendingBytes = realCurrentQuadBytes
-                    myMinorState = MINOR_PROPERTY_NAME
                     return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
                 }
             }
@@ -2611,6 +2610,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
                 if (!decodeSplitMultiByte(c, codes[c], pointer < myInputEnd)) {
                     myMinorStateAfterSplit = MINOR_VALUE_STRING
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
                 }
 
                 outputBuffer = myTextBuffer.bufferWithoutReset!!
