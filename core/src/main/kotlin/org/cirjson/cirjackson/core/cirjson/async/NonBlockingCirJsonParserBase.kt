@@ -116,9 +116,9 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         }
 
     override fun currentLocation(): CirJsonLocation {
-        val column = myInputPointer - myCurrentInputRowStart
+        val column = myInputPointer - myCurrentInputRowStart + 1
         val row = max(myCurrentInputRow, myCurrentInputRowAlt)
-        return CirJsonLocation(contentReference(), myCurrentInputProcessed + myInputPointer + myCurrentBufferStart, -1L,
+        return CirJsonLocation(contentReference(), myCurrentInputProcessed + myInputPointer - myCurrentBufferStart, -1L,
                 row, column)
     }
 
@@ -698,6 +698,11 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
          * State before property name, expecting comma (or closing curly), then property name
          */
         const val MINOR_PROPERTY_LEADING_COMMA = 5
+
+        /**
+         * State before property name itself, received a comma earlier, waiting for quote (or unquoted name)
+         */
+        const val MINOR_PROPERTY_LEADING_WS_AFTER_COMMA = 6
 
         /**
          * State within regular (double-quoted) property name

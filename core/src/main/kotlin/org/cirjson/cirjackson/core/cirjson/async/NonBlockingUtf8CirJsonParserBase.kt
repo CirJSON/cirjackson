@@ -105,6 +105,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             MINOR_PROPERTY_LEADING_COMMA -> startNameAfterComma(nextUnsignedByteFromBuffer)
 
+            MINOR_PROPERTY_LEADING_WS_AFTER_COMMA -> startNameAfterCommaAndWhitespace(nextUnsignedByteFromBuffer)
+
             // Property name states
 
             MINOR_PROPERTY_NAME -> parseEscapedName(myQuadLength, myPending32, myPendingBytes)
@@ -400,7 +402,11 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         updateTokenLocation()
 
         if (ch != CODE_QUOTE) {
-            return handleOddName(ch)
+            return if (ch == CODE_R_CURLY) {
+                closeObjectScope()
+            } else {
+                handleOddName(ch)
+            }
         }
 
         if (myInputPointer + 13 <= myInputEnd) {
@@ -443,7 +449,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         val pointer = myInputPointer
 
         if (pointer >= myInputEnd) {
-            myMinorState = MINOR_PROPERTY_LEADING_WS
+            myMinorState = MINOR_PROPERTY_LEADING_WS_AFTER_COMMA
             return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
         }
 
@@ -454,7 +460,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = skipWhitespace(ch)
 
             if (ch <= 0) {
-                myMinorState = MINOR_PROPERTY_LEADING_WS
+                myMinorState = MINOR_PROPERTY_LEADING_WS_AFTER_COMMA
                 return myCurrentToken
             }
         }
@@ -465,6 +471,44 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             if (ch == CODE_R_CURLY) {
                 if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
                     return closeObjectScope()
+                }
+            }
+
+            return handleOddName(ch)
+        }
+
+        if (myInputPointer + 13 <= myInputEnd) {
+            val n = fastParseName()
+
+            if (n != null) {
+                return fieldComplete(n)
+            }
+        }
+
+        return parseEscapedName(0, 0, 0)
+    }
+
+    @Throws(CirJacksonException::class)
+    private fun startNameAfterCommaAndWhitespace(code: Int): CirJsonToken? {
+        var ch = code
+
+        if (ch <= 0x0020) {
+            ch = skipWhitespace(ch)
+
+            if (ch <= 0) {
+                myMinorState = MINOR_PROPERTY_LEADING_WS_AFTER_COMMA
+                return myCurrentToken
+            }
+        }
+
+        updateTokenLocation()
+
+        if (ch != CODE_QUOTE) {
+            if (ch == CODE_R_CURLY) {
+                if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                    return closeObjectScope()
+                } else {
+                    startUnexpectedValue(ch, true)
                 }
             }
 
@@ -812,14 +856,24 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '{' -> startObjectScope()
 
-            else -> startUnexpectedValue(ch, true)
+            else -> {
+                if (ch or 0x20 == CODE_R_CURLY && formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
+                    if (ch == CODE_R_BRACKET) {
+                        closeArrayScope()
+                    } else {
+                        closeObjectScope()
+                    }
+                } else {
+                    startUnexpectedValue(ch, true)
+                }
+            }
         }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun startUnexpectedValue(code: Int, leadingComma: Boolean): CirJsonToken? {
         if (code == CODE_R_BRACKET && streamReadContext!!.isInArray || code == CODE_COMMA) {
-            if (streamReadContext!!.isInRoot) {
+            if (!streamReadContext!!.isInRoot) {
                 if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
                     --myInputPointer
                     return valueComplete(CirJsonToken.VALUE_NULL)
@@ -1015,6 +1069,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             MINOR_PROPERTY_LEADING_COMMA -> startNameAfterComma(ch)
 
+            MINOR_PROPERTY_LEADING_WS_AFTER_COMMA -> startNameAfterCommaAndWhitespace(ch)
+
             MINOR_VALUE_LEADING_WS -> startValue(ch)
 
             MINOR_VALUE_EXPECTING_COMMA -> startValueExpectComma(ch)
@@ -1070,7 +1126,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             }
         }
 
-        myMinorState = MINOR_VALUE_TOKEN_FALSE
+        myMinorState = MINOR_VALUE_TOKEN_TRUE
         return finishKeywordToken("true", 1, CirJsonToken.VALUE_TRUE)
     }
 
@@ -1090,7 +1146,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             }
         }
 
-        myMinorState = MINOR_VALUE_TOKEN_FALSE
+        myMinorState = MINOR_VALUE_TOKEN_NULL
         return finishKeywordToken("true", 1, CirJsonToken.VALUE_NULL)
     }
 
