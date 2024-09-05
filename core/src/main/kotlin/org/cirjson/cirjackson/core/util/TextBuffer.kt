@@ -522,12 +522,12 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
     fun contentAsInt(neg: Boolean): Int {
         return if (myInputStart >= 0 && myInputBuffer != null) {
             if (neg) {
-                -NumberInput.parseInt(myInputBuffer!!, myInputStart + 1, myInputLength + 1)
+                -NumberInput.parseInt(myInputBuffer!!, myInputStart + 1, myInputLength - 1)
             } else {
                 NumberInput.parseInt(myInputBuffer!!, myInputStart, myInputLength)
             }
         } else if (neg) {
-            -NumberInput.parseInt(myCurrentSegment!!, 1, currentSegmentSize + 1)
+            -NumberInput.parseInt(myCurrentSegment!!, 1, currentSegmentSize - 1)
         } else {
             NumberInput.parseInt(myCurrentSegment!!, 0, currentSegmentSize)
         }
@@ -550,12 +550,12 @@ open class TextBuffer(val bufferRecycler: BufferRecycler?) {
     fun contentAsLong(neg: Boolean): Long {
         return if (myInputStart >= 0 && myInputBuffer != null) {
             if (neg) {
-                -NumberInput.parseLong(myInputBuffer!!, myInputStart + 1, myInputLength + 1)
+                -NumberInput.parseLong(myInputBuffer!!, myInputStart + 1, myInputLength - 1)
             } else {
                 NumberInput.parseLong(myInputBuffer!!, myInputStart, myInputLength)
             }
         } else if (neg) {
-            -NumberInput.parseLong(myCurrentSegment!!, 1, currentSegmentSize + 1)
+            -NumberInput.parseLong(myCurrentSegment!!, 1, currentSegmentSize - 1)
         } else {
             NumberInput.parseLong(myCurrentSegment!!, 0, currentSegmentSize)
         }

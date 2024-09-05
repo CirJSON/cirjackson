@@ -747,9 +747,14 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         /**
          * "-0" (and possibly more zeroes) receive
          */
-        const val MINOR_NUMBER_MINUS_ZERO = 25
+        const val MINOR_NUMBER_PLUS_ZERO = 25
 
-        const val MINOR_NUMBER_INTEGER_DIGITS = 26
+        /**
+         * "-0" (and possibly more zeroes) receive
+         */
+        const val MINOR_NUMBER_MINUS_ZERO = 26
+
+        const val MINOR_NUMBER_INTEGER_DIGITS = 27
 
         const val MINOR_NUMBER_FRACTION_DIGITS = 30
 

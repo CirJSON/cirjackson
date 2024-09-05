@@ -145,6 +145,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             MINOR_NUMBER_ZERO -> finishNumberLeadingZero()
 
+            MINOR_NUMBER_PLUS_ZERO -> finishNumberLeadingPosZero()
+
             MINOR_NUMBER_MINUS_ZERO -> finishNumberLeadingNegZero()
 
             MINOR_NUMBER_INTEGER_DIGITS -> {
@@ -264,7 +266,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             MINOR_VALUE_TOKEN_ERROR -> finishErrorTokenWithEOF()
 
-            MINOR_NUMBER_ZERO, MINOR_NUMBER_MINUS_ZERO -> valueCompleteInt(0, "0")
+            MINOR_NUMBER_ZERO, MINOR_NUMBER_PLUS_ZERO, MINOR_NUMBER_MINUS_ZERO -> valueCompleteInt(0, "0")
 
             MINOR_NUMBER_INTEGER_DIGITS -> {
                 var length = myTextBuffer.currentSegmentSize
@@ -781,6 +783,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
             '/' -> startSlashComment(MINOR_VALUE_LEADING_WS)
 
+            '.' -> if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                startFloatThatStartsWithPeriod()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
+
             '0' -> startNumberLeadingZero()
 
             '1', '2', '3', '4', '5', '6', '7', '8', '9' -> startPositiveNumber(ch)
@@ -841,6 +849,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             '-' -> startNegativeNumber()
 
             '/' -> startSlashComment(MINOR_VALUE_WS_AFTER_COMMA)
+
+            '.' -> if (isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                startFloatThatStartsWithPeriod()
+            } else {
+                startUnexpectedValue(ch, true)
+            }
 
             '0' -> startNumberLeadingZero()
 
@@ -1359,6 +1373,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         if (ch <= CODE_0) {
             return if (ch == CODE_0) {
                 finishNumberLeadingNegZero()
+            } else if (ch == CODE_PERIOD && isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                outputBuffer[0] = '-'
+                outputBuffer[1] = '0'
+                myIntegralLength = 1
+                startFloat(outputBuffer, 2, ch)
             } else {
                 reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
             }
@@ -1400,6 +1420,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
+                } else if (ch or 0x20 != CODE_R_CURLY) {
+                    return reportUnexpectedChar(ch.toChar(), "Malformed number")
                 }
 
                 break
@@ -1444,6 +1466,12 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     reportUnexpectedNumberChar('+',
                             "CirJSON spec does not allow numbers to have plus signs: enable `CirJsonReadFeature.ALLOW_LEADING_PLUS_SIGN_FOR_NUMBERS` to allow")
                 }
+            } else if (ch == CODE_PERIOD && isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
+                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                outputBuffer[0] = '+'
+                outputBuffer[1] = '0'
+                myIntegralLength = 1
+                startFloat(outputBuffer, 2, ch)
             } else {
                 reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
             }
@@ -1490,6 +1518,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     myIntegralLength = outputPointer - 1
                     ++myInputPointer
                     return startFloat(outputBuffer, outputPointer, ch)
+                } else if (ch or 0x20 != CODE_R_CURLY) {
+                    return reportUnexpectedChar(ch.toChar(), "Malformed number")
                 }
 
                 break
@@ -1645,7 +1675,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                 outputBuffer[0] = ch.toChar()
                 myIntegralLength = 1
-                finishNumberIntegralPart(outputBuffer, 1)
+                return finishNumberIntegralPart(outputBuffer, 1)
             }
 
             --myInputPointer
@@ -1667,7 +1697,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
     protected open fun finishNumberLeadingPosNegZero(negative: Boolean): CirJsonToken? {
         while (true) {
             if (myInputPointer >= myInputEnd) {
-                myMinorState = if (negative) MINOR_NUMBER_MINUS_ZERO else MINOR_NUMBER_ZERO
+                myMinorState = if (negative) MINOR_NUMBER_MINUS_ZERO else MINOR_NUMBER_PLUS_ZERO
                 return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
             }
 
@@ -1677,7 +1707,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
                     val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
                     outputBuffer[0] = if (negative) '-' else '+'
-                    outputBuffer[1] = ch.toChar()
+                    outputBuffer[1] = '0'
                     myIntegralLength = 1
                     return startFloat(outputBuffer, 2, ch)
                 }
@@ -1699,7 +1729,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 outputBuffer[0] = if (negative) '-' else '+'
                 outputBuffer[1] = ch.toChar()
                 myIntegralLength = 1
-                finishNumberIntegralPart(outputBuffer, 2)
+                return finishNumberIntegralPart(outputBuffer, 2)
             }
 
             --myInputPointer
@@ -1726,7 +1756,10 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 if (ch == CODE_PERIOD || ch == CODE_E_LOWERCASE || ch == CODE_E_UPPERCASE) {
                     myIntegralLength = realOutputPointer + negMod
                     ++myInputPointer
-                    return startFloat(realOutputBuffer, 2, ch)
+                    return startFloat(realOutputBuffer, realOutputPointer, ch)
+                } else if (ch > 0x20 && ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA && ch != CODE_HASH &&
+                        ch != CODE_SLASH) {
+                    return reportUnexpectedChar(ch.toChar(), "Malformed number")
                 }
 
                 break
@@ -1775,7 +1808,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
                     if (fractionLength == 0) {
                         if (!isEnabled(CirJsonReadFeature.ALLOW_TRAILING_DECIMAL_POINT_FOR_NUMBERS)) {
-                            return reportUnexpectedChar(ch.toChar(), "Decimal point not followed by a digit")
+                            return reportUnexpectedNumberChar(ch.toChar(), "Decimal point not followed by a digit")
                         }
                     }
 
@@ -1851,6 +1884,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             if (exponentLength == 0) {
                 return reportUnexpectedChar(ch.toChar(), "Exponent indicator not followed by a digit")
             }
+        } else if (ch > 0x20 && ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA && ch != CODE_HASH && ch != CODE_SLASH) {
+            return reportUnexpectedChar(ch.toChar(), "Malformed number")
         }
 
         --myInputPointer
@@ -1923,6 +1958,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 myMinorState = MINOR_NUMBER_EXPONENT_MARKER
                 CirJsonToken.NOT_AVAILABLE
             }
+        } else if (ch > 0x20 && ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA && ch != CODE_HASH && ch != CODE_SLASH) {
+            return reportUnexpectedChar(ch.toChar(), "Malformed number")
         }
 
         --myInputPointer
@@ -1976,6 +2013,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
         if (exponentLength == 0) {
             return reportUnexpectedChar(ch.toChar(), "Exponent indicator not followed by a digit")
+        } else if (ch > 0x20 && ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA && ch != CODE_HASH && ch != CODE_SLASH) {
+            return reportUnexpectedChar(ch.toChar(), "Malformed number")
         }
 
         --myInputPointer

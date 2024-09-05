@@ -297,7 +297,7 @@ object NumberInput {
      */
     internal fun parseLong(chars: CharArray, offset: Int, length: Int): Long {
         val length2 = length - 9
-        val result = parseInt(chars, offset, length).toLong() * L_BILLION
+        val result = parseInt(chars, offset, length2).toLong() * L_BILLION
         return result + parseInt(chars, offset + length2, 9).toLong()
     }
 
