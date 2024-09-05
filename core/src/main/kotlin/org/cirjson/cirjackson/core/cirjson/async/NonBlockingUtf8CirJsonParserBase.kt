@@ -552,6 +552,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
         return if (ch == CODE_QUOTE) {
             startString()
+        } else if (ch == CODE_APOSTROPHE && formatReadFeatures and FEAT_MASK_ALLOW_SINGLE_QUOTES != 0) {
+            startApostropheString()
         } else {
             reportUnexpectedChar(ch.toChar(), "was expecting array's ID")
         }
@@ -1161,7 +1163,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         myMinorState = MINOR_VALUE_TOKEN_NULL
-        return finishKeywordToken("true", 1, CirJsonToken.VALUE_NULL)
+        return finishKeywordToken("null", 1, CirJsonToken.VALUE_NULL)
     }
 
     @Throws(CirJacksonException::class)
@@ -1659,7 +1661,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     return startFloat(outputBuffer, 1, ch)
                 }
 
-                if (ch or 0x20 != CODE_R_CURLY) {
+                if (ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA) {
                     return reportUnexpectedChar(ch.toChar(),
                             "expected digit (0-9) to follow minus sign, for valid numeric value")
                 }
@@ -2335,7 +2337,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             }
         }
 
-        if (formatReadFeatures and FEAT_MASK_ALLOW_UNQUOTED_NAMES != 0) {
+        if (formatReadFeatures and FEAT_MASK_ALLOW_UNQUOTED_NAMES == 0) {
             return reportUnexpectedChar(code.toChar(), "was expecting double-quote to start field name")
         }
 
@@ -2418,7 +2420,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 myQuadLength = realQuadLength
                 myPending32 = realCurrentQuad
                 myPendingBytes = realCurrentQuadBytes
-                myMinorState = MINOR_PROPERTY_NAME
+                myMinorState = MINOR_PROPERTY_APOS_NAME
                 return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
             }
 
@@ -2429,50 +2431,56 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             }
 
             if (ch != CODE_QUOTE && INPUT_CODE_LATIN1[ch] != 0) {
-                throwUnquotedSpace(ch, "name")
-            } else {
-                ch = decodeCharEscape()
-
-                if (ch < 0) {
-                    myMinorState = MINOR_PROPERTY_NAME_ESCAPE
-                    myMinorStateAfterSplit = MINOR_PROPERTY_NAME
-                    myQuadLength = realQuadLength
-                    myPending32 = realCurrentQuad
-                    myPendingBytes = realCurrentQuadBytes
-                    myMinorState = MINOR_PROPERTY_NAME
-                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
-                }
-            }
-
-            if (realQuadLength >= quads.size) {
-                quads = growNameDecodeBuffer(quads, quads.size)
-                myQuadBuffer = quads
-            }
-
-            if (ch > 127) {
-                if (realCurrentQuadBytes >= 4) {
-                    quads[realQuadLength++] = realCurrentQuad
-                    realCurrentQuad = 0
-                    realCurrentQuadBytes = 0
-                }
-
-                realCurrentQuad = if (ch < 0x800) {
-                    realCurrentQuad shl 8 or (0xC0 or (ch shr 6))
+                if (ch != CODE_BACKSLASH) {
+                    throwUnquotedSpace(ch, "name")
                 } else {
-                    realCurrentQuad = realCurrentQuad shl 8 or (0xE0 or (ch shr 12))
-                    ++realCurrentQuadBytes
+                    ch = decodeCharEscape()
 
+                    if (ch < 0) {
+                        myMinorState = MINOR_PROPERTY_NAME_ESCAPE
+                        myMinorStateAfterSplit = MINOR_PROPERTY_APOS_NAME
+                        myQuadLength = realQuadLength
+                        myPending32 = realCurrentQuad
+                        myPendingBytes = realCurrentQuadBytes
+                        return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
+                    }
+                }
+
+                if (ch > 127) {
                     if (realCurrentQuadBytes >= 4) {
+                        if (realQuadLength >= quads.size) {
+                            quads = growNameDecodeBuffer(quads, quads.size)
+                            myQuadBuffer = quads
+                        }
+
                         quads[realQuadLength++] = realCurrentQuad
                         realCurrentQuad = 0
                         realCurrentQuadBytes = 0
                     }
 
-                    realCurrentQuad shl 8 or (0x80 or (ch shr 6 and 0x3F))
-                }
+                    realCurrentQuad = if (ch < 0x800) {
+                        realCurrentQuad shl 8 or (ch shr 6 or 0xC0)
+                    } else {
+                        realCurrentQuad = realCurrentQuad shl 8 or (0xE0 or (ch shr 12))
+                        ++realCurrentQuadBytes
 
-                ++realCurrentQuadBytes
-                ch = 0x80 or (ch and 0x3F)
+                        if (realCurrentQuadBytes >= 4) {
+                            if (realQuadLength >= quads.size) {
+                                quads = growNameDecodeBuffer(quads, quads.size)
+                                myQuadBuffer = quads
+                            }
+
+                            quads[realQuadLength++] = realCurrentQuad
+                            realCurrentQuad = 0
+                            realCurrentQuadBytes = 0
+                        }
+
+                        realCurrentQuad shl 8 or (0x80 or (ch shr 6 and 0x3F))
+                    }
+
+                    ++realCurrentQuadBytes
+                    ch = ch and 0x3F or 0x80
+                }
             }
 
             if (realCurrentQuadBytes < 4) {
@@ -2481,12 +2489,17 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 continue
             }
 
+            if (realQuadLength >= quads.size) {
+                quads = growNameDecodeBuffer(quads, quads.size)
+                myQuadBuffer = quads
+            }
+
             quads[realQuadLength++] = realCurrentQuad
             realCurrentQuad = ch
             realCurrentQuadBytes = 1
         }
 
-        if (currentQuadBytes > 0) {
+        if (realCurrentQuadBytes > 0) {
             if (realQuadLength >= quads.size) {
                 quads = growNameDecodeBuffer(quads, quads.size)
                 myQuadBuffer = quads
@@ -2785,7 +2798,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             outputBuffer[outputPointer++] = c.toChar()
         }
 
-        myInputPointer = pointer + 1
+        myInputPointer = pointer
         myTextBuffer.currentSegmentSize = outputPointer
         return finishApostropheString()
     }
@@ -2820,7 +2833,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 while (pointer < max) {
                     c = getByteFromBuffer(pointer++).toInt() and 0xFF
 
-                    if (codes[c] != 0 && c != CODE_APOSTROPHE) {
+                    if (codes[c] != 0 && c != CODE_QUOTE) {
                         break@asciiLoop
                     }
 
@@ -2840,6 +2853,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
                 if (!decodeSplitMultiByte(c, codes[c], pointer < myInputEnd)) {
                     myMinorStateAfterSplit = MINOR_VALUE_APOS_STRING
+                    return CirJsonToken.NOT_AVAILABLE.also { myCurrentToken = it }
                 }
 
                 outputBuffer = myTextBuffer.bufferWithoutReset!!
