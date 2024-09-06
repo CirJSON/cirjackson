@@ -437,6 +437,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
         if (ch != CODE_COMMA) {
             return when (ch) {
+                CODE_R_BRACKET -> closeArrayScope()
+
                 CODE_R_CURLY -> closeObjectScope()
 
                 CODE_HASH -> finishHashComment(MINOR_PROPERTY_LEADING_COMMA)
@@ -1444,7 +1446,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             ch = getByteFromBuffer(myInputPointer).toInt() and 0xFF
         }
 
-        myIntegralLength = outputPointer
+        myIntegralLength = outputPointer - 1
         myTextBuffer.currentSegmentSize = outputPointer
         return valueComplete(CirJsonToken.VALUE_NUMBER_INT)
     }
@@ -1661,7 +1663,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                     return startFloat(outputBuffer, 1, ch)
                 }
 
-                if (ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA) {
+                if (ch > 0x20 && ch or 0x20 != CODE_R_CURLY && ch != CODE_COMMA && ch != CODE_HASH &&
+                        ch != CODE_SLASH) {
                     return reportUnexpectedChar(ch.toChar(),
                             "expected digit (0-9) to follow minus sign, for valid numeric value")
                 }

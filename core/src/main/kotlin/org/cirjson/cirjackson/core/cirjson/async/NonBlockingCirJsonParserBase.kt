@@ -75,7 +75,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
      * Used to simplify tracking of linefeeds, assuming that input typically uses various linefeed combinations (`\r`,
      * `\n` or `\r\n`) consistently, in which case we can simply choose max of two row candidates.
      */
-    protected var myCurrentInputRowAlt = 0
+    protected var myCurrentInputRowAlt = 1
 
     override val isParsingAsyncPossible: Boolean
         get() = true
