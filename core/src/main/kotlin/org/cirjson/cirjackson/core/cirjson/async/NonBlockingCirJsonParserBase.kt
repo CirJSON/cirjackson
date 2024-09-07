@@ -495,7 +495,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
                         cbuf = myTextBuffer.expandCurrentSegment()
                     }
 
-                    cbuf[cix++] = (0x0800 + (ch shr 10)).toChar()
+                    cbuf[cix++] = (0xD800 + (ch shr 10)).toChar()
                     ch = ch and 0x03FF or 0xDC00
                 }
             }

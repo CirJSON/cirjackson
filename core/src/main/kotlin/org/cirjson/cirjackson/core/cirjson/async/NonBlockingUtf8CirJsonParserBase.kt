@@ -3022,7 +3022,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             realPrevious = realPrevious shl 6 or (realNext and 0x3F)
 
             if (myInputPointer >= myInputEnd) {
-                myMinorState = MINOR_VALUE_STRING_UTF8_3
+                myMinorState = MINOR_VALUE_STRING_UTF8_4
                 myPending32 = realPrevious
                 myPendingBytes = 2
                 return false
@@ -3040,9 +3040,9 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
             realPrevious = realPrevious shl 6 or (realNext and 0x3F)
 
             if (myInputPointer >= myInputEnd) {
-                myMinorState = MINOR_VALUE_STRING_UTF8_3
+                myMinorState = MINOR_VALUE_STRING_UTF8_4
                 myPending32 = realPrevious
-                myPendingBytes = 2
+                myPendingBytes = 3
                 return false
             }
 

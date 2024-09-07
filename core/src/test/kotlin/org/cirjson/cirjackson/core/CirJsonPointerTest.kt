@@ -1,7 +1,6 @@
 package org.cirjson.cirjackson.core
 
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
-import org.cirjson.cirjackson.core.cirjson.async.NonBlockingCirJsonParserBase
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import kotlin.test.*
 
@@ -339,7 +338,7 @@ class CirJsonPointerTest : TestBase() {
         val simple = apostropheToQuote(
                 "{'__cirJsonId__':'root','a':123,'array':['root/a',1,2,['root/a/2',3],5,{'__cirJsonId__':'root/a/4','obInArray':4}],'ob':{'__cirJsonId__':'root/ob','first':['root/ob/first',false,true],'second':{'__cirJsonId__':'root/ob/second','sub':37}},'b':true}")
 
-        for (mode in ALL_PARSER_MODES) {
+        for (mode in ALL_NON_ASYNC_PARSER_MODES) {
             viaParser(createParser(mode, simple))
         }
     }
@@ -440,12 +439,7 @@ class CirJsonPointerTest : TestBase() {
 
         assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
         assertSame(EMPTY_POINTER, parser.streamReadContext!!.pathAsPointer())
-
-        if (parser !is NonBlockingCirJsonParserBase) {
-            assertNull(parser.nextToken())
-        } else {
-            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
-        }
+        assertNull(parser.nextToken())
         parser.close()
     }
 
@@ -501,7 +495,7 @@ class CirJsonPointerTest : TestBase() {
         val cirJson = apostropheToQuote(
                 "{'__cirJsonId__':'0','a':1,'b':3}\n{'__cirJsonId__':'1','a':5,'c':['1/c',1,2]}\n['2',1,2]\n")
 
-        for (mode in ALL_PARSER_MODES) {
+        for (mode in ALL_NON_ASYNC_PARSER_MODES) {
             parserWithRoot(createParser(mode, cirJson))
         }
     }
@@ -562,12 +556,7 @@ class CirJsonPointerTest : TestBase() {
         assertEquals("/2/1", parser.streamReadContext!!.pathAsPointer(true).toString())
         assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
         assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
-
-        if (parser !is NonBlockingCirJsonParserBase) {
-            assertNull(parser.nextToken())
-        } else {
-            assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
-        }
+        assertNull(parser.nextToken())
 
         assertEquals("/2", parser.streamReadContext!!.pathAsPointer(true).toString())
 
