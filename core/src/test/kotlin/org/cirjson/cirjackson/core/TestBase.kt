@@ -198,7 +198,7 @@ open class TestBase {
         return TestSupport.testIOContext()
     }
 
-    protected fun writeJsonDoc(factory: CirJsonFactory, doc: String, generator: CirJsonGenerator) {
+    protected fun writeCirJsonDoc(factory: CirJsonFactory, doc: String, generator: CirJsonGenerator) {
         factory.createParser(ObjectReadContext.empty(), apostropheToQuote(doc)).use { p ->
             while (p.nextToken() != null) {
                 generator.copyCurrentStructure(p)

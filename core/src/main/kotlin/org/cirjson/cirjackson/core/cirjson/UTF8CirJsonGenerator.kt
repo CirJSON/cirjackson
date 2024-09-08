@@ -76,9 +76,6 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             myOutputEscapes = value?.escapeCodesForAscii ?: CharTypes.getSevenBitOutputEscapes(myQuoteChar.toInt(),
                     CirJsonWriteFeature.ESCAPE_FORWARD_SLASHES.isEnabledIn(formatWriteFeatures))
         }
-
-    protected val myIDHolder = IDHolder()
-
     init {
         @Suppress("LeakingThis")
         this.characterEscapes = characterEscapes

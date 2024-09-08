@@ -66,6 +66,11 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
     override val streamWriteContext: TokenStreamContext
         get() = filterContext!!
 
+    override fun assignCurrentValue(value: Any?) {
+        super.assignCurrentValue(value)
+        filterContext?.assignCurrentValue(value)
+    }
+
     /*
      *******************************************************************************************************************
      * Public API, write methods, structural
@@ -212,7 +217,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         var filter = filterContext!!.checkValue(myItemFilter!!)
 
         if (filter == null) {
-            filterContext = filterContext!!.createChildArrayContext(null, null, false)
+            filterContext = filterContext!!.createChildObjectContext(null, null, false)
             return this
         }
 
@@ -222,14 +227,14 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
 
         if (filter === TokenFilter.INCLUDE_ALL) {
             checkParentPath()
-            filterContext = filterContext!!.createChildArrayContext(filter, null, true)
+            filterContext = filterContext!!.createChildObjectContext(filter, null, true)
             delegate.writeStartObject()
         } else if (filter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
-            filterContext = filterContext!!.createChildArrayContext(filter, null, true)
+            filterContext = filterContext!!.createChildObjectContext(filter, null, true)
             delegate.writeStartObject()
         } else {
-            filterContext = filterContext!!.createChildArrayContext(filter, null, false)
+            filterContext = filterContext!!.createChildObjectContext(filter, null, false)
         }
 
         return this
@@ -251,7 +256,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         var filter = filterContext!!.checkValue(myItemFilter!!)
 
         if (filter == null) {
-            filterContext = filterContext!!.createChildArrayContext(null, currentValue, false)
+            filterContext = filterContext!!.createChildObjectContext(null, currentValue, false)
             return this
         }
 
@@ -261,14 +266,14 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
 
         if (filter === TokenFilter.INCLUDE_ALL) {
             checkParentPath()
-            filterContext = filterContext!!.createChildArrayContext(filter, currentValue, true)
+            filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue)
         } else if (filter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
-            filterContext = filterContext!!.createChildArrayContext(filter, currentValue, true)
+            filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue)
         } else {
-            filterContext = filterContext!!.createChildArrayContext(filter, currentValue, false)
+            filterContext = filterContext!!.createChildObjectContext(filter, currentValue, false)
         }
 
         return this
@@ -290,7 +295,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         var filter = filterContext!!.checkValue(myItemFilter!!)
 
         if (filter == null) {
-            filterContext = filterContext!!.createChildArrayContext(null, currentValue, false)
+            filterContext = filterContext!!.createChildObjectContext(null, currentValue, false)
             return this
         }
 
@@ -300,10 +305,10 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
 
         if (filter === TokenFilter.INCLUDE_ALL) {
             checkParentPath()
-            filterContext = filterContext!!.createChildArrayContext(filter, currentValue, true)
+            filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue, size)
         } else {
-            filterContext = filterContext!!.createChildArrayContext(filter, currentValue, false)
+            filterContext = filterContext!!.createChildObjectContext(filter, currentValue, false)
         }
 
         return this
@@ -319,6 +324,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
     @Throws(CirJacksonException::class)
     override fun writeName(name: String): CirJsonGenerator {
         var state = filterContext!!.setPropertyName(name)
+        filterContext!!.assignCurrentValue(currentValue() ?: delegate.currentValue())
 
         if (state == null) {
             myItemFilter = null
@@ -834,6 +840,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
     @Throws(CirJacksonException::class)
     protected open fun checkPropertyParentPath() {
         ++matchCount
+        filterContext!!.assignCurrentValue(currentValue() ?: delegate.currentValue())
 
         if (myInclusion == TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH) {
             filterContext!!.writePath(delegate)

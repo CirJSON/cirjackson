@@ -48,6 +48,10 @@ open class TokenFilterContext protected constructor(type: Int, final override va
         return myCurrentValue
     }
 
+    override fun assignCurrentValue(value: Any?) {
+        myCurrentValue = value
+    }
+
     init {
         nestingDepth = (parent?.nestingDepth ?: -1) + 1
     }
@@ -182,6 +186,21 @@ open class TokenFilterContext protected constructor(type: Int, final override va
             if (myIsNeedingToHandleName) {
                 generator.writeName(currentName!!)
             }
+        } else {
+            isStartHandled = true
+
+            if (myType == TYPE_OBJECT) {
+                generator.writeStartObject()
+                generator.writeObjectId(myCurrentValue!!)
+
+                if (myIsNeedingToHandleName) {
+                    myIsNeedingToHandleName = false
+                    generator.writeName(currentName!!)
+                }
+            } else if (myType == TYPE_ARRAY) {
+                generator.writeStartArray()
+                generator.writeArrayId(myCurrentValue!!)
+            }
         }
     }
 
@@ -210,7 +229,7 @@ open class TokenFilterContext protected constructor(type: Int, final override va
     @Throws(CirJacksonException::class)
     open fun closeObject(generator: CirJsonGenerator): TokenFilterContext? {
         if (isStartHandled) {
-            generator.writeEndArray()
+            generator.writeEndObject()
         } else {
             if (filter != null && filter !== TokenFilter.INCLUDE_ALL) {
                 if (filter!!.includeEmptyObject(hasCurrentName)) {
@@ -223,7 +242,7 @@ open class TokenFilterContext protected constructor(type: Int, final override va
         }
 
         if (filter != null && filter !== TokenFilter.INCLUDE_ALL) {
-            filter!!.filterFinishArray()
+            filter!!.filterFinishObject()
         }
 
         return parent

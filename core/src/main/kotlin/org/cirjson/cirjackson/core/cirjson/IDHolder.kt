@@ -1,10 +1,14 @@
 package org.cirjson.cirjackson.core.cirjson
 
-class IDHolder() {
+class IDHolder {
 
     private var currentID = 0
 
     private val mySavedIds = mutableSetOf<IDEntity>()
+
+    fun setID(id: String, referenced: Any, isArray: Boolean) {
+        mySavedIds.add(IDEntity(id, referenced, isArray))
+    }
 
     fun getID(referenced: Any, isArray: Boolean): String {
         val (id, _, isReferencedEntityArray) = mySavedIds.find { referenced === it.referenced } ?: return createID(
@@ -18,6 +22,10 @@ class IDHolder() {
             throw IllegalStateException(
                     "The referenced object `$referenced` was previously $previousState and is now $state")
         }
+    }
+
+    fun getFromID(id: String): Any? {
+        return mySavedIds.find { id == it.id }?.referenced
     }
 
     fun isReferencedAlreadySaved(referenced: Any): Boolean {

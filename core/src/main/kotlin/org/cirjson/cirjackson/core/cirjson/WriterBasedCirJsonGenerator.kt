@@ -81,8 +81,6 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
                     CirJsonWriteFeature.ESCAPE_FORWARD_SLASHES.isEnabledIn(formatWriteFeatures))
         }
 
-    protected val myIDHolder = IDHolder()
-
     init {
         @Suppress("LeakingThis")
         this.characterEscapes = characterEscapes

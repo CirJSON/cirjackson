@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.cirjson.IDHolder
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.exception.StreamWriteException
@@ -15,6 +16,8 @@ import java.math.BigInteger
  * [TokenStreamFactory] instance.
  */
 abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, Versioned {
+
+    protected val myIDHolder = IDHolder()
 
     /*
      *******************************************************************************************************************
@@ -2081,6 +2084,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     @Throws(CirJacksonException::class)
     protected open fun copyCurrentContents(parser: CirJsonParser) {
         var depth = 1
+        var previousToken: CirJsonToken? = null
         lateinit var token: CirJsonToken
 
         while (parser.nextToken()?.also { token = it } != null) {
@@ -2120,6 +2124,19 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
                 }
 
                 CirJsonTokenId.ID_STRING -> {
+                    if (previousToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
+                            previousToken == CirJsonToken.START_ARRAY) {
+                        val id = parser.text!!
+                        val referenced = myIDHolder.getFromID(id)
+
+                        if (referenced != null) {
+                            assignCurrentValue(referenced)
+                        } else {
+                            myIDHolder.setID(id, id, previousToken == CirJsonToken.START_ARRAY)
+                            assignCurrentValue(id)
+                        }
+                    }
+
                     copyCurrentStringValue(parser)
                 }
 
@@ -2151,6 +2168,8 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
                     throw IllegalArgumentException("Internal error: unknown current token, $token")
                 }
             }
+
+            previousToken = token
         }
     }
 
