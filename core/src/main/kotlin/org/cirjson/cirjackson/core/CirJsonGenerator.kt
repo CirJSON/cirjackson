@@ -1509,7 +1509,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    fun writeBoolean(propertyName: String, value: Boolean): CirJsonGenerator {
+    fun writeBooleanProperty(propertyName: String, value: Boolean): CirJsonGenerator {
         writeName(propertyName)
         return writeBoolean(value)
     }

@@ -3,7 +3,10 @@ package org.cirjson.cirjackson.core.filter
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.ObjectWriteContext
 import org.cirjson.cirjackson.core.TestBase
+import org.cirjson.cirjackson.core.io.SerializedString
 import java.io.StringWriter
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -64,6 +67,112 @@ class BasicGeneratorFilteringTest : TestBase() {
         writeCirJsonDoc(factory, doc, generator)
         assertEquals(apostropheToQuote("{'__cirJsonId__':'0','ob':['1',{'__cirJsonId__':'2','value':'bar'}]}"),
                 writer.toString())
+    }
+
+    @Test
+    fun testSingleMatchFilteringWithPathRawBinary() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("array"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, false)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeName("header")
+        generator.writeStartArray()
+        generator.writeArrayId(Any())
+        generator.writeNumber(2)
+        generator.writeBinary(byteArrayOf(1))
+        generator.writeRawValue(SerializedString("1"))
+        generator.writeRawValue("2")
+        generator.writeEndArray()
+
+        generator.writeName("array")
+        generator.writeStartArray()
+        generator.writeArrayId(Any())
+        generator.writeBinary(byteArrayOf(1))
+        generator.writeNumber(1.toShort())
+        generator.writeNumber(2)
+        generator.writeNumber(3L)
+        generator.writeNumber(BigInteger.valueOf(4))
+        generator.writeRaw(" ")
+        generator.writeNumber(BigDecimal("5.0"))
+        generator.writeRaw(SerializedString(" /*x*/"))
+        generator.writeNumber(6.25f)
+        generator.writeNumber(7.5)
+        generator.writeEndArray()
+
+        generator.writeArrayPropertyStart("extra")
+        generator.writeArrayId(Any())
+        generator.writeBinary(byteArrayOf(1))
+        generator.writeNumber(1.toShort())
+        generator.writeNumber(2)
+        generator.writeNumber(3L)
+        generator.writeNumber(BigInteger.valueOf(4))
+        generator.writeNumber(BigDecimal("5.0"))
+        generator.writeNumber(6.25f)
+        generator.writeNumber(7.5)
+        generator.writeEndArray()
+
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','array':['1','AQ==',1,2,3,4 ,5.0 /*x*/,6.25,7.5]}"),
+                writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
+    fun testMultipleMatchFilteringWithPathAlternate() {
+        multipleMatchFilteringWithPathAlternate(true)
+        multipleMatchFilteringWithPathAlternate(false)
+    }
+
+    private fun multipleMatchFilteringWithPathAlternate(exclude: Boolean) {
+        val writer = StringWriter()
+        val filter = if (exclude) NameExcludeFilter(true, "value", "a") else NameMatchFilter("value")
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), filter,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeName(SerializedString("a"))
+        generator.writeNumber(123)
+
+        generator.writeName("array")
+        generator.writeStartArray(2)
+        generator.writeArrayId(2)
+        generator.writeNumber("1")
+        generator.writeNumber(2.toShort())
+        generator.writeEndArray()
+
+        generator.writeName(SerializedString("ob"))
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("value0", 2)
+        generator.writeName(SerializedString("value"))
+        generator.writeStartArray(1)
+        generator.writeArrayId(1)
+        generator.writeString(SerializedString("x"))
+        generator.writeEndArray()
+        generator.writeStringProperty("value2", "foo")
+
+        generator.writeEndObject()
+
+        generator.writeBooleanProperty("b", true)
+
+        generator.writeEndObject()
+        generator.close()
+
+        if (exclude) {
+            assertEquals(apostropheToQuote(
+                    "{'__cirJsonId__':'0','array':['1',1,2],'ob':{'__cirJsonId__':'2','value0':2,'value2':'foo'},'b':true}"),
+                    writer.toString())
+            assertEquals(5, generator.matchCount)
+        } else {
+            assertEquals(apostropheToQuote("{'__cirJsonId__':'0','ob':{'__cirJsonId__':'1','value':['2','x']}}"),
+                    writer.toString())
+            assertEquals(1, generator.matchCount)
+        }
     }
 
     private fun createGenerator(writer: StringWriter): CirJsonGenerator {

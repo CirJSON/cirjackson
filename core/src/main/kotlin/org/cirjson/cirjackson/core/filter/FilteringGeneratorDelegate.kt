@@ -194,6 +194,15 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         return this
     }
 
+    override fun writeArrayId(referenced: Any): CirJsonGenerator {
+        if (myItemFilter === TokenFilter.INCLUDE_ALL || myItemFilter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
+            super.writeArrayId(referenced)
+        }
+
+        assignCurrentValue(referenced)
+        return this
+    }
+
     @Throws(CirJacksonException::class)
     override fun writeEndArray(): CirJsonGenerator {
         filterContext = filterContext!!.closeArray(delegate)
@@ -314,6 +323,11 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         return this
     }
 
+    override fun writeObjectId(referenced: Any): CirJsonGenerator {
+        assignCurrentValue(referenced)
+        return this
+    }
+
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
         filterContext = filterContext!!.closeObject(delegate)
@@ -324,7 +338,6 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
     @Throws(CirJacksonException::class)
     override fun writeName(name: String): CirJsonGenerator {
         var state = filterContext!!.setPropertyName(name)
-        filterContext!!.assignCurrentValue(currentValue() ?: delegate.currentValue())
 
         if (state == null) {
             myItemFilter = null

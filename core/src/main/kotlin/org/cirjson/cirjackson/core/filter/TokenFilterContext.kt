@@ -184,6 +184,7 @@ open class TokenFilterContext protected constructor(type: Int, final override va
 
         if (isStartHandled) {
             if (myIsNeedingToHandleName) {
+                myIsNeedingToHandleName = false
                 generator.writeName(currentName!!)
             }
         } else {
