@@ -175,6 +175,143 @@ class BasicGeneratorFilteringTest : TestBase() {
         }
     }
 
+    @Test
+    fun testMultipleMatchFilteringWithPath1() {
+        var writer = StringWriter()
+        var generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("value0", "value2"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        val doc =
+                "{'__cirJsonId__':'0','a':123,'array':['1',1,2],'ob':{'__cirJsonId__':'2','value0':2,'value':3,'value2':4},'b':true}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','ob':{'__cirJsonId__':'1','value0':2,'value2':4}}"),
+                writer.toString())
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), NameExcludeFilter(true, "ob"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','a':123,'array':['1',1,2],'b':true}"), writer.toString())
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), NameExcludeFilter(false, "ob"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','a':123,'b':true}"), writer.toString())
+    }
+
+    @Test
+    fun testMultipleMatchFilteringWithPath2() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("array", "b", "value"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        val doc =
+                "{'__cirJsonId__':'0','a':123,'array':['1',1,2],'ob':{'__cirJsonId__':'2','value0':2,'value':3,'value2':4},'b':true}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote(
+                "{'__cirJsonId__':'0','array':['1',1,2],'ob':{'__cirJsonId__':'2','value':3},'b':true}"),
+                writer.toString())
+        assertEquals(3, generator.matchCount)
+    }
+
+    @Test
+    fun testMultipleMatchFilteringWithPath3() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("value"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        val doc =
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','a0':true,'a':{'__cirJsonId__':'2','value':3},'b':{'__cirJsonId__':'3','value':'abc'}},'b0':false}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote(
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','a':{'__cirJsonId__':'2','value':3},'b':{'__cirJsonId__':'3','value':'abc'}}}"),
+                writer.toString())
+        assertEquals(2, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering1() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc =
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','a0':true,'b':{'__cirJsonId__':'2','value':4}},'b0':false}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote(
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','b':{'__cirJsonId__':'2'}}}"),
+                writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering2() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc = "['0',${nmfSmallDoc(1)},${nmfSmallDoc(4)},${nmfSmallDoc(7)}]"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote(
+                "['0',${nmfSmallExpectedDoc(1)},${nmfSmallExpectedDoc(4)},${nmfSmallExpectedDoc(7)}]"),
+                writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering3() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc = "['0',['1',${nmfSmallDoc(2)}],['4',${nmfSmallDoc(5)}],['8',${nmfSmallDoc(9)}]]"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("['0',['1',${nmfSmallExpectedDoc(2)}],['5',${nmfSmallExpectedDoc(6)}],['9',${
+            nmfSmallExpectedDoc(10)
+        }]]"), writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering4() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), StrictNameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc =
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','a0':true,'a':{'__cirJsonId__':'2','value':3},'b':{'__cirJsonId__':'3','value':4}},'b0':false}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0'}"), writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering5() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), StrictNameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc = "['0',${nmfSmallDoc(1)},${nmfSmallDoc(4)},${nmfSmallDoc(7)}]"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("['0',{'__cirJsonId__':'1'},{'__cirJsonId__':'2'},{'__cirJsonId__':'3'}]"),
+                writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    @Test
+    fun testNoMatchFiltering6() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), StrictNameMatchFilter("invalid"),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc = "['0',['1',${nmfSmallDoc(2)}],['4',${nmfSmallDoc(5)}],['8',${nmfSmallDoc(9)}]]"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote(
+                "['0',['1',{'__cirJsonId__':'2'}],['3',{'__cirJsonId__':'4'}],['5',{'__cirJsonId__':'6'}]]"),
+                writer.toString())
+        assertEquals(0, generator.matchCount)
+    }
+
+    private fun nmfSmallDoc(baseId: Int): String {
+        return "{'__cirJsonId__':'$baseId','root':{'__cirJsonId__':'${baseId + 1}','a0':true,'b':{'__cirJsonId__':'${baseId + 2}','value':4}},'b0':false}"
+    }
+
+    private fun nmfSmallExpectedDoc(baseId: Int): String {
+        return "{'__cirJsonId__':'$baseId','root':{'__cirJsonId__':'${baseId + 1}','b':{'__cirJsonId__':'${baseId + 2}'}}}"
+    }
+
     private fun createGenerator(writer: StringWriter): CirJsonGenerator {
         return factory.createGenerator(ObjectWriteContext.empty(), writer)
     }

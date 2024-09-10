@@ -57,6 +57,8 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
     var matchCount = 0
         protected set
 
+    protected var myPreviousToken: CirJsonToken? = null
+
     /*
      *******************************************************************************************************************
      * Public API, accessors
@@ -87,6 +89,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, null, true)
             delegate.writeStartArray()
+            myPreviousToken = CirJsonToken.START_ARRAY
             return this
         }
 
@@ -105,10 +108,12 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, null, true)
             delegate.writeStartArray()
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else if (myItemFilter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, null, true)
             delegate.writeStartArray()
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, null, false)
         }
@@ -126,6 +131,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue)
+            myPreviousToken = CirJsonToken.START_ARRAY
             return this
         }
 
@@ -144,10 +150,12 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue)
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else if (myItemFilter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue)
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, false)
         }
@@ -165,6 +173,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue, size)
+            myPreviousToken = CirJsonToken.START_ARRAY
             return this
         }
 
@@ -183,10 +192,12 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue, size)
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else if (myItemFilter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, true)
             delegate.writeStartArray(currentValue, size)
+            myPreviousToken = CirJsonToken.START_ARRAY
         } else {
             filterContext = filterContext!!.createChildArrayContext(myItemFilter, currentValue, false)
         }
@@ -194,6 +205,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         return this
     }
 
+    @Throws(CirJacksonException::class)
     override fun writeArrayId(referenced: Any): CirJsonGenerator {
         if (myItemFilter === TokenFilter.INCLUDE_ALL || myItemFilter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             super.writeArrayId(referenced)
@@ -220,6 +232,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildObjectContext(myItemFilter, null, true)
             delegate.writeStartObject()
+            myPreviousToken = CirJsonToken.START_OBJECT
             return this
         }
 
@@ -238,10 +251,12 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildObjectContext(filter, null, true)
             delegate.writeStartObject()
+            myPreviousToken = CirJsonToken.START_OBJECT
         } else if (filter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
             filterContext = filterContext!!.createChildObjectContext(filter, null, true)
             delegate.writeStartObject()
+            myPreviousToken = CirJsonToken.START_OBJECT
         } else {
             filterContext = filterContext!!.createChildObjectContext(filter, null, false)
         }
@@ -259,6 +274,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildObjectContext(myItemFilter, currentValue, true)
             delegate.writeStartObject(currentValue)
+            myPreviousToken = CirJsonToken.START_OBJECT
             return this
         }
 
@@ -277,10 +293,12 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue)
+            myPreviousToken = CirJsonToken.START_OBJECT
         } else if (filter != null && myInclusion == TokenFilter.Inclusion.INCLUDE_NON_NULL) {
             checkParentPath(false)
             filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue)
+            myPreviousToken = CirJsonToken.START_OBJECT
         } else {
             filterContext = filterContext!!.createChildObjectContext(filter, currentValue, false)
         }
@@ -298,6 +316,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
         if (myItemFilter === TokenFilter.INCLUDE_ALL) {
             filterContext = filterContext!!.createChildObjectContext(myItemFilter, currentValue, true)
             delegate.writeStartObject(currentValue, size)
+            myPreviousToken = CirJsonToken.START_OBJECT
             return this
         }
 
@@ -316,6 +335,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             checkParentPath()
             filterContext = filterContext!!.createChildObjectContext(filter, currentValue, true)
             delegate.writeStartObject(currentValue, size)
+            myPreviousToken = CirJsonToken.START_OBJECT
         } else {
             filterContext = filterContext!!.createChildObjectContext(filter, currentValue, false)
         }
@@ -891,6 +911,104 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
             true
         } else {
             false
+        }
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun copyCurrentContents(parser: CirJsonParser) {
+        var depth = 1
+        lateinit var token: CirJsonToken
+
+        while (parser.nextToken()?.also { token = it } != null) {
+            when (token.id) {
+                CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
+                }
+
+                CirJsonTokenId.ID_PROPERTY_NAME -> {
+                    writeName(parser.currentName!!)
+                }
+
+                CirJsonTokenId.ID_START_ARRAY -> {
+                    writeStartArray()
+                    ++depth
+                }
+
+                CirJsonTokenId.ID_START_OBJECT -> {
+                    writeStartObject()
+                    ++depth
+                }
+
+                CirJsonTokenId.ID_END_ARRAY -> {
+                    writeEndArray()
+
+                    if (--depth == 0) {
+                        return
+                    }
+                }
+
+                CirJsonTokenId.ID_END_OBJECT -> {
+                    writeEndObject()
+
+                    if (--depth == 0) {
+                        return
+                    }
+                }
+
+                CirJsonTokenId.ID_STRING -> {
+                    if (myPreviousToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
+                            myPreviousToken == CirJsonToken.START_ARRAY) {
+                        if (myItemFilter != null) {
+                            val id = parser.text!!
+
+                            if (myPreviousToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
+                                if (myInclusion != TokenFilter.Inclusion.INCLUDE_NON_NULL) {
+                                    writeObjectId(id)
+                                } else {
+                                    delegate.writeObjectId(id)
+                                }
+                            } else {
+                                if (myInclusion != TokenFilter.Inclusion.INCLUDE_NON_NULL) {
+                                    writeArrayId(id)
+                                } else {
+                                    delegate.writeArrayId(id)
+                                }
+                            }
+                        }
+                    } else {
+                        copyCurrentStringValue(parser)
+                    }
+                }
+
+                CirJsonTokenId.ID_NUMBER_INT -> {
+                    copyCurrentIntValue(parser)
+                }
+
+                CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                    copyCurrentFloatValue(parser)
+                }
+
+                CirJsonTokenId.ID_TRUE -> {
+                    writeBoolean(true)
+                }
+
+                CirJsonTokenId.ID_FALSE -> {
+                    writeBoolean(false)
+                }
+
+                CirJsonTokenId.ID_NULL -> {
+                    writeNull()
+                }
+
+                CirJsonTokenId.ID_EMBEDDED_OBJECT -> {
+                    writePOJO(parser.embeddedObject!!)
+                }
+
+                else -> {
+                    throw IllegalArgumentException("Internal error: unknown current token, $token")
+                }
+            }
+
+            myPreviousToken = token
         }
     }
 
