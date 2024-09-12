@@ -2538,7 +2538,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
 
                 if (i == CODE_HASH) {
-                    if (!skipYAMLComment()) {
+                    if (skipYAMLComment()) {
                         i = myInputData.readUnsignedByte()
                         continue
                     }

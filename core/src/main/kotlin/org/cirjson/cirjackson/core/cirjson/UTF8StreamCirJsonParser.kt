@@ -3253,34 +3253,34 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                 if (!loadMore()) {
                     return reportInvalidEOFInValue(CirJsonToken.VALUE_NUMBER_FLOAT)
                 }
+            }
 
-                ch = myInputBuffer[myInputPointer++].toInt()
+            ch = myInputBuffer[myInputPointer++].toInt()
 
-                val match = if (ch == 'N'.code) {
-                    if (negative) {
-                        "-INF"
-                    } else {
-                        "+INF"
-                    }
-                } else if (ch == 'n'.code) {
-                    if (negative) {
-                        "-Infinity"
-                    } else {
-                        "+Infinity"
-                    }
+            val match = if (ch == 'N'.code) {
+                if (negative) {
+                    "-INF"
                 } else {
-                    null
+                    "+INF"
                 }
+            } else if (ch == 'n'.code) {
+                if (negative) {
+                    "-Infinity"
+                } else {
+                    "+Infinity"
+                }
+            } else {
+                null
+            }
 
-                if (match != null) {
-                    matchToken(match, 3)
+            if (match != null) {
+                matchToken(match, 3)
 
-                    return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
-                        resetAsNaN(match, if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY)
-                    } else {
-                        reportError(
-                                "Non-standard token '$match': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
-                    }
+                return if (isEnabled(CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS)) {
+                    resetAsNaN(match, if (negative) Double.NEGATIVE_INFINITY else Double.POSITIVE_INFINITY)
+                } else {
+                    reportError(
+                            "Non-standard token '$match': enable `CirJsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow")
                 }
             }
         }
@@ -3792,9 +3792,13 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                 CODE_LF -> {
                     ++myCurrentInputRow
                     myCurrentInputRowStart = myInputPointer
+                    return
                 }
 
-                CODE_CR -> skipCR()
+                CODE_CR -> {
+                    skipCR()
+                    return
+                }
 
                 CODE_ASTERISK -> {}
 

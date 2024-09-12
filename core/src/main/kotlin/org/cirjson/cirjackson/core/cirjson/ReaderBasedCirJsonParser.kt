@@ -2668,7 +2668,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     private fun skipComment() {
         if (!isEnabled(CirJsonReadFeature.ALLOW_JAVA_COMMENTS)) {
             return reportUnexpectedChar('/',
-                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_JAVA_COMMENTS' not enabled for parser)")
+                    "maybe a (non-standard) comment? (not recognized as one since Feature 'ALLOW_COMMENTS' not enabled for parser)")
         }
 
         if (myInputPointer >= myInputEnd && !loadMore()) {
@@ -2744,8 +2744,10 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
                 if (i == CODE_LF) {
                     ++myCurrentInputRow
                     myCurrentInputRowStart = myInputPointer
+                    break
                 } else if (i == CODE_CR) {
                     skipCR()
+                    break
                 } else if (i != CODE_TAB) {
                     return reportInvalidSpace(i)
                 }
