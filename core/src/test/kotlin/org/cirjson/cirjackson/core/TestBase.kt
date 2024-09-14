@@ -381,32 +381,6 @@ open class TestBase {
      *******************************************************************************************************************
      */
 
-    fun readResource(reference: String): ByteArray {
-        val bytes = ByteArrayOutputStream()
-        val buffer = ByteArray(4000)
-        val inputStream: InputStream? = this::class.java.getResourceAsStream(reference)
-
-        if (inputStream != null) {
-            try {
-                var length: Int
-
-                while (inputStream.read(buffer).also { length = it } > 0) {
-                    bytes.write(buffer, 0, length)
-                }
-
-                inputStream.close()
-            } catch (e: IOException) {
-                throw RuntimeException("Failed to read resource '$reference': $e")
-            }
-        }
-
-        if (bytes.size() == 0) {
-            throw IllegalArgumentException("Failed to read resource '$reference': empty resource?")
-        }
-
-        return bytes.toByteArray()
-    }
-
     companion object {
 
         val BOOLEAN_OPTIONS = booleanArrayOf(true, false)
@@ -494,6 +468,32 @@ open class TestBase {
         val BASE64_VARIANTS =
                 arrayOf(Base64Variants.MIME, Base64Variants.MIME_NO_LINEFEEDS, Base64Variants.MODIFIED_FOR_URL,
                         Base64Variants.PEM)
+
+        fun readResource(reference: String): ByteArray {
+            val bytes = ByteArrayOutputStream()
+            val buffer = ByteArray(4000)
+            val inputStream: InputStream? = TestBase::class.java.getResourceAsStream(reference)
+
+            if (inputStream != null) {
+                try {
+                    var length: Int
+
+                    while (inputStream.read(buffer).also { length = it } > 0) {
+                        bytes.write(buffer, 0, length)
+                    }
+
+                    inputStream.close()
+                } catch (e: IOException) {
+                    throw RuntimeException("Failed to read resource '$reference': $e")
+                }
+            }
+
+            if (bytes.size() == 0) {
+                throw IllegalArgumentException("Failed to read resource '$reference': empty resource?")
+            }
+
+            return bytes.toByteArray()
+        }
 
     }
 
