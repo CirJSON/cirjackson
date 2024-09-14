@@ -268,17 +268,9 @@ open class TestBase {
 
     /*
      *******************************************************************************************************************
-     * Escaping/quoting
+     * Encoding
      *******************************************************************************************************************
      */
-
-    fun quote(str: String): String {
-        return "\"$str\""
-    }
-
-    fun apostropheToQuote(str: String): String {
-        return str.replace('\'', '"')
-    }
 
     fun encodeInUTF32BE(input: String): ByteArray {
         val length = input.length
@@ -468,6 +460,20 @@ open class TestBase {
         val BASE64_VARIANTS =
                 arrayOf(Base64Variants.MIME, Base64Variants.MIME_NO_LINEFEEDS, Base64Variants.MODIFIED_FOR_URL,
                         Base64Variants.PEM)
+
+        /*
+         ***************************************************************************************************************
+         * Escaping/quoting
+         ***************************************************************************************************************
+         */
+
+        fun quote(str: String): String {
+            return "\"$str\""
+        }
+
+        fun apostropheToQuote(str: String): String {
+            return str.replace('\'', '"')
+        }
 
         fun readResource(reference: String): ByteArray {
             val bytes = ByteArrayOutputStream()
