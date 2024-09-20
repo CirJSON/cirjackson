@@ -1639,7 +1639,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             ch = myInputData.readUnsignedByte()
-        } while (codes[ch] != 0)
+        } while (codes[ch] == 0)
 
         myNextByte = ch
 
