@@ -2381,8 +2381,16 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
             }
 
-            if (i == CODE_CR || i == CODE_LF) {
+            if (i == CODE_LF) {
                 ++myCurrentInputRow
+            } else if (i == CODE_CR) {
+                skipCR()
+
+                if (myNextByte != -1) {
+                    i = myNextByte
+                    myNextByte = -1
+                    continue
+                }
             }
 
             i = myInputData.readUnsignedByte()
@@ -2416,16 +2424,35 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
             }
 
-            if (i == CODE_CR || i == CODE_LF) {
-                ++myCurrentInputRow
-            }
-
             try {
+                if (i == CODE_LF) {
+                    ++myCurrentInputRow
+                } else if (i == CODE_CR) {
+                    skipCR()
+
+                    if (myNextByte != -1) {
+                        i = myNextByte
+                        myNextByte = -1
+                        continue
+                    }
+                }
+
                 i = myInputData.readUnsignedByte()
             } catch (e: EOFException) {
                 return eofAsNextChar()
             }
         }
+    }
+
+    @Throws(CirJacksonException::class, IOException::class)
+    private fun skipCR() {
+        myNextByte = myInputData.readUnsignedByte()
+
+        if (myNextByte == CODE_LF) {
+            myNextByte = -1
+        }
+
+        ++myCurrentInputRow
     }
 
     @Throws(CirJacksonException::class, IOException::class)
