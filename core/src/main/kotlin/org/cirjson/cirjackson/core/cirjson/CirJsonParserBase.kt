@@ -137,12 +137,12 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
             if (length == 10) {
                 if (myNumberNegative) {
-                    if (long > LONG_MIN_INT) {
+                    if (long >= LONG_MIN_INT) {
                         myNumberInt = long.toInt()
                         myNumberTypesValid = NUMBER_INT
                         return
                     }
-                } else if (long < LONG_MAX_INT) {
+                } else if (long <= LONG_MAX_INT) {
                     myNumberInt = long.toInt()
                     myNumberTypesValid = NUMBER_INT
                     return
