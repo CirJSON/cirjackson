@@ -4,7 +4,6 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.exception.StreamReadException
 import org.cirjson.cirjackson.core.extensions.growBy
-import org.cirjson.cirjackson.core.extensions.write
 import org.cirjson.cirjackson.core.io.CharTypes
 import org.cirjson.cirjackson.core.io.IOContext
 import org.cirjson.cirjackson.core.symbols.ByteQuadsCanonicalizer
@@ -109,7 +108,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
      */
 
     @Throws(CirJacksonException::class)
-    override fun releaseBuffered(writer: Writer): Int {
+    override fun releaseBuffered(output: OutputStream): Int {
         val count = myInputEnd - myInputPointer
 
         if (count < 1) {
@@ -120,7 +119,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         myInputPointer += count
 
         try {
-            writer.write(myInputBuffer, originalPointer, count)
+            output.write(myInputBuffer, originalPointer, count)
         } catch (e: IOException) {
             throw wrapIOFailure(e)
         }
