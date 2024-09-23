@@ -72,8 +72,8 @@ class ParserSequenceTest : TestBase() {
     private fun multiLevel(mode1: Int, mode2: Int, mode3: Int, mode4: Int) {
         val parser1 = createParser(mode1, "[ \"root1\", 1 ]")
         val parser2 = createParser(mode2, "[ \"root2\", 2 ]")
-        val parser3 = createParser(mode1, "[ \"root3\", 3 ]")
-        val parser4 = createParser(mode2, "[ \"root4\", 4 ]")
+        val parser3 = createParser(mode3, "[ \"root3\", 3 ]")
+        val parser4 = createParser(mode4, "[ \"root4\", 4 ]")
         val baseSequence1 = CirJsonParserSequence.createFlattened(true, parser1, parser2)
         val baseSequence2 = CirJsonParserSequence.createFlattened(true, parser3, parser4)
         val sequence = CirJsonParserSequence.createFlattened(false, baseSequence1, baseSequence2)
