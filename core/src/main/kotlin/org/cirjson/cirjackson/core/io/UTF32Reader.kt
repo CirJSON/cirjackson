@@ -242,11 +242,12 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
     }
 
     @Throws(IOException::class)
+    @OptIn(ExperimentalStdlibApi::class)
     private fun reportInvalid(value: Int, offset: Int, message: String) {
         val bytePosition = myByteCount + myPointer - 1
         val charPosition = myCharCount + offset
 
-        throw CharConversionException("Invalid UTF-32 character 0x${value.toString(16)} $message at char " +
+        throw CharConversionException("Invalid UTF-32 character 0x${value.toHexString()} $message at char " +
                 "#$charPosition, byte #$bytePosition)")
     }
 
