@@ -1,0 +1,13 @@
+{
+   "__cirJsonId__": "root",
+   "request":{
+        "__cirJsonId__": "request",
+        "mac": "000000BAD004",
+            "data": {
+                "__cirJsonId__": "request/data",
+            "invoice": "54321",
+                "tag": "TAG2",
+                "car_number":"CA492CF"
+        }
+      }
+}

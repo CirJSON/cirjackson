@@ -139,7 +139,7 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
             cbuf[outputPointer++] = low.toChar()
         }
 
-        val actualLength = outputEnd - off
+        val actualLength = outputPointer - off
         myCharCount += actualLength
         return actualLength
     }
@@ -267,7 +267,7 @@ open class UTF32Reader(protected val myIOContext: IOContext?, protected var myIn
          */
         const val LAST_VALID_UNICODE_CHAR = 0x10FFFF
 
-        val NO_CHAR = '\u0000'
+        const val NO_CHAR = '\u0000'
 
     }
 

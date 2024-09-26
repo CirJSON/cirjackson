@@ -201,7 +201,7 @@ abstract class TokenStreamContext protected constructor(protected var myType: In
 
                 TYPE_ARRAY -> {
                     append('[')
-                    append(currentIndex)
+                    append(currentIndex - 1)
                     append(']')
                 }
 

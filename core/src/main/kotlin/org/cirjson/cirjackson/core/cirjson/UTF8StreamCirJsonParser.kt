@@ -305,7 +305,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
             }
 
             else -> {
-                super.getValueAsString(null)
+                super.getValueAsString(defaultValue)
             }
         }
     }
@@ -4285,9 +4285,9 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
         return if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
             val total = myCurrentInputProcessed + myNameStartOffset - 1
-            CirJsonLocation(contentReference(), -1L, total, myNameStartRow, myNameStartColumn)
+            CirJsonLocation(contentReference(), total, -1L, myNameStartRow, myNameStartColumn)
         } else {
-            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, myNameStartRow, myNameStartColumn)
+            CirJsonLocation(contentReference(), tokenCharacterOffset - 1, -1L, tokenLineNumber, myNameStartColumn)
         }
     }
 

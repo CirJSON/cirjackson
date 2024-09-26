@@ -177,7 +177,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             else -> {
-                super.getValueAsString(null)
+                super.getValueAsString(defaultValue)
             }
         }
     }
@@ -550,6 +550,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             i = skipWhitespace()
+            tokenLineNumber = myCurrentInputRow
 
             if (isEnabled(CirJsonReadFeature.ALLOW_TRAILING_COMMA)) {
                 if (i or 0x20 == CODE_R_CURLY) {

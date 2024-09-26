@@ -341,7 +341,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
 
             else -> {
-                super.getValueAsString(null)
+                super.getValueAsString(defaultValue)
             }
         }
     }
@@ -3109,7 +3109,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             val total = myCurrentInputProcessed + myNameStartOffset - 1
             CirJsonLocation(contentReference(), -1L, total, myNameStartRow, myNameStartColumn)
         } else {
-            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, myNameStartRow, myNameStartColumn)
+            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, tokenLineNumber, myNameStartColumn)
         }
     }
 
