@@ -2145,6 +2145,10 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
 
                 if (ch != '}' && !streamReadContext!!.isInRoot) {
+                    if (streamReadContext!!.isInArray && streamReadContext!!.currentIndex == 0) {
+                        return reportUnexpectedChar(ch, "expected VALUE_STRING")
+                    }
+
                     if (isEnabled(CirJsonReadFeature.ALLOW_MISSING_VALUES)) {
                         myNextByte = code
                         return CirJsonToken.VALUE_NULL

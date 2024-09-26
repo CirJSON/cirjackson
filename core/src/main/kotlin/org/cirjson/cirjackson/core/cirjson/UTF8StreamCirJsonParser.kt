@@ -2784,7 +2784,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
 
                 var ch2 = quads[index shr 2]
                 byteIndex = index and 3
-                ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                ch2 = ch2 shr (3 - byteIndex shl 3)
                 ++index
 
                 if (ch2 and 0xC0 != 0x080) {
@@ -2796,7 +2796,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                 if (needed > 1) {
                     ch2 = quads[index shr 2]
                     byteIndex = index and 3
-                    ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                    ch2 = ch2 shr (3 - byteIndex shl 3)
                     ++index
 
                     if (ch2 and 0xC0 != 0x080) {
@@ -2808,7 +2808,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                     if (needed > 2) {
                         ch2 = quads[index shr 2]
                         byteIndex = index and 3
-                        ch2 = ch2 shr (3 - byteIndex shl 3) and 0xFF
+                        ch2 = ch2 shr (3 - byteIndex shl 3)
                         ++index
 
                         if (ch2 and 0xC0 != 0x080) {
@@ -2826,7 +2826,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                         charBuffer = myTextBuffer.expandCurrentSegment()
                     }
 
-                    charBuffer[charIndex++] = ((ch shr 10) + 0x0800).toChar()
+                    charBuffer[charIndex++] = ((ch shr 10) + 0xD800).toChar()
                     ch = ch and 0x03FF or 0xDC00
                 }
             }
@@ -3101,6 +3101,10 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
                 }
 
                 if (ch != '}' && !streamReadContext!!.isInRoot) {
+                    if (streamReadContext!!.isInArray && streamReadContext!!.currentIndex == 0) {
+                        return reportUnexpectedChar(ch, "expected VALUE_STRING")
+                    }
+
                     if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
                         --myInputPointer
                         return CirJsonToken.VALUE_NULL

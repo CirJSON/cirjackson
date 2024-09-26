@@ -2052,6 +2052,10 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             CODE_R_BRACKET, CODE_COMMA -> {
                 if (i == CODE_COMMA || streamReadContext!!.isInArray) {
                     if (!streamReadContext!!.isInRoot) {
+                        if (streamReadContext!!.isInArray && streamReadContext!!.currentIndex == 0) {
+                            return reportUnexpectedChar(i.toChar(), "expected VALUE_STRING")
+                        }
+
                         if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
                             --myInputPointer
                             return CirJsonToken.VALUE_NULL
