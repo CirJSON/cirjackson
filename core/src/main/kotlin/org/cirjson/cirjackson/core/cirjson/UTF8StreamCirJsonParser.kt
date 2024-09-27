@@ -919,6 +919,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
             CirJsonToken.PROPERTY_NAME
         }
         i = skipColon()
+        updateLocation()
 
         if (i == CODE_QUOTE) {
             myIsTokenIncomplete = true
@@ -4291,13 +4292,13 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
             val total = myCurrentInputProcessed + myNameStartOffset - 1
             CirJsonLocation(contentReference(), total, -1L, myNameStartRow, myNameStartColumn)
         } else {
-            CirJsonLocation(contentReference(), tokenCharacterOffset - 1, -1L, tokenLineNumber, myNameStartColumn)
+            CirJsonLocation(contentReference(), tokenCharacterOffset - 1, -1L, tokenLineNumber, myTokenInputColumn)
         }
     }
 
     override fun currentLocation(): CirJsonLocation {
         val column = myInputPointer - myCurrentInputRowStart + 1
-        return CirJsonLocation(contentReference(), -1L, myCurrentInputProcessed + myInputPointer, myCurrentInputRow,
+        return CirJsonLocation(contentReference(), myCurrentInputProcessed + myInputPointer, -1L, myCurrentInputRow,
                 column)
     }
 

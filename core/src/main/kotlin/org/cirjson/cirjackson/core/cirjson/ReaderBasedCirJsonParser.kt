@@ -939,6 +939,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         streamReadContext!!.currentName = name
         myCurrentToken = CirJsonToken.PROPERTY_NAME
         i = skipColon()
+        updateLocation()
 
         if (i == CODE_QUOTE) {
             myIsTokenIncomplete = true
@@ -3113,7 +3114,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             val total = myCurrentInputProcessed + myNameStartOffset - 1
             CirJsonLocation(contentReference(), -1L, total, myNameStartRow, myNameStartColumn)
         } else {
-            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, tokenLineNumber, myNameStartColumn)
+            CirJsonLocation(contentReference(), -1L, tokenCharacterOffset - 1, tokenLineNumber, myTokenInputColumn)
         }
     }
 
