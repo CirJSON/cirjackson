@@ -29,7 +29,7 @@ abstract class CirJacksonException : RuntimeException {
         this.location = null
     }
 
-    constructor(message: String?, location: CirJsonLocation) : super(message) {
+    constructor(message: String?, location: CirJsonLocation?) : super(message) {
         this.location = location
     }
 

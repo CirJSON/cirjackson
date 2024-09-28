@@ -122,6 +122,15 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
                 row, column)
     }
 
+    override fun currentLocationMinusOne(): CirJsonLocation {
+        val previousInputPointer = myInputPointer - 1
+        val row = max(myCurrentInputRow, myCurrentInputRowAlt)
+        val column = previousInputPointer - myCurrentInputRowStart + 1
+        return CirJsonLocation(contentReference(),
+                myCurrentInputProcessed + previousInputPointer - myCurrentBufferStart, -1L,
+                row, column)
+    }
+
     override fun currentTokenLocation(): CirJsonLocation {
         return CirJsonLocation(contentReference(), tokenCharacterOffset, -1L, tokenLineNumber, myTokenInputColumn)
     }

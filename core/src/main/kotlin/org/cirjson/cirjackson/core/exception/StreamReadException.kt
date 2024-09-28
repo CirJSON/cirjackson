@@ -15,15 +15,17 @@ open class StreamReadException : CirJacksonException {
     override val processor: CirJsonParser?
         get() = myProcessor
 
-    constructor(processor: CirJsonParser?, message: String) : super(message) {
+    constructor(processor: CirJsonParser?, message: String) : this(processor, message, processor?.currentLocation())
+
+    constructor(processor: CirJsonParser?, message: String, cause: Throwable) : this(processor, message,
+            processor?.currentLocation(), cause)
+
+    constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation?) : super(message, location) {
         myProcessor = processor
     }
 
-    constructor(processor: CirJsonParser?, message: String, cause: Throwable) : super(message, cause) {
-        myProcessor = processor
-    }
-
-    constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation) : super(message, location) {
+    constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation?, cause: Throwable) : super(
+            message, location, cause) {
         myProcessor = processor
     }
 

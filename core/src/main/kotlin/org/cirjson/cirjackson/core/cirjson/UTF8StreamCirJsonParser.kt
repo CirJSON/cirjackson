@@ -4305,7 +4305,7 @@ open class UTF8StreamCirJsonParser(objectReadContext: ObjectReadContext, ioConte
     override fun currentLocationMinusOne(): CirJsonLocation {
         val previousInputPointer = myInputPointer - 1
         val column = previousInputPointer - myCurrentInputRowStart + 1
-        return CirJsonLocation(contentReference(), -1L, myCurrentInputProcessed + previousInputPointer,
+        return CirJsonLocation(contentReference(), myCurrentInputProcessed + previousInputPointer, -1L,
                 myCurrentInputRow, column)
     }
 
