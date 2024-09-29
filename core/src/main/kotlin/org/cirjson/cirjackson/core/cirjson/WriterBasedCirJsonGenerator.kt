@@ -712,6 +712,7 @@ open class WriterBasedCirJsonGenerator(objectWriteContext: ObjectWriteContext, i
         val room = myOutputEnd - myOutputTail
         text.toCharArray(myOutputBuffer, myOutputTail, 0, room)
         myOutputTail += room
+        flushBuffer()
         var offset = room
         var length = text.length - room
 
