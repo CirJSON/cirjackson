@@ -1478,6 +1478,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of Object Property to write
+     *
      * @param data Binary value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1500,6 +1501,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of Object Property to write
+     *
      * @param value Boolean value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1543,6 +1545,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value String value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1552,7 +1555,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    fun writeStringProperty(propertyName: String, value: String): CirJsonGenerator {
+    fun writeStringProperty(propertyName: String, value: String?): CirJsonGenerator {
         writeName(propertyName)
         return writeString(value)
     }
@@ -1565,6 +1568,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1587,6 +1591,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1609,6 +1614,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1640,7 +1646,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    fun writeNumberProperty(propertyName: String, value: BigInteger): CirJsonGenerator {
+    fun writeNumberProperty(propertyName: String, value: BigInteger?): CirJsonGenerator {
         writeName(propertyName)
         return writeNumber(value)
     }
@@ -1653,6 +1659,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1675,6 +1682,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1697,6 +1705,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * ```
      *
      * @param propertyName Name of the property to write
+     *
      * @param value Numeric value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1706,7 +1715,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    fun writeNumberProperty(propertyName: String, value: BigDecimal): CirJsonGenerator {
+    fun writeNumberProperty(propertyName: String, value: BigDecimal?): CirJsonGenerator {
         writeName(propertyName)
         return writeNumber(value)
     }
@@ -1744,9 +1753,8 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * writeStartObject()
      * ```
      *
-     * Note: caller still has to take care to close the Object
-     * (by calling [writeEndObject]) after writing all
-     * entries of the value Object.
+     * Note: caller still has to take care to close the Object (by calling [writeEndObject]) after writing all entries
+     * of the value Object.
      *
      * @param propertyName Name of the Object property to write
      *
@@ -1770,10 +1778,10 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * writeObject(pojo)
      * ```
      *
-     * NOTE: see [writePOJO] for details on how POJO value actually
-     * gets written (uses delegation).
+     * NOTE: see [writePOJO] for details on how POJO value actually gets written (uses delegation).
      *
      * @param propertyName Name of the property to write
+     *
      * @param pojo POJO value of the property to write
      *
      * @return This generator, to allow call chaining
@@ -1783,7 +1791,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * @throws StreamWriteException for problems in encoding token stream
      */
     @Throws(CirJacksonException::class)
-    fun writePOJOProperty(propertyName: String, pojo: Any): CirJsonGenerator {
+    fun writePOJOProperty(propertyName: String, pojo: Any?): CirJsonGenerator {
         writeName(propertyName)
         return writePOJO(pojo)
     }
@@ -2175,7 +2183,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
 
     /*
      *******************************************************************************************************************
-     * Helper methods for sub-classes
+     * Helper methods for subclasses
      *******************************************************************************************************************
      */
 
