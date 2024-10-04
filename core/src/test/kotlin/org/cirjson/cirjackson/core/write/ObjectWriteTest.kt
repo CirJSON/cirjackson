@@ -95,6 +95,8 @@ class ObjectWriteTest : TestBase() {
         } catch (e: StreamWriteException) {
             verifyException(e, "Current context not Array")
         }
+
+        generator.close()
     }
 
     @Test
