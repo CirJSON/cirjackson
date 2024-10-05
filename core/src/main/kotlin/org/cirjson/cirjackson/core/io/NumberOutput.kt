@@ -266,10 +266,10 @@ object NumberOutput {
             val high = upper / BILLION_L
             upper -= high * BILLION_L
             offset = leading(high.toInt(), buffer, offset)
-            outputUptoBillion(upper.toInt(), buffer, offset)
+            outputFullBillion(upper.toInt(), buffer, offset)
         }
 
-        return outputInt(v.toInt(), buffer, offset)
+        return outputFullBillion(v.toInt(), buffer, offset)
     }
 
     /**

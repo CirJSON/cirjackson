@@ -16,7 +16,7 @@ class NumberParsingTest : TestBase() {
     private val slowFactory = CirJsonFactory.builder().build()
 
     private val fastFactory = CirJsonFactory.builder().enable(StreamReadFeature.USE_FAST_DOUBLE_PARSER)
-            .enable(StreamReadFeature.USE_FAST_DOUBLE_PARSER).build()
+            .enable(StreamReadFeature.USE_FAST_BIG_NUMBER_PARSER).build()
 
     private val factories = arrayOf(slowFactory, fastFactory)
 
