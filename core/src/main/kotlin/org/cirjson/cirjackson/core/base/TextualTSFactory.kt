@@ -191,7 +191,7 @@ abstract class TextualTSFactory : DecorableTSFactory {
     @Throws(CirJacksonException::class)
     override fun createGenerator(writeContext: ObjectWriteContext, output: OutputStream,
             encoding: CirJsonEncoding): CirJsonGenerator {
-        val ioContext = createContext(createContentReference(output), true, encoding)
+        val ioContext = createContext(createContentReference(output), false, encoding)
 
         return if (encoding == CirJsonEncoding.UTF8) {
             decorate(createUTF8Generator(writeContext, ioContext, decorate(ioContext, output)))
