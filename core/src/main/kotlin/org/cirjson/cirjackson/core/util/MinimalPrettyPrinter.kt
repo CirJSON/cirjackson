@@ -21,6 +21,8 @@ open class MinimalPrettyPrinter(protected var myRootValueSeparator: String?) : P
 
     protected var mySeparators = PrettyPrinter.DEFAULT_SEPARATORS.withObjectNameValueSpacing(Separators.Spacing.NONE)
 
+    constructor() : this(PrettyPrinter.DEFAULT_ROOT_VALUE_SEPARATOR.toString())
+
     /**
      * @param separator Root value separator definitions
      *
