@@ -182,6 +182,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             return this
         }
 
+        myOutputBuffer[myOutputTail++] = myQuoteChar
         val length = name.appendQuotedUTF8(myOutputBuffer, myOutputTail)
 
         if (length < 0) {

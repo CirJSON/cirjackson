@@ -27,7 +27,7 @@ open class CirJsonWriteContext(type: Int, final override val parent: CirJsonWrit
 
     init {
         myType = type
-        nestingDepth = (parent?.nestingDepth ?: -1) + -1
+        nestingDepth = (parent?.nestingDepth ?: -1) + 1
         myIndex = -1
     }
 

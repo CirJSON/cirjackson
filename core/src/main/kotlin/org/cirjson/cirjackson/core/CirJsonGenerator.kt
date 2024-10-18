@@ -1353,6 +1353,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
             writeTypeId(id!!)
         } else {
             val idString = (id as? String) ?: id.toString()
+            typeIdDefinition.isWrapperWritten = true
             var inclusion = typeIdDefinition.inclusion!!
 
             if (valueShape != CirJsonToken.START_OBJECT && inclusion.isRequiringObjectContext) {
