@@ -345,6 +345,11 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
 
     override fun writeObjectId(referenced: Any): CirJsonGenerator {
         assignCurrentValue(referenced)
+
+        if (filterContext?.filter == TokenFilter.INCLUDE_ALL) {
+            delegate.writeObjectId(referenced)
+        }
+
         return this
     }
 
@@ -963,13 +968,13 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
                             if (myPreviousToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
                                 if (myInclusion != TokenFilter.Inclusion.INCLUDE_NON_NULL) {
                                     writeObjectId(id)
-                                } else {
+                                } else if (filterContext?.filter != null) {
                                     delegate.writeObjectId(id)
                                 }
                             } else {
                                 if (myInclusion != TokenFilter.Inclusion.INCLUDE_NON_NULL) {
                                     writeArrayId(id)
-                                } else {
+                                } else if (filterContext?.filter != null) {
                                     delegate.writeArrayId(id)
                                 }
                             }

@@ -84,7 +84,7 @@ abstract class TokenStreamContext protected constructor(protected var myType: In
      * Accessor that may be called to verify whether this context has valid index: will return `false` before the first
      * entry of Object context or before first element of Array context; otherwise returns `true`.
      */
-    val isIndexValid
+    open val isIndexValid
         get() = if (myType == TYPE_ARRAY) myIndex > 0 else myIndex >= 0
 
     /**

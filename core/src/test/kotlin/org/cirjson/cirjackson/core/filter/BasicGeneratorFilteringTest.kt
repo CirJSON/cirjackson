@@ -228,6 +228,18 @@ class BasicGeneratorFilteringTest : TestBase() {
     }
 
     @Test
+    fun testMultipleMatchFilteringWithPath4() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("b0"),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        val doc =
+                "{'__cirJsonId__':'0','root':{'__cirJsonId__':'1','a0':true,'a':{'__cirJsonId__':'2','value':3},'b':{'__cirJsonId__':'3','value':'abc'}},'b0':false}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','b0':false}"), writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
     fun testNoMatchFiltering1() {
         val writer = StringWriter()
         val generator = FilteringGeneratorDelegate(createGenerator(writer), NameMatchFilter("invalid"),
@@ -310,6 +322,379 @@ class BasicGeneratorFilteringTest : TestBase() {
 
     private fun nmfSmallExpectedDoc(baseId: Int): String {
         return "{'__cirJsonId__':'$baseId','root':{'__cirJsonId__':'${baseId + 1}','b':{'__cirJsonId__':'${baseId + 2}'}}}"
+    }
+
+    @Test
+    fun testValueOmitsFieldName1() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NoArraysFilter(),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc = "{'__cirJsonId__':'0','root':['1','a'],'b0':false}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','b0':false}"), writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
+    fun testValueOmitsFieldName2() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), NoObjectsFilter(),
+                TokenFilter.Inclusion.INCLUDE_NON_NULL, true)
+        val doc =
+                "['0','a',{'__cirJsonId__':'1','root':{'__cirJsonId__':'2','b':{'__cirJsonId__':'3','value':4}},'b0':false}]"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("['0','a']"), writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
+    fun testIndexMatchWithPath1() {
+        var writer = StringWriter()
+        var generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(1),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        val doc =
+                "{'__cirJsonId__':'0','a':123,'array':['1',1,2],'ob':{'__cirJsonId__':'2','value0':2,'value':3,'value2':'abc'},'b':true}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','array':['1',2]}"), writer.toString())
+        assertEquals(1, generator.matchCount)
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(0),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','array':['1',1]}"), writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
+    fun testIndexMatchWithPath2() {
+        var writer = StringWriter()
+        var generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(0, 1),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        var doc =
+                "{'__cirJsonId__':'0','a':123,'array':['1',1,2],'ob':{'__cirJsonId__':'2','value0':2,'value':3,'value2':4},'b':true}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','array':['1',1,2]}"), writer.toString())
+        assertEquals(2, generator.matchCount)
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(1, 3, 5),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        doc = "{'__cirJsonId__':'0','a':123,'misc':['1',1,2, null, true, false, 'abc', 123],'ob':null,'b':true}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','misc':['1',2,true,'abc']}"), writer.toString())
+        assertEquals(3, generator.matchCount)
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(2, 6),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        doc = "{'__cirJsonId__':'0','misc':['1',1,2, null, 0.25, false, 'abc', 11234567890]}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','misc':['1',null,11234567890]}"), writer.toString())
+        assertEquals(2, generator.matchCount)
+
+        writer = StringWriter()
+        generator = FilteringGeneratorDelegate(createGenerator(writer), IndexMatchFilter(1),
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+        doc = "{'__cirJsonId__':'0','misc':['1',1,0.25,11234567890]}"
+        writeCirJsonDoc(factory, doc, generator)
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','misc':['1',0.25]}"), writer.toString())
+        assertEquals(1, generator.matchCount)
+    }
+
+    @Test
+    fun testWriteStartObjectWithObject() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), TokenFilter.INCLUDE_ALL,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        val value = "val"
+
+        val obj = Any()
+        generator.writeStartObject(obj, 2)
+        generator.writeObjectId(obj)
+        generator.writeName("field1")
+        generator.writeStartObject(value)
+        generator.writeObjectId(value)
+        generator.writeEndObject()
+
+        generator.writeName("field2")
+        generator.writeNumber(BigDecimal("1.0"))
+
+        generator.writeEndObject()
+        generator.close()
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','field1':{'__cirJsonId__':'1'},'field2':1.0}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testRawValueDelegationWithArray() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), TokenFilter.INCLUDE_ALL,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartArray()
+        generator.writeArrayId(Any())
+        generator.writeRawValue(charArrayOf('1'), 0, 1)
+        generator.writeRawValue("123", 2, 1)
+        generator.writeRaw(',')
+        generator.writeRaw("/* comment")
+        generator.writeRaw("... */".toCharArray(), 3, 3)
+        generator.writeRaw(" ,42".toCharArray(), 1, 3)
+        generator.writeEndArray()
+        generator.close()
+
+        assertEquals(apostropheToQuote("['0',1,3,/* comment */,42]"), writer.toString())
+    }
+
+    @Test
+    fun testRawValueDelegationWithObject() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), TokenFilter.INCLUDE_ALL,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("f1", 1)
+        generator.writeName("f2")
+        generator.writeRawValue(charArrayOf('1', '2', '.', '3', '-'), 0, 4)
+        generator.writeNumberProperty("f3", 3)
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','f1':1,'f2':12.3,'f3':3}"), writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyArrayIfNotFiltered() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("empty_array")
+        generator.writeArrayId(Any())
+        generator.writeEndArray()
+        generator.writeArrayPropertyStart("filtered_array")
+        generator.writeArrayId(Any())
+        generator.writeNumber(6)
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','empty_array':['1']}"), writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyArray() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("empty_array")
+        generator.writeArrayId(Any())
+        generator.writeEndArray()
+        generator.writeArrayPropertyStart("filtered_array")
+        generator.writeArrayId(Any())
+        generator.writeNumber(6)
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','empty_array':['1'],'filtered_array':['2']}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyObjectIfNotFiltered() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeObjectPropertyStart("empty_object")
+        generator.writeObjectId(Any())
+        generator.writeEndObject()
+        generator.writeObjectPropertyStart("filtered_object")
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("foo", 6)
+        generator.writeEndObject()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0','empty_object':{'__cirJsonId__':'1'}}"), writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyObject() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeObjectPropertyStart("empty_object")
+        generator.writeObjectId(Any())
+        generator.writeEndObject()
+        generator.writeObjectPropertyStart("filtered_object")
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("foo", 6)
+        generator.writeEndObject()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote(
+                "{'__cirJsonId__':'0','empty_object':{'__cirJsonId__':'1'},'filtered_object':{'__cirJsonId__':'2'}}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyArrayInObjectIfNotFiltered() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeObjectPropertyStart("object_with_empty_array")
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("foo")
+        generator.writeArrayId(Any())
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.writeObjectPropertyStart("object_with_filtered_array")
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("foo")
+        generator.writeArrayId(Any())
+        generator.writeNumber(6)
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(
+                apostropheToQuote("{'__cirJsonId__':'0','object_with_empty_array':{'__cirJsonId__':'1','foo':['2']}}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyArrayInObject() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeObjectPropertyStart("object_with_empty_array")
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("foo")
+        generator.writeArrayId(Any())
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.writeObjectPropertyStart("object_with_filtered_array")
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("foo")
+        generator.writeArrayId(Any())
+        generator.writeNumber(6)
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(
+                apostropheToQuote(
+                        "{'__cirJsonId__':'0','object_with_empty_array':{'__cirJsonId__':'1','foo':['2']},'object_with_filtered_array':{'__cirJsonId__':'3','foo':['4']}}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyObjectInArrayIfNotFiltered() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("array_with_empty_object")
+        generator.writeArrayId(Any())
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeEndObject()
+        generator.writeEndArray()
+        generator.writeArrayPropertyStart("array_with_filtered_object")
+        generator.writeArrayId(Any())
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("foo", 5)
+        generator.writeEndObject()
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(
+                apostropheToQuote("{'__cirJsonId__':'0','array_with_empty_object':['1',{'__cirJsonId__':'2'}]}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyObjectInArray() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeArrayPropertyStart("array_with_empty_object")
+        generator.writeArrayId(Any())
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeEndObject()
+        generator.writeEndArray()
+        generator.writeArrayPropertyStart("array_with_filtered_object")
+        generator.writeArrayId(Any())
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeNumberProperty("foo", 5)
+        generator.writeEndObject()
+        generator.writeEndArray()
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote(
+                "{'__cirJsonId__':'0','array_with_empty_object':['1',{'__cirJsonId__':'2'}],'array_with_filtered_object':['3',{'__cirJsonId__':'4'}]}"),
+                writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyTopLevelObject() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartObject()
+        generator.writeObjectId(Any())
+        generator.writeEndObject()
+        generator.close()
+
+        assertEquals(apostropheToQuote("{'__cirJsonId__':'0'}"), writer.toString())
+    }
+
+    @Test
+    fun testIncludeEmptyTopLevelArray() {
+        val writer = StringWriter()
+        val generator = FilteringGeneratorDelegate(createGenerator(writer), INCLUDE_EMPTY_IF_NOT_FILTERED,
+                TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, true)
+
+        generator.writeStartArray()
+        generator.writeArrayId(Any())
+        generator.writeEndArray()
+        generator.close()
+
+        assertEquals(apostropheToQuote("['0']"), writer.toString())
     }
 
     private fun createGenerator(writer: StringWriter): CirJsonGenerator {

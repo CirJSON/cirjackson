@@ -44,6 +44,9 @@ open class TokenFilterContext protected constructor(type: Int, final override va
     override val hasCurrentName: Boolean
         get() = currentName != null
 
+    override val isIndexValid
+        get() = myIndex >= 0
+
     override fun currentValue(): Any? {
         return myCurrentValue
     }
