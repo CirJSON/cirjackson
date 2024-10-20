@@ -14,3 +14,6 @@ plugins {
 rootProject.name = "cirjackson"
 include(":cirjackson-core")
 project(":cirjackson-core").projectDir = file("./core")
+
+include(":cirjackson-annotations")
+project(":cirjackson-annotations").projectDir = file("./annotations")
