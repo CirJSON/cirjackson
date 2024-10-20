@@ -371,7 +371,7 @@ open class TokenFilter {
      *
      * @return Whether all leaf scalar values should be included (`true`) or not (`false`)
      */
-    protected open fun includeScalar(): Boolean {
+    open fun includeScalar(): Boolean {
         return true
     }
 
