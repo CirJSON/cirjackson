@@ -17,3 +17,6 @@ project(":cirjackson-core").projectDir = file("./core")
 
 include(":cirjackson-annotations")
 project(":cirjackson-annotations").projectDir = file("./annotations")
+
+include(":cirjackson-databind")
+project(":cirjackson-databind").projectDir = file("./databind")
