@@ -65,7 +65,8 @@ subprojects {
             while (toProcess.isNotEmpty()) {
                 val dir = toProcess.removeAt(0)
 
-                val folderFiles = dir.listFiles()!!.toMutableList()
+                val folderFiles = dir.listFiles()?.toMutableList() ?: continue
+
                 for (f in folderFiles) {
                     if (f.isFile) {
                         res.add(f)
@@ -107,31 +108,6 @@ subprojects {
 
     tasks.withType(CreatePackageVersionTask::class).configureEach {
         outputs.upToDateWhen { false }
-    }
-
-    @Suppress("ObjectLiteralToLambda")
-    val createVersionTask = task<Copy>("createVersion") {
-        outputs.upToDateWhen { false }
-
-        from("src/main/template")
-        into("gen")
-        rename("\\.in$", "")
-        eachFile(object : Action<FileCopyDetails> {
-            override fun execute(details: FileCopyDetails) {
-                details.name = details.name.removeSuffix(".in")
-                val fileContent =
-                        details.file.readText().replace("@projectVersion@", project.version.toString())
-                                .replace("@projectGroupId@", project.group.toString())
-                                .replace("@projectArtifactId@", project.name)
-                val path = details.file.path.removePrefix(project.projectDir.absolutePath)
-                val pathSep = Path("/").pathString
-                val printedPath = Path(project.projectDir.absolutePath, "/gen/",
-                        path.removePrefix("${pathSep}${Path("src/main/template").pathString}"))
-                val file = File(printedPath.pathString.removeSuffix(".in"))
-
-                file.writeText(fileContent)
-            }
-        })
     }
 
     sourceSets {
