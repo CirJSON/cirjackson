@@ -1,4 +1,4 @@
-package org.cirjson.cirjackson.core.cirjson
+package @package@
 
 import org.cirjson.cirjackson.core.Version
 import org.cirjson.cirjackson.core.Versioned
@@ -12,7 +12,7 @@ class PackageVersion : Versioned {
 
     companion object {
 
-        val VERSION = VersionUtil.parseVersion("1.0.0-SNAPSHOT", "org.cirjson.cirjackson", "cirjackson-core")
+        val VERSION = VersionUtil.parseVersion("@projectVersion@", "@projectGroupId@", "@projectArtifactId@")
 
     }
 

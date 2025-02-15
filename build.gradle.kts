@@ -4,6 +4,8 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
 import java.net.URL
 import java.util.*
+import kotlin.io.path.Path
+import kotlin.io.path.pathString
 
 val properties = File(rootDir, "gradle.properties").inputStream().use {
     Properties().apply { load(it) }
@@ -45,26 +47,91 @@ subprojects {
         jvmToolchain(17)
     }
 
+    abstract class CreatePackageVersionTask : DefaultTask() {
+
+        @TaskAction
+        fun action() {
+            for (template in templateFiles()) {
+                generateFromTemplate(template)
+            }
+        }
+
+        private fun templateFolder() = project.file("src/main/template")
+
+        private fun templateFiles(): List<File> {
+            val res = mutableListOf<File>()
+            val toProcess = mutableListOf(templateFolder())
+
+            while (toProcess.isNotEmpty()) {
+                val dir = toProcess.removeAt(0)
+
+                val folderFiles = dir.listFiles()!!.toMutableList()
+                for (f in folderFiles) {
+                    if (f.isFile) {
+                        res.add(f)
+                    } else {
+                        toProcess.add(f)
+                    }
+                }
+            }
+
+            return res
+        }
+
+        private fun generateFromTemplate(file: File) {
+            val sep = File.separator
+            val filePath = file.path
+            val smt = Path("src/main/template").pathString
+            val pathInSmt = filePath.removePrefix("${project.projectDir.path}$sep$smt$sep")
+            val packagePath = pathInSmt.removeSuffix("$sep${file.name}")
+            val newPath = Path(project.projectDir.path, "gen", packagePath, file.name.removeSuffix(".in"))
+
+            val content = file.readText()
+            val packageString = packagePath.replace(sep, ".")
+
+            val newContent = content.replace("@projectVersion@", project.version.toString())
+                    .replace("@projectGroupId@", project.group.toString()).replace("@projectArtifactId@", project.name)
+                    .replace("@package@", packageString)
+
+            newPath.parent.toFile().mkdirs()
+
+            val output = newPath.toFile()
+            output.writeText(newContent)
+        }
+    }
+
+    val createPackageVersionTask = tasks.register<CreatePackageVersionTask>("createPackageVersionTask") {
+        group = "build"
+        description = "Create PackageVersion.kt"
+    }
+
+    tasks.withType(CreatePackageVersionTask::class).configureEach {
+        outputs.upToDateWhen { false }
+    }
+
     @Suppress("ObjectLiteralToLambda")
     val createVersionTask = task<Copy>("createVersion") {
         outputs.upToDateWhen { false }
 
-        from("src/main/template", object : Action<CopySpec> {
-            override fun execute(spec: CopySpec) {
-                spec.eachFile(object : Action<FileCopyDetails> {
-                    override fun execute(details: FileCopyDetails) {
-                        details.name = details.name.removeSuffix(".in")
-                        val fileContent =
-                                details.file.readText().replace("@projectVersion@", project.version.toString())
-                                        .replace("@projectGroupId@", project.group.toString())
-                                        .replace("@projectArtifactId@", project.name)
+        from("src/main/template")
+        into("gen")
+        rename("\\.in$", "")
+        eachFile(object : Action<FileCopyDetails> {
+            override fun execute(details: FileCopyDetails) {
+                details.name = details.name.removeSuffix(".in")
+                val fileContent =
+                        details.file.readText().replace("@projectVersion@", project.version.toString())
+                                .replace("@projectGroupId@", project.group.toString())
+                                .replace("@projectArtifactId@", project.name)
+                val path = details.file.path.removePrefix(project.projectDir.absolutePath)
+                val pathSep = Path("/").pathString
+                val printedPath = Path(project.projectDir.absolutePath, "/gen/",
+                        path.removePrefix("${pathSep}${Path("src/main/template").pathString}"))
+                val file = File(printedPath.pathString.removeSuffix(".in"))
 
-                        details.file.writeText(fileContent)
-                    }
-                })
+                file.writeText(fileContent)
             }
         })
-        into("gen")
     }
 
     sourceSets {
@@ -74,7 +141,7 @@ subprojects {
     }
 
     tasks.compileKotlin {
-        dependsOn(createVersionTask)
+        dependsOn(createPackageVersionTask)
     }
 }
 
