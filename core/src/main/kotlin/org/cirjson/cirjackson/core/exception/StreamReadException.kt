@@ -18,9 +18,8 @@ open class StreamReadException : CirJacksonException {
     constructor(processor: CirJsonParser?, message: String, cause: Throwable) : this(processor, message,
             processor?.currentLocation(), cause)
 
-    constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation?) : super(message, location) {
-        myProcessor = processor
-    }
+    constructor(processor: CirJsonParser?, message: String?, location: CirJsonLocation?) : super(processor, message,
+            location)
 
     constructor(processor: CirJsonParser?, message: String, location: CirJsonLocation?, cause: Throwable) : super(
             message, location, cause) {
