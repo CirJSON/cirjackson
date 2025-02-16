@@ -1,9 +1,13 @@
 package org.cirjson.cirjackson.core
 
+import java.io.Closeable
+
 /**
  * Base class for all CirJackson-produced checked exceptions.
  */
 abstract class CirJacksonException : RuntimeException {
+
+    protected var myProcessor: Closeable? = null
 
     /**
      * Accessor for location information related to position within input or output (depending on operation), if
@@ -14,23 +18,45 @@ abstract class CirJacksonException : RuntimeException {
      *
      * @return Location in input or output that triggered the problem reported, if available; `null` otherwise.
      */
-    var location: CirJsonLocation?
+    var location: CirJsonLocation? = null
         private set
 
-    constructor(message: String?, location: CirJsonLocation?, cause: Throwable?) : super(message, cause) {
-        this.location = location
+    constructor(message: String?) : super(message)
+
+    constructor(cause: Throwable?) : super(cause)
+
+    constructor(processor: Closeable?, message: String?, location: CirJsonLocation?, cause: Throwable?) : super(message,
+            cause) {
+        myProcessor = processor
+        this.location = location ?: CirJsonLocation.NA
     }
 
-    constructor(message: String?) : super(message) {
-        this.location = null
+    constructor(message: String?, cause: Throwable?) : this(null, message, null, cause)
+
+    constructor(message: String?, location: CirJsonLocation?, cause: Throwable?) : this(null, message, location, cause)
+
+    constructor(processor: Closeable?, cause: Throwable?) : super(cause) {
+        myProcessor = processor
+        location = CirJsonLocation.NA
     }
 
-    constructor(message: String?, cause: Throwable?) : super(message, cause) {
-        this.location = null
+    constructor(processor: Closeable?, message: String?) : super(message) {
+        myProcessor = processor
+        location = (processor as? CirJsonParser)?.currentTokenLocation() ?: CirJsonLocation.NA
     }
 
-    constructor(message: String?, location: CirJsonLocation?) : super(message) {
-        this.location = location
+    constructor(processor: Closeable?, message: String?, cause: Throwable?) : super(message, cause) {
+        myProcessor = processor
+        location = if (cause is CirJacksonException) {
+            cause.location
+        } else {
+            (processor as? CirJsonParser)?.currentTokenLocation() ?: CirJsonLocation.NA
+        }
+    }
+
+    constructor(processor: Closeable?, message: String?, location: CirJsonLocation?) : super(message) {
+        myProcessor = processor
+        this.location = location ?: CirJsonLocation.NA
     }
 
     /**
@@ -62,7 +88,8 @@ abstract class CirJacksonException : RuntimeException {
      * processor; or has not been retrofitted to set it; this means that caller needs to take care to check for nulls.
      * Subtypes override this method with co-variant return type, for more type-safe access.
      */
-    abstract val processor: Any?
+    open val processor: Any?
+        get() = myProcessor
 
     /**
      * Accessor that subclasses can override to append additional information right after the main message, but before

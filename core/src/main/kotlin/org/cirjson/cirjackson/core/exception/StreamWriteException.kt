@@ -8,10 +8,8 @@ import org.cirjson.cirjackson.core.CirJsonGenerator
  */
 open class StreamWriteException : CirJacksonException {
 
-    private val myProcessor: CirJsonGenerator?
-
     override val processor: CirJsonGenerator?
-        get() = myProcessor
+        get() = myProcessor as CirJsonGenerator?
 
     constructor(generator: CirJsonGenerator?, message: String) : super(message) {
         myProcessor = generator
