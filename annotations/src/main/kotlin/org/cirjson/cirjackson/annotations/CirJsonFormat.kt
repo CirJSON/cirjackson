@@ -64,6 +64,10 @@ import java.util.*
  * property. This will have precedence over possible global configuration.
  *
  */
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
+        AnnotationTarget.VALUE_PARAMETER)
+@Retention(AnnotationRetention.RUNTIME)
+@CirJacksonAnnotation
 annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shape.ANY,
         val locale: String = DEFAULT_LOCALE, val timezone: String = DEFAULT_TIMEZONE,
         val lenient: OptionalBoolean = OptionalBoolean.DEFAULT, val with: Array<Feature> = emptyArray(),
