@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.annotations
 
+import kotlin.reflect.KClass
+
 /**
  * CirJackson-specific annotation used for indicating that value of annotated property will be "injected", i.e. set
  * based on value configured by `ObjectMapper` (usually on per-call basis). Usually property is not deserialized from
@@ -14,7 +16,8 @@ package org.cirjson.cirjackson.annotations
  * Default is `OptionalBoolean.DEFAULT`, which translates to `OptionalBoolean.TRUE`.
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.PROPERTY)
+        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER,
+        AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJacksonInject(val value: String = "", val useInput: OptionalBoolean = OptionalBoolean.DEFAULT) {
@@ -28,8 +31,8 @@ annotation class CirJacksonInject(val value: String = "", val useInput: Optional
     open class Value protected constructor(val id: Any?, val useInput: Boolean?) :
             CirJacksonAnnotationValue<CirJacksonInject> {
 
-        override fun valueFor(): Class<CirJacksonInject> {
-            return CirJacksonInject::class.java
+        override fun valueFor(): KClass<CirJacksonInject> {
+            return CirJacksonInject::class
         }
 
         fun withId(id: Any?): Value {

@@ -57,7 +57,8 @@ package org.cirjson.cirjackson.annotations
  * {"size": "m"}, {"size": "medium"}, or {"size": "M"}.
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.PROPERTY)
+        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER,
+        AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonAlias(vararg val value: String)

@@ -17,7 +17,8 @@ package org.cirjson.cirjackson.annotations
  * can be used if there is just single reference pair (for example, node class that just has parent/child linkage,
  * consisting of one managed reference and matching back reference)
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER,
+        AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonBackReference(val value: String = "defaultReference")

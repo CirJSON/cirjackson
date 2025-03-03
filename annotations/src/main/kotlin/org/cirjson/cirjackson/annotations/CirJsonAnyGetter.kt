@@ -13,7 +13,8 @@ package org.cirjson.cirjackson.annotations
  * 'false' if for overriding purposes. Overriding may be necessary when used with "mix-in annotations" (aka "annotation
  * overrides"). For most cases, however, default value of "true" is just fine and should be omitted.
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER,
+        AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonAnyGetter(val isEnabled: Boolean = true)

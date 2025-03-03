@@ -34,12 +34,14 @@ package org.cirjson.cirjackson.annotations
  *
  * Default value of [Mode.DEFAULT] means that caller is to use standard heuristics for choosing mode to use.
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER,
+        AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonCreator(val mode: Mode = Mode.DEFAULT) {
 
     enum class Mode {
+
         /**
          * Pseudo-mode that indicates that caller is to use default heuristics for choosing mode to use. This typically
          * favors use of delegating mode for single-argument creators that take structured types.
@@ -68,6 +70,7 @@ annotation class CirJsonCreator(val mode: Mode = Mode.DEFAULT) {
          * choosing different creator).
          */
         DISABLED
+
     }
 
 }

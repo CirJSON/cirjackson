@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.annotations
 
+import kotlin.reflect.KClass
+
 /**
  * Marker interface used by value classes like [CirJsonFormat.Value] that are used to contain information from one of
  * CirJackson annotations, and can be directly instantiated from those annotations, as well as programmatically
@@ -14,6 +16,6 @@ interface CirJacksonAnnotationValue<A : Annotation> {
      *
      * @return Annotation class for which instances of this value class are created
      */
-    fun valueFor(): Class<A>
+    fun valueFor(): KClass<A>
 
 }

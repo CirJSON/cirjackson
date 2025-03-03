@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.annotations.CirJsonFormat.Companion.DEFAULT_TIMEZO
 import org.cirjson.cirjackson.annotations.CirJsonFormat.Feature
 import org.cirjson.cirjackson.annotations.CirJsonFormat.Shape
 import java.util.*
+import kotlin.reflect.KClass
 
 /**
  * General-purpose annotation used for configuring details of how values of properties are to be serialized. Unlike most
@@ -65,7 +66,7 @@ import java.util.*
  *
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.VALUE_PARAMETER)
+        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shape.ANY,
@@ -503,8 +504,8 @@ annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shap
             return Value(pattern, shape, locale, myTimezoneString, myTimezone, features, lenient)
         }
 
-        override fun valueFor(): Class<CirJsonFormat> {
-            return CirJsonFormat::class.java
+        override fun valueFor(): KClass<CirJsonFormat> {
+            return CirJsonFormat::class
         }
 
         /**

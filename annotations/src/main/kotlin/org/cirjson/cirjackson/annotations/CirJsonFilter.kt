@@ -11,7 +11,7 @@ package org.cirjson.cirjackson.annotations
  * @property value ID of filter to use; if empty String (""), no filter is to be used.
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.VALUE_PARAMETER)
+        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonFilter(val value: String)

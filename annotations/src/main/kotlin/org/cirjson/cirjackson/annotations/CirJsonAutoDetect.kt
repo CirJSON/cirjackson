@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.annotations
 import org.cirjson.cirjackson.annotations.CirJsonAutoDetect.Visibility
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
+import kotlin.reflect.KClass
 
 /**
  * Class annotation that can be used to define which kinds of Methods are to be detected by auto-detection, and with
@@ -112,7 +113,7 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
      */
     class Value(val fieldVisibility: Visibility, val getterVisibility: Visibility, val isGetterVisibility: Visibility,
             val setterVisibility: Visibility, val creatorVisibility: Visibility,
-            val scalarConstructorVisibility: Visibility) {
+            val scalarConstructorVisibility: Visibility) : CirJacksonAnnotationValue<CirJsonAutoDetect> {
 
         fun withFieldVisibility(visibility: Visibility): Value {
             return construct(visibility, getterVisibility, isGetterVisibility, setterVisibility, creatorVisibility,
@@ -168,8 +169,8 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
                     scalarConstructorVisibility)
         }
 
-        fun valueFor(): Class<CirJsonAutoDetect> {
-            return CirJsonAutoDetect::class.java
+        override fun valueFor(): KClass<CirJsonAutoDetect> {
+            return CirJsonAutoDetect::class
         }
 
         fun readResolve(): Any {
