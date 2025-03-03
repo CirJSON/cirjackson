@@ -8,4 +8,5 @@ package org.cirjson.cirjackson.databind
  * @property type Bean type information, including raw class and possible generics information
  */
 abstract class BeanDescription(val type: KotlinType) {
+    // TODO
 }
