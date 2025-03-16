@@ -1,6 +1,5 @@
 package org.cirjson.cirjackson.annotations
 
-import org.cirjson.cirjackson.annotations.CirJsonInclude.Value
 import kotlin.reflect.KClass
 
 /**
