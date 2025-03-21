@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.annotations
 
+import org.cirjson.cirjackson.annotations.CirJsonFormat.Value
 import org.cirjson.cirjackson.annotations.CirJsonInclude.Include
 import kotlin.reflect.KClass
 
@@ -155,7 +156,7 @@ annotation class CirJsonInclude(val value: Include = Include.USE_DEFAULTS, val c
     /**
      * Helper class used to contain information from a single [CirJsonInclude] annotation.
      */
-    class Value private constructor(valueInclusion: Include?, contentInclusion: Include?, valueFilter: KClass<*>?,
+    class Value internal constructor(valueInclusion: Include?, contentInclusion: Include?, valueFilter: KClass<*>?,
             contentFilter: KClass<*>?) : CirJacksonAnnotationValue<CirJsonInclude> {
 
         val valueInclusion = valueInclusion ?: Include.USE_DEFAULTS
@@ -309,6 +310,16 @@ annotation class CirJsonInclude(val value: Include = Include.USE_DEFAULTS, val c
              */
             fun merge(base: Value?, overrides: Value?): Value? {
                 return base?.withOverrides(overrides) ?: overrides
+            }
+
+            fun mergeAll(vararg values: Value?): Value? {
+                var result: Value? = null
+
+                for (value in values) {
+                    result = merge(result, value)
+                }
+
+                return result
             }
 
             /**

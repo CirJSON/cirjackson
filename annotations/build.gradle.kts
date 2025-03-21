@@ -8,3 +8,7 @@ fun setupManifest(jar: Jar) {
         attributes(mapOf("Can-Retransform-Classes" to "true"))
     }
 }
+
+dependencies {
+    testImplementation(kotlin("reflect"))
+}

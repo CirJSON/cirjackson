@@ -63,10 +63,10 @@ import kotlin.reflect.KClass
  *
  * @property without Set of [Features][Feature] to explicitly disable with respect to the handling of annotated
  * property. This will have precedence over possible global configuration.
- *
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION,
+        AnnotationTarget.FIELD, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER,
+        AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shape.ANY,
@@ -159,6 +159,18 @@ annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shap
 
         val isStructured: Boolean
             get() = this == OBJECT || this == ARRAY || this == POJO
+
+        companion object {
+
+            fun isNumeric(shape: Shape?): Boolean {
+                return shape?.isNumeric ?: false
+            }
+
+            fun isStructured(shape: Shape?): Boolean {
+                return shape?.isStructured ?: false
+            }
+
+        }
 
     }
 
@@ -259,7 +271,7 @@ annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shap
             }
 
             if (myDisabled == 0 && myEnabled == 0) {
-                return this
+                return overrides
             }
 
             val enabled = myEnabled and overrideDisabled.inv() or overrideEnabled

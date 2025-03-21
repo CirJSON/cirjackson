@@ -83,7 +83,7 @@ annotation class CirJacksonInject(val value: String = "", val useInput: Optional
 
         companion object {
 
-            private val EMPTY = Value(null, null)
+            val EMPTY = Value(null, null)
 
             fun construct(id: Any?, useInput: Boolean?): Value {
                 val realId = id.takeIf { "" != it }
