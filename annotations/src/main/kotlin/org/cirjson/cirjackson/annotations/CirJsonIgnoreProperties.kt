@@ -73,7 +73,7 @@ annotation class CirJsonIgnoreProperties(val value: Array<String> = [], val igno
             }
 
             if (!overrides.merge) {
-                return this
+                return overrides
             }
 
             if (equals(this, overrides)) {
@@ -194,7 +194,7 @@ annotation class CirJsonIgnoreProperties(val value: Array<String> = [], val igno
         }
 
         override fun toString(): String {
-            return "Value(ignored=$ignored,ignoreUnknown=$ignoreUnknown,allowGetters=$allowGetters,allowSetters=$allowSetters,merge=$merge)"
+            return "CirJsonIgnoreProperties.Value(ignored=$ignored,ignoreUnknown=$ignoreUnknown,allowGetters=$allowGetters,allowSetters=$allowSetters,merge=$merge)"
         }
 
         override fun hashCode(): Int {
@@ -267,6 +267,22 @@ annotation class CirJsonIgnoreProperties(val value: Array<String> = [], val igno
                 return result
             }
 
+            fun forIgnoredProperties(ignored: Set<String>?): Value {
+                return EMPTY.withIgnored(ignored)
+            }
+
+            fun forIgnoredProperties(vararg ignored: String): Value {
+                if (ignored.isEmpty()) {
+                    return EMPTY
+                }
+
+                return EMPTY.withIgnored(asSet(ignored))
+            }
+
+            fun forIgnoreUnknown(state: Boolean): Value {
+                return if (state) EMPTY.withIgnoreUnknown() else EMPTY.withoutIgnoreUnknown()
+            }
+
             private fun asSet(value: Array<out String>?): Set<String> {
                 if (value.isNullOrEmpty()) {
                     return emptySet()
@@ -300,7 +316,7 @@ annotation class CirJsonIgnoreProperties(val value: Array<String> = [], val igno
 
             private fun isEmptyValue(ignored: Set<String>?, ignoreUnknown: Boolean, allowGetters: Boolean,
                     allowSetters: Boolean, merge: Boolean): Boolean {
-                return ignored.isNullOrEmpty() && !ignoreUnknown && !allowGetters && !allowSetters && !merge
+                return ignored.isNullOrEmpty() && !ignoreUnknown && !allowGetters && !allowSetters && merge
             }
 
         }

@@ -19,8 +19,9 @@ import kotlin.reflect.KClass
  *
  * @property value Names of properties to include.
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
-        AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.CONSTRUCTOR)
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION,
+        AnnotationTarget.FIELD, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER,
+        AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonIncludeProperties(val value: Array<String> = []) {
@@ -32,7 +33,7 @@ annotation class CirJsonIncludeProperties(val value: Array<String> = []) {
      * @property included Name of the properties to include. `null` means that all properties are included, empty means
      * none.
      */
-    class Value private constructor(val included: Set<String>?) : CirJacksonAnnotationValue<CirJsonIncludeProperties> {
+    class Value internal constructor(val included: Set<String>?) : CirJacksonAnnotationValue<CirJsonIncludeProperties> {
 
         /**
          * Mutant factory method to override the current value with another, merging the included fields so that only
