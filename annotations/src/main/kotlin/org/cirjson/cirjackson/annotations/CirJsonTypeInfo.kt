@@ -308,6 +308,16 @@ annotation class CirJsonTypeInfo(val use: Id, val include: As = As.PROPERTY, val
                     requireTypeIdForSubtypes == other.requireTypeIdForSubtypes && propertyName == other.propertyName && defaultImplementation == other.defaultImplementation
         }
 
+        override fun hashCode(): Int {
+            var hash = idType.hashCode()
+            hash = hash * 31 + inclusionType.hashCode()
+            hash = hash * 31 + propertyName.hashCode()
+            hash = hash * 31 + defaultImplementation.hashCode()
+            hash = hash * 31 + requireTypeIdForSubtypes.hashCode()
+            hash = hash * 31 + (11.takeIf { visible } ?: -17)
+            return hash
+        }
+
         companion object {
 
             val EMPTY = Value(Id.NONE, As.PROPERTY, null, null, false, null)
@@ -315,7 +325,7 @@ annotation class CirJsonTypeInfo(val use: Id, val include: As = As.PROPERTY, val
             @Suppress("NAME_SHADOWING")
             fun construct(idType: Id?, inclusionType: As, propertyName: String?, defaultImplementation: KClass<*>?,
                     visible: Boolean, requireTypeIdForSubtypes: Boolean?): Value {
-                val idType = Id.NONE
+                val idType = idType ?: Id.NONE
                 val propertyName = propertyName?.takeUnless { it.isEmpty() } ?: idType.defaultPropertyName
                 val defaultImplementation = defaultImplementation?.takeUnless { it.java.isAnnotation }
 
@@ -323,8 +333,8 @@ annotation class CirJsonTypeInfo(val use: Id, val include: As = As.PROPERTY, val
                         requireTypeIdForSubtypes)
             }
 
-            fun from(src: CirJsonTypeInfo?): Value {
-                src ?: return EMPTY
+            fun from(src: CirJsonTypeInfo?): Value? {
+                src ?: return null
                 return construct(src.use, src.include, src.property, src.defaultImplementation, src.visible,
                         src.requireTypeIdForSubtypes.asBoolean())
             }

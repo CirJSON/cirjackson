@@ -10,5 +10,5 @@ fun setupManifest(jar: Jar) {
 }
 
 dependencies {
-    testImplementation(kotlin("reflect"))
+    implementation(kotlin("reflect"))
 }

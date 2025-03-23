@@ -1,9 +1,9 @@
 package org.cirjson.cirjackson.annotations
 
 import org.cirjson.cirjackson.annotations.CirJsonAutoDetect.Visibility
-import java.lang.reflect.Member
-import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
+import kotlin.reflect.KVisibility
 
 /**
  * Class annotation that can be used to define which kinds of Methods are to be detected by auto-detection, and with
@@ -87,19 +87,14 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
          */
         DEFAULT;
 
-        fun isVisible(member: Member): Boolean {
+        fun <V> isVisible(member: KProperty<V>): Boolean {
             return when (this) {
                 ANY -> true
 
-                NON_PRIVATE -> !Modifier.isPrivate(member.modifiers)
+                NON_PRIVATE -> member.visibility != KVisibility.PRIVATE
 
-                PROTECTED_AND_PUBLIC, PUBLIC_ONLY -> {
-                    if (this == PROTECTED_AND_PUBLIC && Modifier.isProtected(member.modifiers)) {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                PROTECTED_AND_PUBLIC, PUBLIC_ONLY -> this == PROTECTED_AND_PUBLIC &&
+                        member.visibility == KVisibility.PROTECTED || member.visibility == KVisibility.PUBLIC
 
                 NONE, DEFAULT -> false
             }
@@ -179,7 +174,7 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
         }
 
         override fun toString(): String {
-            return "Value(fieldVisibility=$fieldVisibility, getterVisibility=$getterVisibility, isGetterVisibility=$isGetterVisibility, setterVisibility=$setterVisibility, creatorVisibility=$creatorVisibility, scalarConstructorVisibility=$scalarConstructorVisibility)"
+            return "CirJsonAutoDetect.Value(fieldVisibility=$fieldVisibility,getterVisibility=$getterVisibility,isGetterVisibility=$isGetterVisibility,setterVisibility=$setterVisibility,creatorVisibility=$creatorVisibility,scalarConstructorVisibility=$scalarConstructorVisibility)"
         }
 
         override fun equals(other: Any?): Boolean {
@@ -297,7 +292,7 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
                 return null
             }
 
-            fun merge(base: Value?, overrides: Value): Value {
+            fun merge(base: Value?, overrides: Value?): Value? {
                 return base?.withOverrides(overrides) ?: overrides
             }
 

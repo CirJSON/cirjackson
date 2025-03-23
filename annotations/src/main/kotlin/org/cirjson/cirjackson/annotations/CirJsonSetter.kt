@@ -21,7 +21,7 @@ import kotlin.reflect.KClass
  * array, or referential value) contains explicit `null` value (if format has one) to bind. Default action, in absence
  * of any explicit configuration, is usually [Nulls.SET], meaning that the `null` is included as usual.
  */
-@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
+@Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD, AnnotationTarget.PROPERTY,
         AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @MustBeDocumented

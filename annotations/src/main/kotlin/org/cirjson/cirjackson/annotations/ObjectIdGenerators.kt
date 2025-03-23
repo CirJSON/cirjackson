@@ -52,7 +52,7 @@ object ObjectIdGenerators {
      */
     class IntSequenceGenerator(scope: KClass<*>, private var myNextValue: Int) : Base<Int>(scope) {
 
-        constructor() : this(Any::class, 1)
+        constructor() : this(Any::class, -1)
 
         private fun initialValue() = 1
 
