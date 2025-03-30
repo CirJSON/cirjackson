@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
  * ```
  * @CirJsonDeserialize(
  *   using=MySerializer::class,
- *   as=MyHashMap::class,
+ *   valueAs=MyHashMap::class,
  *   keyAs=MyHashKey::class,
  *   contentAs=MyHashValue::class
  * )
@@ -72,7 +72,7 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION,
         AnnotationTarget.FIELD, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER,
-        AnnotationTarget.CONSTRUCTOR)
+        AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
 annotation class CirJsonDeserialize(val using: KClass<out ValueDeserializer> = ValueDeserializer.None::class,
