@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.type
 
 import org.cirjson.cirjackson.core.CirJsonToken
+import kotlin.reflect.KClass
 
 /**
  * This is a simple value class used between core streaming and higher level databinding to pass information about type
@@ -26,8 +27,8 @@ import org.cirjson.cirjackson.core.CirJsonToken
  * used instead of actual class of [forValue] in cases where we do not want to use the "real" type but something more
  * generic, usually to work around specific problem with implementation type, or its deserializer.
  */
-open class WritableTypeID private constructor(val forValue: Any?, val valueShape: CirJsonToken, val id: Any?,
-        val forValueType: Class<*>?) {
+open class WritableTypeID private constructor(val forValue: Any?, val valueShape: CirJsonToken, var id: Any?,
+        var forValueType: KClass<*>?) {
 
     /**
      * If type id is to be embedded as a regular property, name of the property; otherwise `null`.
@@ -76,7 +77,7 @@ open class WritableTypeID private constructor(val forValue: Any?, val valueShape
      *
      * @param valueShape Serialize shape writer will use for value
      */
-    constructor(forValue: Any?, forValueType: Class<*>?, valueShape: CirJsonToken) : this(forValue, valueShape, null,
+    constructor(forValue: Any?, forValueType: KClass<*>?, valueShape: CirJsonToken) : this(forValue, valueShape, null,
             forValueType)
 
     /**

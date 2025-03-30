@@ -13,6 +13,7 @@ import java.lang.reflect.Type
  *
  * Instances can (only) be constructed by [TypeFactory].
  */
+@Suppress("EqualsOrHashCode")
 abstract class KotlinType : ResolvedType, Type {
 
     /**
