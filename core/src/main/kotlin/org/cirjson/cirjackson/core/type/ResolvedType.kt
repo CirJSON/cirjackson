@@ -1,13 +1,15 @@
 package org.cirjson.cirjackson.core.type
 
+import kotlin.reflect.KClass
+
 abstract class ResolvedType {
 
     /**
      * Type-erased [Class] of resolved type
      */
-    abstract val rawClass: Class<*>
+    abstract val rawClass: KClass<*>
 
-    abstract fun hasRawClass(clazz: Class<*>): Boolean
+    abstract fun hasRawClass(clazz: KClass<*>): Boolean
 
     abstract val isAbstract: Boolean
 

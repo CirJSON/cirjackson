@@ -3,10 +3,9 @@ package org.cirjson.cirjackson.databind
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.databind.type.TypeBindings
 import org.cirjson.cirjackson.databind.type.TypeFactory
-import org.cirjson.cirjackson.databind.util.isEnumType
-import org.cirjson.cirjackson.databind.util.isRecordType
-import java.lang.reflect.Modifier
+import org.cirjson.cirjackson.databind.util.*
 import java.lang.reflect.Type
+import kotlin.reflect.KClass
 
 /**
  * Base class for type token classes used both to contain information and as keys for deserializers.
@@ -21,7 +20,7 @@ abstract class KotlinType : ResolvedType, Type {
      * type erasure: type instance may have more information on this). It may be an interface or abstract class, so
      * instantiation may not be possible.
      */
-    protected val myClass: Class<*>
+    protected val myClass: KClass<*>
 
     protected val myHash: Int
 
@@ -64,7 +63,7 @@ abstract class KotlinType : ResolvedType, Type {
      * @param isUsedAsStaticType Whether this type declaration will force specific type as opposed to being a base type
      * (usually for serialization typing)
      */
-    protected constructor(raw: Class<*>, additionalHash: Int, valueHandler: Any?, typeHandler: Any?,
+    protected constructor(raw: KClass<*>, additionalHash: Int, valueHandler: Any?, typeHandler: Any?,
             isUsedAsStaticType: Boolean) {
         myClass = raw
         myHash = 31 * additionalHash + raw.hashCode()
@@ -191,7 +190,7 @@ abstract class KotlinType : ResolvedType, Type {
      * other types will return `null` to indicate that no just refinement makes necessary sense, without trying to
      * detect special status through implemented interfaces.
      */
-    abstract fun refine(raw: Class<*>, bindings: TypeBindings, superClass: KotlinType,
+    abstract fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
             superInterfaces: Array<KotlinType>): KotlinType
 
     /*
@@ -200,14 +199,14 @@ abstract class KotlinType : ResolvedType, Type {
      *******************************************************************************************************************
      */
 
-    override val rawClass: Class<*>
+    override val rawClass: KClass<*>
         get() = myClass
 
     /**
-     * Method that can be used to check whether this type has specified Class as its type erasure. Put another way,
+     * Method that can be used to check whether this type has specified KClass as its type erasure. Put another way,
      * returns `true` if instantiation of this Type is given (type-erased) Class.
      */
-    override fun hasRawClass(clazz: Class<*>): Boolean {
+    override fun hasRawClass(clazz: KClass<*>): Boolean {
         return myClass == clazz
     }
 
@@ -221,16 +220,16 @@ abstract class KotlinType : ResolvedType, Type {
         return true
     }
 
-    fun isTypeOrSubTypeOf(clazz: Class<*>): Boolean {
+    fun isTypeOrSubTypeOf(clazz: KClass<*>): Boolean {
         return myClass == clazz || clazz.isAssignableFrom(myClass)
     }
 
-    fun isTypeOrSuperTypeOf(clazz: Class<*>): Boolean {
+    fun isTypeOrSuperTypeOf(clazz: KClass<*>): Boolean {
         return myClass == clazz || myClass.isAssignableFrom(clazz)
     }
 
     override val isAbstract: Boolean
-        get() = Modifier.isAbstract(myClass.modifiers)
+        get() = myClass.isAbstract
 
     /**
      * Convenience accessor for checking whether underlying Java type is a concrete class or not: abstract classes and
@@ -238,12 +237,11 @@ abstract class KotlinType : ResolvedType, Type {
      */
     override val isConcrete: Boolean
         get() {
-            val mods = myClass.modifiers
-            return mods and (Modifier.INTERFACE or Modifier.ABSTRACT) == 0 || myClass.isPrimitive
+            return !myClass.isInterface && !myClass.isAbstract || myClass.isPrimitive
         }
 
     override val isThrowable: Boolean
-        get() = Throwable::class.java.isAssignableFrom(myClass)
+        get() = Throwable::class.isAssignableFrom(myClass)
 
     override val isArrayType: Boolean
         get() = false
@@ -280,7 +278,7 @@ abstract class KotlinType : ResolvedType, Type {
         get() = myClass.isPrimitive
 
     final override val isFinal: Boolean
-        get() = Modifier.isFinal(myClass.modifiers)
+        get() = myClass.isFinal
 
     /**
      * Accessor that returns `true` if type represented is a container type; this includes array, Map and Collection
