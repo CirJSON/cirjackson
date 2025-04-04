@@ -12,4 +12,6 @@ fun setupManifest(jar: Jar) {
 dependencies {
     implementation(project(":cirjackson-core"))
     implementation(project(":cirjackson-annotations"))
+
+    implementation(kotlin("reflect"))
 }
