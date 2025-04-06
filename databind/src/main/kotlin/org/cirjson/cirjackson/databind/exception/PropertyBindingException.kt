@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.exception
 import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
 import java.util.*
+import kotlin.reflect.KClass
 
 /**
  * Base class for [MismatchedInputExceptions][MismatchedInputException] that are specifically related to problems
@@ -16,7 +17,7 @@ import java.util.*
  * @property propertyIds Set of ids of properties that are known for the type, if this can be statically determined.
  */
 abstract class PropertyBindingException protected constructor(parser: CirJsonParser?, message: String,
-        location: CirJsonLocation, val referringClass: Class<*>, val propertyName: String,
+        location: CirJsonLocation, val referringClass: KClass<*>, val propertyName: String,
         protected val propertyIds: Collection<Any>?) : MismatchedInputException(parser, message, location) {
 
     /**

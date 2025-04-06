@@ -10,7 +10,7 @@ class NamedType(val type: KClass<*>, name: String?) {
             field = value?.takeUnless { it.isEmpty() }
         }
 
-    private val myHashCode = type.simpleName!!.hashCode() + name.hashCode()
+    private val myHashCode = type.qualifiedName!!.hashCode() + name.hashCode()
 
     init {
         this.name = name
@@ -37,7 +37,7 @@ class NamedType(val type: KClass<*>, name: String?) {
     }
 
     override fun toString(): String {
-        return "[NamedType, class ${type.simpleName}, name: ${name?.let { "'$it'" } ?: "null"}]"
+        return "[NamedType, class ${type.qualifiedName}, name: ${name?.let { "'$it'" } ?: "null"}]"
     }
 
 }

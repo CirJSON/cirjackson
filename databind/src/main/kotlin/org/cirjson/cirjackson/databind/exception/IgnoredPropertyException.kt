@@ -3,13 +3,14 @@ package org.cirjson.cirjackson.databind.exception
 import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
 import org.cirjson.cirjackson.databind.DatabindException
+import kotlin.reflect.KClass
 
 /**
  * Specialized [DatabindException] subclass used to indicate case where an explicitly ignored property is encountered,
  * and mapper is configured to consider this an error.
  */
 class IgnoredPropertyException(parser: CirJsonParser, message: String, location: CirJsonLocation,
-        referringClass: Class<*>, propertyName: String, propertyIds: Collection<Any>?) :
+        referringClass: KClass<*>, propertyName: String, propertyIds: Collection<Any>?) :
         PropertyBindingException(parser, message, location, referringClass, propertyName, propertyIds) {
 
     companion object {
@@ -31,9 +32,9 @@ class IgnoredPropertyException(parser: CirJsonParser, message: String, location:
          */
         fun from(parser: CirJsonParser, fromObjectOrClass: Any, propertyName: String,
                 propertyIds: Collection<Any>?): IgnoredPropertyException {
-            val ref = if (fromObjectOrClass is Class<*>) fromObjectOrClass else fromObjectOrClass::class.java
+            val ref = fromObjectOrClass as? KClass<*> ?: fromObjectOrClass::class
             val message =
-                    "Ignored field \"$propertyName\" (class ${ref.name}) encountered; mapper configured not to allow this"
+                    "Ignored field \"$propertyName\" (class ${ref.qualifiedName}) encountered; mapper configured not to allow this"
             val e = IgnoredPropertyException(parser, message, parser.currentLocation(), ref, propertyName, propertyIds)
             e.prependPath(fromObjectOrClass, propertyName)
             return e

@@ -2,13 +2,14 @@ package org.cirjson.cirjackson.databind.exception
 
 import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
+import kotlin.reflect.KClass
 
 /**
  * Specialized [PropertyBindingException] subclass specifically used to indicate problems due to encountering a CirJSON
  * property that could not be mapped to an Object property (via getter, constructor argument or field).
  */
 open class UnrecognizedPropertyException(parser: CirJsonParser?, message: String, location: CirJsonLocation,
-        referringClass: Class<*>, propertyName: String, propertyIds: Collection<Any>?) :
+        referringClass: KClass<*>, propertyName: String, propertyIds: Collection<Any>?) :
         PropertyBindingException(parser, message, location, referringClass, propertyName, propertyIds) {
 
     companion object {
@@ -30,9 +31,9 @@ open class UnrecognizedPropertyException(parser: CirJsonParser?, message: String
          */
         fun from(parser: CirJsonParser, fromObjectOrClass: Any, propertyName: String,
                 propertyIds: Collection<Any>?): UnrecognizedPropertyException {
-            val ref = if (fromObjectOrClass is Class<*>) fromObjectOrClass else fromObjectOrClass::class.java
+            val ref = fromObjectOrClass as? KClass<*> ?: fromObjectOrClass::class
             val message =
-                    "Ignored field \"$propertyName\" (class ${ref.name}) encountered; mapper configured not to allow this"
+                    "Ignored field \"$propertyName\" (class ${ref.qualifiedName}) encountered; mapper configured not to allow this"
             val e = UnrecognizedPropertyException(parser, message, parser.currentLocation(), ref, propertyName,
                     propertyIds)
             e.prependPath(fromObjectOrClass, propertyName)
