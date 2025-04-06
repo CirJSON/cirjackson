@@ -4,6 +4,78 @@ import kotlin.reflect.KClass
 
 /*
  ***********************************************************************************************************************
+ * Methods that deal with inheritance
+ ***********************************************************************************************************************
+ */
+
+val KClass<*>.superclass: KClass<*>?
+    get() = java.superclass?.kotlin
+
+val KClass<*>.interfaces: List<KClass<*>>
+    get() = java.interfaces.map { it.kotlin }
+
+fun KClass<*>?.findRawSuperTypes(endBefore: KClass<*>?, addClassItself: Boolean): List<KClass<*>> {
+    if (this == null || this == endBefore || this == Any::class) {
+        return emptyList()
+    }
+
+    val result = ArrayList<KClass<*>>(8)
+    addRawSuperTypes(this, endBefore, result, addClassItself)
+    return result
+}
+
+/**
+ * Method for finding all super classes (but not super interfaces) of given class, starting with the immediate super
+ * class and ending in the most distant one. KClass itself is included if `addClassItself` is `true`.
+ *
+ * NOTE: mostly/only called to resolve mix-ins as that's where we do not care about fully-resolved types, just associated annotations.
+ */
+fun KClass<*>?.findSuperClasses(endBefore: KClass<*>?, addClassItself: Boolean): List<KClass<*>> {
+    if (this == null || this == endBefore) {
+        return emptyList()
+    }
+
+    val result = ArrayList<KClass<*>>(8)
+    var clazz = this
+
+    if (addClassItself) {
+        result.add(clazz)
+    }
+
+    while (clazz!!.superclass?.also { clazz = it } != null) {
+        if (clazz!! == endBefore) {
+            break
+        }
+
+        result.add(clazz!!)
+    }
+
+    return result
+}
+
+private fun addRawSuperTypes(clazz: KClass<*>?, endBefore: KClass<*>?, result: MutableCollection<KClass<*>>,
+        addClassItself: Boolean) {
+    if (clazz == null || clazz == endBefore || clazz == Any::class) {
+        return
+    }
+
+    if (addClassItself) {
+        if (clazz in result) {
+            return
+        }
+
+        result.add(clazz)
+    }
+
+    for (interfaze in clazz.interfaces) {
+        addRawSuperTypes(interfaze, endBefore, result, true)
+    }
+
+    addRawSuperTypes(clazz.superclass, endBefore, result, true)
+}
+
+/*
+ ***********************************************************************************************************************
  * Class type detection methods
  ***********************************************************************************************************************
  */
@@ -90,7 +162,7 @@ val KClass<*>?.name: String
 fun String?.backticked(): String {
     this ?: return "[null]"
 
-    return "'$this'"
+    return "`$this`"
 }
 
 /*
