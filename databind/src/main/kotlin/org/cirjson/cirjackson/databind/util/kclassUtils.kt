@@ -1,6 +1,9 @@
 package org.cirjson.cirjackson.databind.util
 
+import java.lang.reflect.Modifier
+import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
 
 /*
  ***********************************************************************************************************************
@@ -76,9 +79,138 @@ private fun addRawSuperTypes(clazz: KClass<*>?, endBefore: KClass<*>?, result: M
 
 /*
  ***********************************************************************************************************************
- * Class type detection methods
+ * KClass type detection methods
  ***********************************************************************************************************************
  */
+
+fun KClass<*>.isAssignableFrom(clazz: KClass<*>): Boolean {
+    return java.isAssignableFrom(clazz.java)
+}
+
+val KClass<*>.isArray: Boolean
+    get() = java.isArray
+
+val KClass<*>.isPrimitive: Boolean
+    get() = javaPrimitiveType != null
+
+/**
+ * Helper accessor that encapsulates reliable check on whether given raw type "is an Enum", that is, is or extends
+ * [Enum].
+ */
+val Class<*>.isEnumType: Boolean
+    get() = Enum::class.java.isAssignableFrom(this)
+
+val KClass<*>.isEnumType: Boolean
+    get() = java.isEnumType
+
+val KClass<*>.isAnnotation: Boolean
+    get() = Annotation::class.isAssignableFrom(this)
+
+val KClass<*>.componentType: KClass<*>
+    get() = java.componentType.kotlin
+
+val KClass<*>.isInterface get() = java.isInterface
+
+/**
+ * Returns `null` if KClass might be a bean; type String (that identifies why it's not a bean) if not
+ */
+fun KClass<*>.canBeABeanType(): String? {
+    if (Annotation::class.isAssignableFrom(this)) {
+        return "annotation"
+    }
+
+    if (isArray) {
+        return "array"
+    }
+
+    if (isEnumType) {
+        return "enum"
+    }
+
+    if (isPrimitive) {
+        return "primitive"
+    }
+
+    return null
+}
+
+fun KClass<*>.isLocalType(allowNonStatic: Boolean): String? {
+    try {
+        val isStatic = Modifier.isStatic(java.modifiers)
+
+        if (!isStatic && hasEnclosingMethod()) {
+            return "local/anonymous"
+        }
+
+        if (!allowNonStatic) {
+            if (!isStatic && enclosingClass != null) {
+                return "non-static member class"
+            }
+        }
+    } catch (_: SecurityException) {
+    } catch (_: NullPointerException) {
+    }
+
+    return null
+}
+
+/**
+ * Accessor for finding enclosing KClass for non-static inner classes
+ */
+val KClass<*>.outerClass: KClass<*>?
+    get() {
+        if (!Modifier.isStatic(java.modifiers)) {
+            try {
+                if (hasEnclosingMethod()) {
+                    return null
+                }
+
+                return enclosingClass
+            } catch (_: SecurityException) {
+            }
+        }
+
+        return null
+    }
+
+/**
+ * Helper accessor used to weed out dynamic Proxy types; types that do not expose concrete method API that we could use
+ * to figure out automatic Bean (property) based serialization.
+ */
+val KClass<*>.isProxyType: Boolean
+    get() {
+        val name = qualifiedName!!
+        return name.startsWith("net.sf.cglib.proxy.") || name.startsWith("org.hibernate.proxy.")
+    }
+
+/**
+ * Helper accessor that checks if given class is a concrete one; that is, not an interface or abstract class.
+ */
+val KClass<*>.isConcrete: Boolean
+    get() {
+        val mod = java.modifiers
+        return mod and (Modifier.INTERFACE or Modifier.ABSTRACT) != 0
+    }
+
+val KCallable<*>.isConcrete: Boolean
+    get() {
+        return isAbstract
+    }
+
+val KFunction<*>.isConcrete: Boolean
+    get() {
+        return isAbstract
+    }
+
+val KClass<*>.isCollectionMapOrArray: Boolean
+    get() {
+        return isArray || Collection::class.isAssignableFrom(this) || Map::class.isAssignableFrom(this)
+    }
+
+val KClass<*>.isBogusClass: Boolean
+    get() {
+        return this == Nothing::class || this == Void::class || this == Void.TYPE.kotlin
+    }
 
 val Class<*>.isRecordType: Boolean
     get() {
@@ -89,16 +221,19 @@ val Class<*>.isRecordType: Boolean
 val KClass<*>.isRecordType: Boolean
     get() = java.isRecordType
 
-val KClass<*>.isArray: Boolean
-    get() = java.isArray
+val KClass<*>.isObjectOrPrimitive: Boolean
+    get() = this == Any::class || isPrimitive
 
-val KClass<*>.componentType: KClass<*>
-    get() = java.componentType.kotlin
+fun Any?.hasClass(raw: KClass<*>): Boolean {
+    this ?: return false
+    return this::class == raw
+}
 
-val KClass<*>.isInterface get() = java.isInterface
-
-fun KClass<*>.isAssignableFrom(clazz: KClass<*>): Boolean {
-    return java.isAssignableFrom(clazz.java)
+fun verifyMustOverride(expectedType: KClass<*>, instance: Any, method: String) {
+    if (instance::class != expectedType) {
+        throw IllegalStateException(
+                "Sub-class ${instance::class} (of class ${expectedType.qualifiedName}) must override method '$method'")
+    }
 }
 
 /*
@@ -177,25 +312,15 @@ fun String?.quotedOr(forNull: String): String {
 
 /*
  ***********************************************************************************************************************
- * Enum type detection
+ * Access to various Class definition aspects; leftover from some (failed) caching attempts
  ***********************************************************************************************************************
  */
 
-/**
- * Helper accessor that encapsulates reliable check on whether given raw type "is an Enum", that is, is or extends
- * [Enum].
- */
-val Class<*>.isEnumType: Boolean
-    get() = Enum::class.java.isAssignableFrom(this)
+fun KClass<*>.hasEnclosingMethod(): Boolean {
+    TODO("Not yet implemented")
+}
 
-val KClass<*>.isEnumType: Boolean
-    get() = java.isEnumType
-
-/*
- ***********************************************************************************************************************
- * Primitive type detection
- ***********************************************************************************************************************
- */
-
-val KClass<*>.isPrimitive: Boolean
-    get() = javaPrimitiveType != null
+val KClass<*>.enclosingClass: KClass<*>?
+    get() {
+        TODO("Not yet implemented")
+    }
