@@ -1,5 +1,10 @@
 package org.cirjson.cirjackson.databind.util
 
+import org.cirjson.cirjackson.core.CirJacksonException
+import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.StreamWriteFeature
+import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import java.io.IOException
 import java.lang.reflect.Modifier
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
@@ -238,6 +243,186 @@ fun verifyMustOverride(expectedType: KClass<*>, instance: Any, method: String) {
 
 /*
  ***********************************************************************************************************************
+ * Exception handling; simple re-throw
+ ***********************************************************************************************************************
+ */
+
+/**
+ * Helper method that will check if the throwable is an [Error], and if so, (re)throw it; otherwise just returns it
+ */
+fun Throwable.throwIfError(): Throwable {
+    if (this is Error) {
+        throw this
+    }
+
+    return this
+}
+
+/**
+ * Helper method that will check if the throwable is a [RuntimeException], and if so, (re)throw it; otherwise just
+ * returns it
+ */
+fun Throwable.throwIfRuntimeException(): Throwable {
+    if (this is RuntimeException) {
+        throw this
+    }
+
+    return this
+}
+
+/**
+ * Helper method that will check if the throwable is a [CirJacksonException], and if so, (re)throw it; otherwise just
+ * returns it
+ */
+@Throws(CirJacksonException::class)
+fun Throwable.throwIfCirJacksonException(): Throwable {
+    if (this is CirJacksonException) {
+        throw this
+    }
+
+    return this
+}
+
+/*
+ ***********************************************************************************************************************
+ * Exception handling; other
+ ***********************************************************************************************************************
+ */
+
+/**
+ * Accessor that can be used to find the "root cause", innermost of chained (wrapped) exceptions.
+ */
+val Throwable.rootCause: Throwable
+    get() {
+        var root = this
+
+        while (cause != null) {
+            root = cause!!
+        }
+
+        return root
+    }
+
+/**
+ * Method that works like by calling [rootCause] and then either throwing it (if instance of [CirJacksonException]), or
+ * returns it.
+ */
+fun Throwable.throwRootCauseIfCirJacksonException(): Throwable {
+    return rootCause.throwIfCirJacksonException()
+}
+
+/**
+ * Method that will wrap the throwable as an [IllegalArgumentException] if it is a checked exception; otherwise (runtime
+ * exception or error) throw as is
+ */
+fun Throwable.throwAsIllegalArgumentException() {
+    throwAsIllegalArgumentException(exceptionMessage())
+}
+
+/**
+ * Method that will wrap the throwable as an [IllegalArgumentException] (and with specified message) if it is a checked
+ * exception; otherwise (runtime exception or error) throw as is
+ */
+@Suppress("ThrowableNotThrown")
+fun Throwable.throwAsIllegalArgumentException(message: String?) {
+    throwIfRuntimeException()
+    throwIfError()
+    throw IllegalArgumentException(message, this)
+}
+
+/**
+ * Method that will locate the innermost exception for given Throwable; and then wrap it as an
+ * [IllegalArgumentException] if it is a checked exception; otherwise (runtime exception or error) throw as is
+ */
+fun Throwable.unwrapAndThrowAsIllegalArgumentException() {
+    rootCause.throwAsIllegalArgumentException()
+}
+
+/**
+ * Method that will locate the innermost exception for given Throwable; and then wrap it as an
+ * [IllegalArgumentException] if it is a checked exception; otherwise (runtime exception or error) throw as is
+ */
+fun Throwable.unwrapAndThrowAsIllegalArgumentException(message: String?) {
+    rootCause.throwAsIllegalArgumentException(message)
+}
+
+/**
+ * Helper method that encapsulate logic in trying to close output generator in case of failure; useful mostly in forcing
+ * flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that output state
+ * may be corrupt so we need to be prepared for secondary exception without masking original one.
+ *
+ * Note that exception is thrown as-is if unchecked (likely case); if it is checked, however, [RuntimeException] is
+ * thrown (except for [IOException] which will be wrapped as [CirJacksonIOException]).
+ */
+@Throws(CirJacksonException::class)
+@Suppress("ThrowableNotThrown")
+fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator, fail: Exception) {
+    generator.configure(StreamWriteFeature.AUTO_CLOSE_CONTENT, true)
+
+    try {
+        generator.close()
+    } catch (e: Exception) {
+        fail.addSuppressed(e)
+    }
+
+    fail.throwIfCirJacksonException()
+    fail.throwIfRuntimeException()
+
+    if (fail is IOException) {
+        throw CirJacksonIOException.construct(fail, generator)
+    }
+
+    throw RuntimeException(fail)
+}
+
+/**
+ * Helper method that encapsulate logic in trying to close given [AutoCloseable] in case of failure; useful mostly in
+ * forcing flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that
+ * output state may be corrupt so we need to be prepared for secondary exception without masking original one.
+ */
+@Throws(CirJacksonException::class)
+@Suppress("ThrowableNotThrown")
+fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator?, toClose: AutoCloseable?, fail: Exception) {
+    if (generator != null) {
+        generator.configure(StreamWriteFeature.AUTO_CLOSE_CONTENT, true)
+
+        try {
+            generator.close()
+        } catch (e: Exception) {
+            fail.addSuppressed(e)
+        }
+    }
+
+    if (toClose != null) {
+        try {
+            toClose.close()
+        } catch (e: Exception) {
+            fail.addSuppressed(e)
+        }
+    }
+
+    fail.throwIfCirJacksonException()
+    fail.throwIfRuntimeException()
+
+    if (fail is IOException) {
+        throw CirJacksonIOException.construct(fail, generator)
+    }
+
+    throw RuntimeException(fail)
+}
+
+/*
+ ***********************************************************************************************************************
+ * Class name, description access
+ ***********************************************************************************************************************
+ */
+
+fun String?.quotedOr(forNull: String): String {
+    return this?.let { "\"$it\"" } ?: forNull
+}
+
+/*
+ ***********************************************************************************************************************
  * Type name, name, desc handling methods
  ***********************************************************************************************************************
  */
@@ -286,7 +471,7 @@ val KClass<*>?.name: String
 
 /*
  ***********************************************************************************************************************
- * Class name, description access
+ * Other escaping, description access
  ***********************************************************************************************************************
  */
 
@@ -300,14 +485,8 @@ fun String?.backticked(): String {
     return "`$this`"
 }
 
-/*
- ***********************************************************************************************************************
- * Class name, description access
- ***********************************************************************************************************************
- */
-
-fun String?.quotedOr(forNull: String): String {
-    return this?.let { "\"$it\"" } ?: forNull
+fun Throwable.exceptionMessage(): String {
+    TODO("Not yet implemented")
 }
 
 /*
