@@ -407,6 +407,10 @@ fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator?, toClo
  ***********************************************************************************************************************
  */
 
+fun <T : Any> KClass<T>.findConstructor(forceAccess: Boolean): KFunction<T> {
+    TODO("Not yet implemented")
+}
+
 /*
  ***********************************************************************************************************************
  * Class name, description access
@@ -496,6 +500,20 @@ fun Throwable.exceptionMessage(): String {
  * Access checking/handling methods
  ***********************************************************************************************************************
  */
+
+/**
+ * Method that is called if a [KCallable] may need forced access,
+ * to force a field, method or constructor to be accessible: this
+ * is done by calling [AccessibleObject.accessible].
+ *
+ * @param member Accessor to call <code>setAccessible()</code> on.
+ * @param evenIfAlreadyPublic Whether to always try to make accessor
+ *   accessible, even if {@code public} (true),
+ *   or only if needed to force by-pass of non-{@code public} access (false)
+ */
+fun KCallable<*>.checkAndFixAccess() {
+    TODO("Not yet implemented")
+}
 
 /*
  ***********************************************************************************************************************
