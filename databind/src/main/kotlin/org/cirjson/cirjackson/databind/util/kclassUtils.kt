@@ -4,8 +4,9 @@ import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.StreamWriteFeature
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.databind.KotlinType
 import java.io.IOException
-import java.lang.reflect.Modifier
+import java.lang.reflect.*
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -36,7 +37,7 @@ fun KClass<*>?.findRawSuperTypes(endBefore: KClass<*>?, addClassItself: Boolean)
  * Method for finding all super classes (but not super interfaces) of given class, starting with the immediate super
  * class and ending in the most distant one. KClass itself is included if `addClassItself` is `true`.
  *
- * NOTE: mostly/only called to resolve mix-ins as that's where we do not care about fully-resolved types, just associated annotations.
+ * NOTE: mostly/only called to resolve mix-ins as that's where we do not care about fully resolved types, just associated annotations.
  */
 fun KClass<*>?.findSuperClasses(endBefore: KClass<*>?, addClassItself: Boolean): List<KClass<*>> {
     if (this == null || this == endBefore) {
@@ -179,7 +180,7 @@ val KClass<*>.isProxyType: Boolean
     }
 
 /**
- * Helper accessor that checks if given class is a concrete one; that is, not an interface or abstract class.
+ * Helper accessor that checks if the given class is concrete; that is, not an interface or abstract class.
  */
 val KClass<*>.isConcrete: Boolean
     get() {
@@ -339,7 +340,7 @@ fun Throwable.unwrapAndThrowAsIllegalArgumentException(message: String?) {
 /**
  * Helper method that encapsulate logic in trying to close output generator in case of failure; useful mostly in forcing
  * flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that output state
- * may be corrupt so we need to be prepared for secondary exception without masking original one.
+ * may be corrupt, so we need to be prepared for secondary exception without masking the original one.
  *
  * Note that exception is thrown as-is if unchecked (likely case); if it is checked, however, [RuntimeException] is
  * thrown (except for [IOException] which will be wrapped as [CirJacksonIOException]).
@@ -368,7 +369,7 @@ fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator, fail: 
 /**
  * Helper method that encapsulate logic in trying to close given [AutoCloseable] in case of failure; useful mostly in
  * forcing flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that
- * output state may be corrupt so we need to be prepared for secondary exception without masking original one.
+ * output state may be corrupt, so we need to be prepared for secondary exception without masking the original one.
  */
 @Throws(CirJacksonException::class)
 @Suppress("ThrowableNotThrown")
@@ -407,8 +408,54 @@ fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator?, toClo
  ***********************************************************************************************************************
  */
 
-fun <T : Any> KClass<T>.findConstructor(forceAccess: Boolean): KFunction<T> {
-    TODO("Not yet implemented")
+/**
+ * Method that can be called to try to create an instance of the specified type. Instantiation is done using default
+ * no-argument constructor.
+ *
+ * @param canFixAccess Whether it is possible to try to change access rights of the default constructor (in case it is
+ * not publicly accessible) or not.
+ *
+ * @throws IllegalArgumentException If instantiation fails for any reason; except for cases where constructor throws an
+ * unchecked exception (which will be passed as is)
+ */
+@Throws(IllegalArgumentException::class)
+fun <T : Any> KClass<T>.createInstance(canFixAccess: Boolean): T? {
+    val constructor = findConstructor(canFixAccess) ?: throw IllegalArgumentException(
+            "Class $qualifiedName has no default (no arg) constructor")
+
+    try {
+        return constructor.newInstance()
+    } catch (e: Exception) {
+        e.unwrapAndThrowAsIllegalArgumentException(
+                "Failed to instantiate class $qualifiedName, problem: ${e.exceptionMessage()}")
+    }
+
+    return null
+}
+
+@Throws(IllegalArgumentException::class)
+fun <T : Any> KClass<T>.findConstructor(forceAccess: Boolean): Constructor<T>? {
+    try {
+        val constructor = java.getDeclaredConstructor()
+
+        if (forceAccess) {
+            constructor.checkAndFixAccess(true)
+        } else {
+            if (!Modifier.isPublic(constructor.modifiers)) {
+                throw IllegalArgumentException(
+                        "Default constructor for $qualifiedName is not accessible (non-public?): not allowed to try modify access via Reflection: cannot instantiate type")
+            }
+        }
+
+        return constructor
+    } catch (_: NoSuchMethodException) {
+        return null
+    } catch (e: Exception) {
+        e.unwrapAndThrowAsIllegalArgumentException(
+                "Failed to find default constructor of class $qualifiedName, problem: ${e.exceptionMessage()}")
+    }
+
+    return null
 }
 
 /*
@@ -428,8 +475,47 @@ fun String?.quotedOr(forNull: String): String {
  */
 
 /**
- * Helper accessor used to construct appropriate description when passed either type (KClass) or an instance; in latter
- * case, KClass of instance is to be used.
+ * Helper accessor used to construct the appropriate description when passed either type (Class) or an instance; in the
+ * latter case, class of instance is to be used.
+ */
+val Any?.classDescription: String
+    get() {
+        this ?: return "unknown"
+        return (this as? KClass<*> ?: this::class).name
+    }
+
+/**
+ * Helper accessor to create and return "backticked" description of the given resolved type (or, `"null"` if `null`
+ * passed), similar to return value of [classDescription].
+ *
+ * @return String description of the type including generic type parameters, surrounded by backticks, if type passed; or
+ * string `null` if `null` passed
+ */
+val KotlinType?.typeDescription: String
+    get() {
+        this ?: return "[null]"
+
+        var arrays = 0
+        var fullType: KotlinType = this
+
+        while (fullType.isArrayType) {
+            arrays++
+            fullType = fullType.contentType!!
+        }
+
+        val stringBuilder = StringBuilder(80).append('`')
+        stringBuilder.append(fullType.toCanonical())
+
+        while (arrays-- > 0) {
+            stringBuilder.append("[]")
+        }
+
+        return stringBuilder.append('`').toString()
+    }
+
+/**
+ * Helper accessor used to construct appropriate description when passed either type (KClass) or an instance; in the
+ * latter case, KClass of instance is to be used.
  */
 val Any?.className: String
     get() {
@@ -438,8 +524,7 @@ val Any?.className: String
     }
 
 /**
- * Returns either `cls.getName()` (if `cls` not null),
- * or `"[null]"` if `cls` is null.
+ * Returns either `cls.qualifiedName` (if `cls` not `null`), or `"[null]"` if `cls` is `null`.
  */
 @Suppress("KDocUnresolvedReference")
 val KClass<*>?.name: String
@@ -469,6 +554,25 @@ val KClass<*>?.name: String
         return stringBuilder.toString().backticked()
     }
 
+/**
+ * Returns either single-quoted (apostrophe) `'this.name'` (if `this` not `null`), or '"[null]"' if `this` is `null`.
+ */
+@Suppress("KDocUnresolvedReference")
+val Named?.nonNullName: String
+    get() {
+        this ?: return "[null]"
+        return name.apostrophed()
+    }
+
+/**
+ * Returns either single-quoted (apostrophe) `'this'` (if `this` not `null`), or '"[null]"' if `this` is `null`.
+ */
+@Suppress("KDocUnresolvedReference")
+fun String?.name(): String {
+    this ?: return "[null]"
+    return apostrophed()
+}
+
 /*
  ***********************************************************************************************************************
  * Other escaping, description access
@@ -485,8 +589,32 @@ fun String?.backticked(): String {
     return "`$this`"
 }
 
-fun Throwable.exceptionMessage(): String {
-    TODO("Not yet implemented")
+/**
+ * Returns either ``this`` (single-quoted) or `"[null]"`.
+ */
+@Suppress("KDocUnresolvedReference")
+fun String?.apostrophed(): String {
+    this ?: return "[null]"
+
+    return "'$this'"
+}
+
+/**
+ * Helper method that returns [Throwable.message] for all other exceptions except for (a) [CirJacksonException], for
+ * which `originalMessage` is returned, and (b) [InvocationTargetException], for which the cause's message is returned,
+ * if available. Method is used to avoid including accidentally the trailing location information twice in the message
+ * when wrapping exceptions.
+ */
+fun Throwable.exceptionMessage(): String? {
+    if (this is CirJacksonException) {
+        return originalMessage
+    }
+
+    if (this is InvocationTargetException && cause != null) {
+        return cause!!.message
+    }
+
+    return message
 }
 
 /*
@@ -495,6 +623,31 @@ fun Throwable.exceptionMessage(): String {
  ***********************************************************************************************************************
  */
 
+/**
+ * Helper method used to get default value for wrappers used for primitive types (`0` for Int, etc.)
+ */
+fun KClass<*>.defaultValue(): Any {
+    return when (this) {
+        Int::class -> 0
+
+        Long::class -> 0L
+
+        Boolean::class -> false
+
+        Double::class -> 0.0
+
+        Float::class -> 0.0f
+
+        Byte::class -> 0.toByte()
+
+        Short::class -> 0.toShort()
+
+        Char::class -> '\u0000'
+
+        else -> throw IllegalArgumentException("Class $qualifiedName is not a primitive type")
+    }
+}
+
 /*
  ***********************************************************************************************************************
  * Access checking/handling methods
@@ -502,17 +655,38 @@ fun Throwable.exceptionMessage(): String {
  */
 
 /**
- * Method that is called if a [KCallable] may need forced access,
- * to force a field, method or constructor to be accessible: this
- * is done by calling [AccessibleObject.accessible].
+ * Method that is called if a [Constructor] may need forced access, to force a field, method or constructor to be
+ * accessible: this is done by calling [AccessibleObject.accessible].
  *
- * @param member Accessor to call <code>setAccessible()</code> on.
- * @param evenIfAlreadyPublic Whether to always try to make accessor
- *   accessible, even if {@code public} (true),
- *   or only if needed to force by-pass of non-{@code public} access (false)
+ * @param evenIfAlreadyPublic Whether to always try to make accessor accessible, even if `public` (`true`), or only if
+ * needed to force bypass of non-`public` access (`false`)
  */
-fun KCallable<*>.checkAndFixAccess() {
-    TODO("Not yet implemented")
+@Suppress("DEPRECATION")
+fun Member.checkAndFixAccess(evenIfAlreadyPublic: Boolean) {
+    val accessibleObject = this as AccessibleObject
+
+    try {
+        val declaringClass = declaringClass
+        val isPublic = Modifier.isPublic(modifiers) && Modifier.isPublic(declaringClass.modifiers)
+
+        if (!isPublic || evenIfAlreadyPublic && !declaringClass.kotlin.isJdkClass) {
+            accessibleObject.isAccessible = true
+        }
+    } catch (se: SecurityException) {
+        if (!accessibleObject.isAccessible) {
+            val declaringClass = declaringClass
+            throw IllegalArgumentException(
+                    "Cannot access $this (from class ${declaringClass.name}); failed to set access: ${se.exceptionMessage()}")
+        }
+    } catch (e: RuntimeException) {
+        if (e !is InaccessibleObjectException) {
+            throw e
+        }
+
+        throw IllegalArgumentException(
+                "Failed to call `isAccessible` on ${this::class.simpleName} '$name' (of class ${declaringClass.kotlin.name}) due to `${e::class.qualifiedName}`, problem: ${e.message}",
+                e)
+    }
 }
 
 /*
@@ -536,6 +710,20 @@ val KClass<*>.isEnumType: Boolean
  * Methods for detecting special class categories
  ***********************************************************************************************************************
  */
+
+/**
+ * Accessor for checking whether given `KClass` is under Java package of `java.*`, `javax.*` or `sun.*` (including all
+ * sub-packages).
+ *
+ * Added since some aspects of handling need to be changed for JDK types (and possibly some extensions under `javax.`
+ * and `sun.`): for example, forcing of access will not work well for future JDKs.
+ */
+val KClass<*>.isJdkClass: Boolean
+    get() {
+        val className = qualifiedName ?: return false
+        return className.startsWith("java.") || className.startsWith("javax.") ||
+                className.startsWith("sun.")
+    }
 
 /*
  ***********************************************************************************************************************

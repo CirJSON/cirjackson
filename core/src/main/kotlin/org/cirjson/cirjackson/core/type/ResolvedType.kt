@@ -40,10 +40,11 @@ abstract class ResolvedType {
         get() = referencedType != null
 
     /*
-    / **********************************************************************
-    / * Public API, type parameter access
-    / **********************************************************************
+     *******************************************************************************************************************
+     * Public API, type parameter access
+     *******************************************************************************************************************
      */
+
     /**
      * Accessor that can be used to find out if the type directly declares generic parameters (for its direct
      * super-class and/or super-interfaces).
@@ -56,13 +57,13 @@ abstract class ResolvedType {
     abstract val keyType: ResolvedType?
 
     /**
-     * Accessor for content type of this type, if type has such a thing: simple types do not, structured types do (like
-     * arrays, Collections and Maps)
+     * Accessor for the content type of this type, if type has such a thing: simple types do not, structured types do
+     * (like arrays, Collections and Maps)
      */
     abstract val contentType: ResolvedType?
 
     /**
-     * Accessor for type of value that instances of this type references, if any.
+     * Accessor for the type of value that instances of this type references, if any.
      */
     abstract val referencedType: ResolvedType?
 
@@ -77,10 +78,25 @@ abstract class ResolvedType {
     /**
      * Method for accessing definitions of contained ("child") types.
      *
-     * @param index Index of contained type to return
+     * @param index Index of the contained type to return
      *
-     * @return Contained type at index, or null if no such type exists (no exception thrown)
+     * @return Contained type at index, or `null` if no such type exists (no exception thrown)
      */
     abstract fun containedType(index: Int): ResolvedType?
+
+    /*
+     *******************************************************************************************************************
+     * Public API, type parameter access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be used to serialize type into form from which it can be fully deserialized from at a later point
+     * (using `TypeFactory` from mapper package). For simple types, this is the same as calling [KClass.qualifiedName],
+     * but for structured types it may additionally contain type information about contents.
+     *
+     * @return String representation of the fully resolved type
+     */
+    abstract fun toCanonical(): String
 
 }
