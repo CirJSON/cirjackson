@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.databind.KotlinType
 import java.io.IOException
 import java.lang.reflect.*
+import java.util.*
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -745,3 +746,84 @@ val KClass<*>.enclosingClass: KClass<*>?
  * Helper classes
  ***********************************************************************************************************************
  */
+
+/**
+ * Class used to contain gory details of how we can determine instances' details of common types like
+ * [EnumMaps][EnumMap].
+ */
+private object EnumTypeLocator {
+
+    private val myEnumSetTypeField: Field?
+
+    private val myEnumMapTypeField: Field?
+
+    private val myFailForEnumSet: String?
+
+    private val myFailForEnumMap: String?
+
+    init {
+        var field: Field? = null
+        var message: String? = null
+
+        try {
+            field = locateField(EnumSet::class, "elementType", Class::class)
+        } catch (e: Exception) {
+            message = e.toString()
+        }
+
+        myEnumSetTypeField = field
+        myFailForEnumSet = message
+
+        try {
+            field = locateField(EnumMap::class, "keyType", Class::class)
+        } catch (e: Exception) {
+            message = e.toString()
+        }
+
+        myEnumMapTypeField = field
+        myFailForEnumMap = message
+    }
+
+    fun enumTypeFor(set: EnumSet<*>): KClass<*> {
+        if (myEnumSetTypeField == null) {
+            throw IllegalStateException(
+                    "Cannot figure out type parameter for `EnumSet` (odd JDK platform?), problem: $myFailForEnumSet")
+        }
+
+        return (get(myEnumSetTypeField, set) as Class<*>).kotlin
+    }
+
+    fun enumTypeFor(set: EnumMap<*, *>): KClass<*> {
+        if (myEnumMapTypeField == null) {
+            throw IllegalStateException(
+                    "Cannot figure out type parameter for `EnumSet` (odd JDK platform?), problem: $myFailForEnumMap")
+        }
+
+        return (get(myEnumMapTypeField, set) as Class<*>).kotlin
+    }
+
+    private fun get(field: Field, bean: Any): Any {
+        try {
+            return field.get(bean)
+        } catch (e: Exception) {
+            throw IllegalArgumentException(e)
+        }
+    }
+
+}
+
+@Throws(IllegalStateException::class)
+private fun locateField(fromClass: KClass<*>, expectedName: String, type: KClass<*>): Field {
+    val fields = fromClass.java.declaredFields
+
+    for (field in fields) {
+        if (expectedName != field.name || field.type != type.java) {
+            continue
+        }
+
+        field.isAccessible = true
+        return field
+    }
+
+    throw IllegalStateException("No field named '$expectedName' in class '${fromClass.qualifiedName}'")
+}
