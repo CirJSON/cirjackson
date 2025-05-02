@@ -5,12 +5,14 @@ import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.StreamWriteFeature
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.annotation.CirJacksonStandardImplementation
 import java.io.IOException
 import java.lang.reflect.*
 import java.util.*
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.hasAnnotation
 
 /*
  ***********************************************************************************************************************
@@ -38,7 +40,8 @@ fun KClass<*>?.findRawSuperTypes(endBefore: KClass<*>?, addClassItself: Boolean)
  * Method for finding all super classes (but not super interfaces) of given class, starting with the immediate super
  * class and ending in the most distant one. KClass itself is included if `addClassItself` is `true`.
  *
- * NOTE: mostly/only called to resolve mix-ins as that's where we do not care about fully resolved types, just associated annotations.
+ * NOTE: mostly/only called to resolve mix-ins as that's where it does not care about fully resolved types, just
+ * associated annotations.
  */
 fun KClass<*>?.findSuperClasses(endBefore: KClass<*>?, addClassItself: Boolean): List<KClass<*>> {
     if (this == null || this == endBefore) {
@@ -171,7 +174,7 @@ val KClass<*>.outerClass: KClass<*>?
     }
 
 /**
- * Helper accessor used to weed out dynamic Proxy types; types that do not expose concrete method API that we could use
+ * Helper accessor used to weed out dynamic Proxy types; types that do not expose concrete method API that could be used
  * to figure out automatic Bean (property) based serialization.
  */
 val KClass<*>.isProxyType: Boolean
@@ -341,7 +344,7 @@ fun Throwable.unwrapAndThrowAsIllegalArgumentException(message: String?) {
 /**
  * Helper method that encapsulate logic in trying to close output generator in case of failure; useful mostly in forcing
  * flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that output state
- * may be corrupt, so we need to be prepared for secondary exception without masking the original one.
+ * may be corrupt, so it needs to be prepared for secondary exception without masking the original one.
  *
  * Note that exception is thrown as-is if unchecked (likely case); if it is checked, however, [RuntimeException] is
  * thrown (except for [IOException] which will be wrapped as [CirJacksonIOException]).
@@ -370,7 +373,7 @@ fun closeOnFailAndThrowAsCirJacksonException(generator: CirJsonGenerator, fail: 
 /**
  * Helper method that encapsulate logic in trying to close given [AutoCloseable] in case of failure; useful mostly in
  * forcing flush()ing as otherwise error conditions tend to be hard to diagnose. However, it is often the case that
- * output state may be corrupt, so we need to be prepared for secondary exception without masking the original one.
+ * output state may be corrupt, so it needs to be prepared for secondary exception without masking the original one.
  */
 @Throws(CirJacksonException::class)
 @Suppress("ThrowableNotThrown")
@@ -761,6 +764,24 @@ fun KClass<*>.findEnumType(): KClass<*> {
  */
 
 /**
+ * Accessor that can be called to determine if given Object is the default implementation CirJackson uses, as opposed to
+ * a custom serializer installed by a module or calling application. Determination is done using
+ * [CirJacksonStandardImplementation] annotation on handler (serializer, deserializer, etc.) class.
+ *
+ * NOTE: passing `null` is legal, and will result in `true` being returned.
+ */
+val Any?.isCirJacksonStandardImplementation: Boolean
+    get() = this == null || this::class.isCirJacksonStandardImplementation
+
+/**
+ * Accessor that can be called to determine if given KClass is the default implementation CirJackson uses, as opposed to
+ * a custom serializer installed by a module or calling application. Determination is done using
+ * [CirJacksonStandardImplementation] annotation.
+ */
+val KClass<*>.isCirJacksonStandardImplementation: Boolean
+    get() = hasAnnotation<CirJacksonStandardImplementation>()
+
+/**
  * Accessor for checking whether given `KClass` is under Java package of `java.*`, `javax.*` or `sun.*` (including all
  * sub-packages).
  *
@@ -772,6 +793,67 @@ val KClass<*>.isJdkClass: Boolean
         val className = qualifiedName ?: return false
         return className.startsWith("java.") || className.startsWith("javax.") ||
                 className.startsWith("sun.")
+    }
+
+/**
+ * Convenience accessor for:
+ * ```
+ * return jdkMajorVersion >= 17
+ * ```
+ * that also catches any possible exceptions, so it is safe to call
+ * from static contexts.
+ *
+ * @return {@code true} if we can determine that the code is running on
+ * JDK 17 or above; {@code false} otherwise.
+ */
+val isJDK17OrAbove: Boolean
+    get() = try {
+        jdkMajorVersion >= 17
+    } catch (t: Throwable) {
+        t.rethrowIfFatal()
+        System.err.println("Failed to determine JDK major version, assuming pre-JDK-17; problem: $t")
+        false
+    }
+
+/**
+ * Convenience accessor for:
+ * ```
+ * val version = System.getProperty("java.version")
+ *
+ * if (version.startsWith("1.")) {
+ *     return 8
+ * }
+ *
+ * val dotIndex = version.indexOf('.')
+ * val cleaned = if (dotIndex == -1) version else version.substring(0, dotIndex)
+ * ```
+ * that also catches any possible exceptions, so it is safe to call
+ * from static contexts.
+ *
+ * @return The major version of JDK that the code is running on
+ *
+ * @throws IllegalStateException If JDK version information cannot be determined
+ */
+val jdkMajorVersion: Int
+    get() {
+        val version = try {
+            System.getProperty("java.version")
+        } catch (e: SecurityException) {
+            throw IllegalStateException("Could not access 'java.version': cannot determine JDK major version")
+        }
+
+        if (version.startsWith("1.")) {
+            return 8
+        }
+
+        val dotIndex = version.indexOf('.')
+        val cleaned = if (dotIndex == -1) version else version.substring(0, dotIndex)
+
+        try {
+            return cleaned.toInt()
+        } catch (e: NumberFormatException) {
+            throw IllegalStateException("Invalid JDK version String '$version': cannot determine JDK major version")
+        }
     }
 
 /*
@@ -796,7 +878,7 @@ val KClass<*>.enclosingClass: KClass<*>?
  */
 
 /**
- * Class used to contain gory details of how we can determine instances' details of common types like
+ * Class used to contain gory details of how it can determine instances' details of common types like
  * [EnumMaps][EnumMap].
  */
 private object EnumTypeLocator {
