@@ -793,13 +793,13 @@ private object EnumTypeLocator {
         return (get(myEnumSetTypeField, set) as Class<*>).kotlin
     }
 
-    fun enumTypeFor(set: EnumMap<*, *>): KClass<*> {
+    fun enumTypeFor(map: EnumMap<*, *>): KClass<*> {
         if (myEnumMapTypeField == null) {
             throw IllegalStateException(
                     "Cannot figure out type parameter for `EnumSet` (odd JDK platform?), problem: $myFailForEnumMap")
         }
 
-        return (get(myEnumMapTypeField, set) as Class<*>).kotlin
+        return (get(myEnumMapTypeField, map) as Class<*>).kotlin
     }
 
     private fun get(field: Field, bean: Any): Any {
