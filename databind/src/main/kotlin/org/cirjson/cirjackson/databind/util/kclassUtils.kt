@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.StreamWriteFeature
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.util.Named
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.annotation.CirJacksonStandardImplementation
 import java.io.IOException
