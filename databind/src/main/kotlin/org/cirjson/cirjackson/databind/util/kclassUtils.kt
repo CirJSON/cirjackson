@@ -706,6 +706,54 @@ val Class<*>.isEnumType: Boolean
 val KClass<*>.isEnumType: Boolean
     get() = java.isEnumType
 
+/**
+ * Helper method that can be used to dynamically figure out the enumeration type of given [EnumSet], without having
+ * access to its declaration. Code is needed to work around design flaw in JDK.
+ */
+fun EnumSet<*>.findEnumType(): KClass<*> {
+    if (isNotEmpty()) {
+        return first().findEnumType()
+    }
+
+    return EnumTypeLocator.enumTypeFor(this)
+}
+
+/**
+ * Helper method that can be used to dynamically figure out the enumeration type of given [EnumMap], without having
+ * access to its declaration. Code is needed to work around design flaw in JDK.
+ */
+fun EnumMap<*, *>.findEnumType(): KClass<*> {
+    if (isNotEmpty()) {
+        return keys.first().findEnumType()
+    }
+
+    return EnumTypeLocator.enumTypeFor(this)
+}
+
+/**
+ * Helper method that can be used to dynamically figure out formal enumeration type (class) for given enumeration. This
+ * is either class of enum instance (for "simple" enumerations), or its superclass (for enums with instance fields or
+ * methods)
+ */
+fun Enum<*>.findEnumType(): KClass<*> {
+    return declaringJavaClass.kotlin
+}
+
+/**
+ * Helper method that can be used to dynamically figure out formal enumeration type (class) for the given class of an
+ * enumeration value. This is either class of enum instance (for "simple" enumerations), or its superclass (for enums
+ * with instance fields or methods)
+ */
+fun KClass<*>.findEnumType(): KClass<*> {
+    var clazz = java
+
+    while (clazz != Enum::class.java) {
+        clazz = clazz.superclass
+    }
+
+    return clazz.kotlin
+}
+
 /*
  ***********************************************************************************************************************
  * Methods for detecting special class categories
