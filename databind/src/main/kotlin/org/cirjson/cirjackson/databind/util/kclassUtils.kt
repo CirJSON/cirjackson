@@ -16,6 +16,14 @@ import kotlin.reflect.full.hasAnnotation
 
 /*
  ***********************************************************************************************************************
+ * Useful values
+ ***********************************************************************************************************************
+ */
+
+private val NO_CTORS = emptyArray<Ctor>()
+
+/*
+ ***********************************************************************************************************************
  * Methods that deal with inheritance
  ***********************************************************************************************************************
  */
@@ -862,13 +870,71 @@ val jdkMajorVersion: Int
  ***********************************************************************************************************************
  */
 
+val KClass<*>.isNonStaticInnerClass: Boolean
+    get() {
+        val clazz = java
+        return !Modifier.isStatic(clazz.modifiers) && enclosingClass != null
+    }
+
 fun KClass<*>.hasEnclosingMethod(): Boolean {
-    TODO("Not yet implemented")
+    return !isObjectOrPrimitive && java.enclosingMethod != null
 }
+
+val KClass<*>.classMethods: Array<Method>
+    get() {
+        try {
+            return java.declaredMethods
+        } catch (ex: NoClassDefFoundError) {
+            val loader = Thread.currentThread().contextClassLoader ?: return failGetClassMethods(this, ex)
+            val contextClass = try {
+                loader.loadClass(java.name)
+            } catch (e: ClassNotFoundException) {
+                ex.addSuppressed(e)
+                return failGetClassMethods(this, ex)
+            }
+
+            return try {
+                contextClass.declaredMethods
+            } catch (e: Exception) {
+                failGetClassMethods(this, e)
+            }
+        } catch (e: Exception) {
+            return failGetClassMethods(this, e)
+        }
+    }
+
+private fun failGetClassMethods(clazz: KClass<*>, rootCause: Throwable): Array<Method> {
+    throw IllegalArgumentException(
+            "Failed on call to `getDeclaredMethods()` on class `${clazz.qualifiedName}`, problem: (${rootCause::class.qualifiedName}) ${rootCause.message}",
+            rootCause)
+}
+
+val KClass<*>.ctors: Array<Ctor>
+    get() {
+        if (isInterface || isObjectOrPrimitive) {
+            return NO_CTORS
+        }
+
+        val rawConstructors = java.constructors
+        return Array(rawConstructors.size) { Ctor(rawConstructors[it]) }
+    }
+
+val KClass<*>.declaringClass: KClass<*>?
+    get() {
+        if (isObjectOrPrimitive) {
+            return null
+        }
+
+        return java.declaringClass.kotlin
+    }
 
 val KClass<*>.enclosingClass: KClass<*>?
     get() {
-        TODO("Not yet implemented")
+        if (isObjectOrPrimitive) {
+            return null
+        }
+
+        return java.enclosingClass.kotlin
     }
 
 /*
@@ -956,4 +1022,16 @@ private fun locateField(fromClass: KClass<*>, expectedName: String, type: KClass
     }
 
     throw IllegalStateException("No field named '$expectedName' in class '${fromClass.qualifiedName}'")
+}
+
+class Ctor(val constructor: Constructor<*>) {
+
+    val parameterCount: Int by lazy { constructor.parameterCount }
+
+    val declaringClass: KClass<*> by lazy { constructor.declaringClass.kotlin }
+
+    val declaredAnnotations: Array<Annotation> by lazy { constructor.declaredAnnotations }
+
+    val parameterAnnotations: Array<Array<Annotation>> by lazy { constructor.parameterAnnotations }
+
 }
