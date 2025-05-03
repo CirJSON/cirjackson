@@ -79,8 +79,8 @@ annotation class CirJsonSerialize(val using: KClass<out ValueSerializer> = Value
         val nullsUsing: KClass<out ValueSerializer> = ValueSerializer.None::class,
         val valueAs: KClass<*> = Nothing::class, val keyAs: KClass<*> = Nothing::class,
         val contentAs: KClass<*> = Nothing::class, val typing: Typing = Typing.DEFAULT_TYPING,
-        val converter: KClass<out Converter> = Converter.None::class,
-        val contentConverter: KClass<out Converter> = Converter.None::class) {
+        val converter: KClass<out Converter<*, *>> = Converter.None::class,
+        val contentConverter: KClass<out Converter<*, *>> = Converter.None::class) {
 
     /**
      * Enumeration used with [CirJsonSerialize.typing] property to define whether type detection is based on dynamic

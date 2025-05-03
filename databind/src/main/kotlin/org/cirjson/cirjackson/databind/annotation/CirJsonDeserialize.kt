@@ -78,6 +78,7 @@ import kotlin.reflect.KClass
 annotation class CirJsonDeserialize(val using: KClass<out ValueDeserializer> = ValueDeserializer.None::class,
         val contentUsing: KClass<out ValueDeserializer> = ValueDeserializer.None::class,
         val keyUsing: KClass<out KeyDeserializer> = KeyDeserializer.None::class,
-        val builder: KClass<*> = Nothing::class, val converter: KClass<out Converter> = Converter.None::class,
-        val contentConverter: KClass<out Converter> = Converter.None::class, val valueAs: KClass<*> = Nothing::class,
-        val keyAs: KClass<*> = Nothing::class, val contentAs: KClass<*> = Nothing::class)
+        val builder: KClass<*> = Nothing::class, val converter: KClass<out Converter<*, *>> = Converter.None::class,
+        val contentConverter: KClass<out Converter<*, *>> = Converter.None::class,
+        val valueAs: KClass<*> = Nothing::class, val keyAs: KClass<*> = Nothing::class,
+        val contentAs: KClass<*> = Nothing::class)
