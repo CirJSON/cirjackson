@@ -718,6 +718,9 @@ val Class<*>.isEnumType: Boolean
 val KClass<*>.isEnumType: Boolean
     get() = java.isEnumType
 
+val <E : Enum<E>> KClass<E>.enumConstants: Array<E>
+    get() = java.enumConstants!!
+
 /**
  * Helper method that can be used to dynamically figure out the enumeration type of given [EnumSet], without having
  * access to its declaration. Code is needed to work around design flaw in JDK.
