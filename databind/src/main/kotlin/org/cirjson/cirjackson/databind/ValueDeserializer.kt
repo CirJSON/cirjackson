@@ -1,8 +1,8 @@
 package org.cirjson.cirjackson.databind
 
 // TODO
-abstract class ValueDeserializer {
+abstract class ValueDeserializer<T> {
 
-    abstract class None private constructor() : ValueDeserializer()
+    abstract class None private constructor() : ValueDeserializer<Any>()
 
 }

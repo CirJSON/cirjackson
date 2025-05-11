@@ -73,10 +73,10 @@ import kotlin.reflect.KClass
         AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)
 @CirJacksonAnnotation
-annotation class CirJsonSerialize(val using: KClass<out ValueSerializer> = ValueSerializer.None::class,
-        val contentUsing: KClass<out ValueSerializer> = ValueSerializer.None::class,
-        val keyUsing: KClass<out ValueSerializer> = ValueSerializer.None::class,
-        val nullsUsing: KClass<out ValueSerializer> = ValueSerializer.None::class,
+annotation class CirJsonSerialize(val using: KClass<out ValueSerializer<*>> = ValueSerializer.None::class,
+        val contentUsing: KClass<out ValueSerializer<*>> = ValueSerializer.None::class,
+        val keyUsing: KClass<out ValueSerializer<*>> = ValueSerializer.None::class,
+        val nullsUsing: KClass<out ValueSerializer<*>> = ValueSerializer.None::class,
         val valueAs: KClass<*> = Nothing::class, val keyAs: KClass<*> = Nothing::class,
         val contentAs: KClass<*> = Nothing::class, val typing: Typing = Typing.DEFAULT_TYPING,
         val converter: KClass<out Converter<*, *>> = Converter.None::class,
