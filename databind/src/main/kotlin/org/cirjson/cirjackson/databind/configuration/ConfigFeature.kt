@@ -22,7 +22,7 @@ interface ConfigFeature {
     /**
      * Convenience method for checking whether feature is enabled in given bitmask
      */
-    fun enabledIn(flags: Int): Boolean
+    fun isEnabledIn(flags: Int): Boolean
 
     companion object {
 

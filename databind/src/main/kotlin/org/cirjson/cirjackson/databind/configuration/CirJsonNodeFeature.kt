@@ -40,7 +40,7 @@ enum class CirJsonNodeFeature(override val isEnabledByDefault: Boolean) : Dataty
      *
      * The feature is disabled by default.
      */
-    STRIP_TRAILING_BIGDECIMAL_ZEROES(false),
+    STRIP_TRAILING_BIG_DECIMAL_ZEROES(false),
 
     /**
      * Determines the behavior when coercing `NaN` to [java.math.BigDecimal] with
