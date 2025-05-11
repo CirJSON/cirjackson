@@ -136,10 +136,10 @@ enum class DeserializationFeature(override val isEnabledByDefault: Boolean) : Co
     /**
      * Feature that determines what happens if an Object ID reference is encountered that does not refer to an actual
      * Object with that id ("unresolved Object ID"): either an exception
-     * [org.cirjson.cirjackson.databind.deserialization.UnresolvedForwardReference] containing information about
-     * [org.cirjson.cirjackson.databind.deserialization.UnresolvedId] is thrown (`true`), or a `null` object is used
-     * instead (`false`). Note that if this is set to `false`, no further processing is done; specifically, if reference
-     * is defined via setter method, that method will NOT be called.
+     * [org.cirjson.cirjackson.databind.deserialization.UnresolvedForwardReferenceException] containing information
+     * about [org.cirjson.cirjackson.databind.deserialization.UnresolvedId] is thrown (`true`), or a `null` object is
+     * used instead (`false`). Note that if this is set to `false`, no further processing is done; specifically, if
+     * reference is defined via setter method, that method will NOT be called.
      *
      * The feature is enabled by default, so that unknown Object Ids will result in an exception thrown at the end of
      * deserialization.
