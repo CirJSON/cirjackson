@@ -191,7 +191,7 @@ abstract class KotlinType : ResolvedType, Type {
      * detect special status through implemented interfaces.
      */
     abstract fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType
+            superInterfaces: Array<KotlinType>): KotlinType?
 
     /*
      *******************************************************************************************************************
