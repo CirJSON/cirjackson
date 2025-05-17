@@ -1,8 +1,23 @@
 package org.cirjson.cirjackson.databind.type
 
 import org.cirjson.cirjackson.databind.KotlinType
+import kotlin.reflect.KType
 
 class TypeFactory {
+
+    /*
+     *******************************************************************************************************************
+     * Public general-purpose factory methods
+     *******************************************************************************************************************
+     */
+
+    fun constructType(type: KType): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    fun resolveMemberType(type: KType, contextBindings: TypeBindings): KotlinType {
+        TODO("Not yet implemented")
+    }
 
     companion object {
 
