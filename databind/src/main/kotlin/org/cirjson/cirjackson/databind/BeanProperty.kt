@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind
 
-// TODO
-interface BeanProperty {
+import org.cirjson.cirjackson.databind.util.FullyNamed
+
+interface BeanProperty : FullyNamed {
 }
