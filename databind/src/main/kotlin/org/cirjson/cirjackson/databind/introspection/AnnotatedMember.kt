@@ -9,4 +9,9 @@ abstract class AnnotatedMember protected constructor(protected val myTypeContext
         TODO("Not yet implemented")
     }
 
+    abstract val rawType: KClass<*>
+
+    @Throws(UnsupportedOperationException::class, IllegalArgumentException::class)
+    abstract fun getValue(pojo: Any): Any?
+
 }

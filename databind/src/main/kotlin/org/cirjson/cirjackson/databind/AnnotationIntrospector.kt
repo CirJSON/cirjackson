@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.annotations.CirJsonInclude
 import org.cirjson.cirjackson.core.Versioned
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.introspection.Annotated
+import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
 
 abstract class AnnotationIntrospector : Versioned {
 
@@ -25,6 +26,27 @@ abstract class AnnotationIntrospector : Versioned {
      */
 
     open fun findPropertyInclusion(config: MapperConfig<*>, annotated: Annotated): CirJsonInclude.Value? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Serialization: property annotations
+     *******************************************************************************************************************
+     */
+
+    open fun findEnumValues(config: MapperConfig<*>, annotatedClass: AnnotatedClass, enumValues: Array<Enum<*>>,
+            names: Array<String?>): Array<String?> {
+        TODO("Not yet implemented")
+    }
+
+    open fun findEnumAliases(config: MapperConfig<*>, annotatedClass: AnnotatedClass, enumValues: Array<Enum<*>>,
+            aliases: Array<Array<String>?>) {
+        TODO("Not yet implemented")
+    }
+
+    open fun findDefaultEnumValue(config: MapperConfig<*>, annotatedClass: AnnotatedClass,
+            enumValues: Array<Enum<*>>): Enum<*>? {
         TODO("Not yet implemented")
     }
 
