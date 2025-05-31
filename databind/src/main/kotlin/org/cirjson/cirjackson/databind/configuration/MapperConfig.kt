@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind.configuration
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat
 import org.cirjson.cirjackson.annotations.CirJsonInclude
+import org.cirjson.cirjackson.core.SerializableString
 import org.cirjson.cirjackson.databind.AnnotationIntrospector
 import org.cirjson.cirjackson.databind.MapperFeature
 import org.cirjson.cirjackson.databind.introspection.MixInResolver
@@ -16,6 +17,20 @@ abstract class MapperConfig<T : MapperConfig<T>> : MixInResolver {
      */
 
     fun isEnabled(feature: MapperFeature): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    fun isEnabled(feature: DatatypeFeature): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuration: factory methods
+     *******************************************************************************************************************
+     */
+
+    fun compileString(string: String): SerializableString {
         TODO("Not yet implemented")
     }
 
