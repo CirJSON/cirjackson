@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.databind.serialization
 
-// TODO
-class VirtualBeanPropertyWriter {
+abstract class VirtualBeanPropertyWriter : BeanPropertyWriter {
+
+    protected constructor() : super()
+
 }

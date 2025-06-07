@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.introspection
 
-// TODO
-class BeanPropertyDefinition {
+import org.cirjson.cirjackson.databind.util.FullyNamed
+
+abstract class BeanPropertyDefinition : FullyNamed {
 }

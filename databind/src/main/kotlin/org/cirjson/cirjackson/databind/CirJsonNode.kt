@@ -3,7 +3,6 @@ package org.cirjson.cirjackson.databind
 import org.cirjson.cirjackson.core.CirJsonPointer
 import org.cirjson.cirjackson.core.TreeNode
 
-// TODO
 abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base(), TreeNode, Iterable<CirJsonNode> {
 
     /*
