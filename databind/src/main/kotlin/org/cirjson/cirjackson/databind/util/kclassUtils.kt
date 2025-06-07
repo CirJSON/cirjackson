@@ -23,6 +23,13 @@ import kotlin.reflect.full.hasAnnotation
 
 private val NO_CTORS = emptyArray<Ctor>()
 
+private val EMPTY_ITERATOR = Collections.emptyIterator<Any?>()
+
+@Suppress("UNCHECKED_CAST")
+fun <T> emptyIterator(): Iterator<T> {
+    return EMPTY_ITERATOR as Iterator<T>
+}
+
 /*
  ***********************************************************************************************************************
  * Methods that deal with inheritance

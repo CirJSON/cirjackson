@@ -60,4 +60,11 @@ abstract class AnnotationIntrospector : Versioned {
         TODO("Not yet implemented")
     }
 
+    open class ReferenceProperty(val type: Type, val name: String) {
+
+        enum class Type {
+        }
+
+    }
+
 }
