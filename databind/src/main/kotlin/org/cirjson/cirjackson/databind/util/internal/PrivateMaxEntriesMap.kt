@@ -45,7 +45,7 @@ import kotlin.math.min
  *
  * @param V the type of mapped values
  */
-class PrivateMaxEntriesMap<K : Any, V : Any> private constructor(builder: Builder<K, V>) : AbstractMutableMap<K, V>(),
+class PrivateMaxEntriesMap<K, V> private constructor(builder: Builder<K, V>) : AbstractMutableMap<K, V>(),
         ConcurrentMap<K, V> {
 
     private val myConcurrencyLevel = builder.concurrencyLevel
@@ -603,7 +603,7 @@ class PrivateMaxEntriesMap<K : Any, V : Any> private constructor(builder: Builde
      */
     private data class WeightedValue<V>(val value: V, val weight: Int) {
 
-        fun contains(o: Any): Boolean {
+        fun contains(o: Any?): Boolean {
             return value == o
         }
 
@@ -654,7 +654,7 @@ class PrivateMaxEntriesMap<K : Any, V : Any> private constructor(builder: Builde
             return this@PrivateMaxEntriesMap.remove(element) != null
         }
 
-        override fun toArray(): Array<Any> {
+        override fun toArray(): Array<Any?> {
             return myData.keys.toTypedArray()
         }
 
@@ -817,7 +817,7 @@ class PrivateMaxEntriesMap<K : Any, V : Any> private constructor(builder: Builde
      *     .build();
      * ```
      */
-    class Builder<K : Any, V : Any> {
+    class Builder<K, V> {
 
         var concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL
             private set

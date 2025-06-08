@@ -13,6 +13,9 @@ class AnnotatedField(context: TypeResolutionContext, private val myField: Field,
      *******************************************************************************************************************
      */
 
+    override val name: String
+        get() = TODO("Not yet implemented")
+
     override val rawType: KClass<*>
         get() = TODO("Not yet implemented")
 

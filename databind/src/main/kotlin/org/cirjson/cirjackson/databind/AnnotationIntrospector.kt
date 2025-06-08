@@ -29,6 +29,14 @@ abstract class AnnotationIntrospector : Versioned {
         TODO("Not yet implemented")
     }
 
+    open fun findWrapperName(config: MapperConfig<*>, annotated: Annotated): PropertyName? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findPropertyAliases(config: MapperConfig<*>, annotated: Annotated): List<PropertyName>? {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Serialization: general annotations

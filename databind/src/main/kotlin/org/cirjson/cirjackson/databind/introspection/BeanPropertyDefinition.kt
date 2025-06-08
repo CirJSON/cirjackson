@@ -34,7 +34,7 @@ abstract class BeanPropertyDefinition : FullyNamed {
      * Alternate "mutant factory" that will only change simple name, but leave other optional parts (like namespace) as
      * is.
      */
-    abstract fun withSimpleName(newSimpleName: String): BeanPropertyDefinition
+    abstract fun withSimpleName(newSimpleName: String?): BeanPropertyDefinition
 
     /*
      *******************************************************************************************************************
@@ -51,7 +51,7 @@ abstract class BeanPropertyDefinition : FullyNamed {
     /**
      * Accessor for finding wrapper name to use for property (if any).
      */
-    abstract val wrapperName: String?
+    abstract val wrapperName: PropertyName?
 
     /**
      * Accessor that can be called to check whether property was included due to an explicit marker (usually annotation)
@@ -206,8 +206,13 @@ abstract class BeanPropertyDefinition : FullyNamed {
      * Method used to check if this property has specific inclusion override associated with it or not. It should NOT
      * check for any default settings (global, per-type, or containing POJO settings)
      */
-    abstract fun findInclusion(): CirJsonInclude.Value?
+    abstract fun findInclusion(): CirJsonInclude.Value
 
+    /**
+     * Method for finding all aliases of the property, if any.
+     *
+     * @return [List] of aliases, if any; never `null` (empty list if no aliases found)
+     */
     abstract fun findAliases(): List<PropertyName>
 
 }

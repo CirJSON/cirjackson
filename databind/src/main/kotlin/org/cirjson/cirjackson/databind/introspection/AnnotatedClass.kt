@@ -33,6 +33,9 @@ class AnnotatedClass internal constructor(private val myConfig: MapperConfig<*>?
         TODO("Not yet implemented")
     }
 
+    override val name: String
+        get() = TODO("Not yet implemented")
+
     override val type: KotlinType
         get() = TODO("Not yet implemented")
 

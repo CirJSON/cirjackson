@@ -4,6 +4,8 @@ import org.cirjson.cirjackson.databind.util.FullyNamed
 
 open class PropertyName(simpleName: String?, val namespace: String?) : FullyNamed {
 
+    constructor(simpleName: String?) : this(simpleName, null)
+
     /*
      *******************************************************************************************************************
      * FullyNamed implementation
@@ -26,6 +28,14 @@ open class PropertyName(simpleName: String?, val namespace: String?) : FullyName
         get() = TODO("Not yet implemented")
 
     fun hasSimpleName(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    fun hasSimpleName(string: String?): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    fun hasNamespace(): Boolean {
         TODO("Not yet implemented")
     }
 

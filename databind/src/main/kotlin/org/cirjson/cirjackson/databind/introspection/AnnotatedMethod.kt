@@ -13,6 +13,9 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: Meth
      *******************************************************************************************************************
      */
 
+    override val name: String
+        get() = TODO("Not yet implemented")
+
     override val type: KotlinType
         get() = TODO("Not yet implemented")
 
@@ -21,9 +24,12 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: Meth
 
     /*
      *******************************************************************************************************************
-     * Annotated implementation
+     * AnnotatedWithParams
      *******************************************************************************************************************
      */
+
+    override val parameterCount: Int
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************

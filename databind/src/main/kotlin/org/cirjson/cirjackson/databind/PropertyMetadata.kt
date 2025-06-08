@@ -14,6 +14,8 @@ open class PropertyMetadata protected constructor(val required: Boolean?, val de
 
     companion object {
 
+        val STANDARD_OPTIONAL = PropertyMetadata(false, null, null, null, null, null, null)
+
         val STANDARD_REQUIRED_OR_OPTIONAL = PropertyMetadata(null, null, null, null, null, null, null)
 
     }
