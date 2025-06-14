@@ -44,11 +44,11 @@ abstract class TypeBase : KotlinType, CirJacksonSerializable {
             TODO("Not yet implemented")
         }
 
-    override fun findSuperType(erasedTarget: Class<*>): KotlinType? {
+    override fun findSuperType(erasedTarget: KClass<*>): KotlinType? {
         TODO("Not yet implemented")
     }
 
-    override fun findTypeParameters(expectedType: Class<*>): Array<KotlinType> {
+    override fun findTypeParameters(expectedType: KClass<*>): Array<KotlinType> {
         TODO("Not yet implemented")
     }
 

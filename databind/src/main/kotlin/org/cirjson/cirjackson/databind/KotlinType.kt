@@ -336,7 +336,7 @@ abstract class KotlinType : ResolvedType, Type {
      * type (if this type has given erased type), one of its supertypes that has the erased types, or `null` if target
      * is neither this type nor any of its supertypes.
      */
-    abstract fun findSuperType(erasedTarget: Class<*>): KotlinType?
+    abstract fun findSuperType(erasedTarget: KClass<*>): KotlinType?
 
     /**
      * Accessor for finding fully resolved parent class of this type, if it has one; `null` if not.
@@ -351,7 +351,7 @@ abstract class KotlinType : ResolvedType, Type {
     /**
      * Method that may be used to find parameterization this type has for given type-erased generic target type.
      */
-    abstract fun findTypeParameters(expectedType: Class<*>): Array<KotlinType>
+    abstract fun findTypeParameters(expectedType: KClass<*>): Array<KotlinType>
 
     /*
      *******************************************************************************************************************
