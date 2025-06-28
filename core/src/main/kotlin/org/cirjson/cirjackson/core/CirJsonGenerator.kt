@@ -69,7 +69,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * placeholder of the same) that allows some level of interaction including ability to trigger serialization of
      * Object values through generator instance.
      */
-    abstract val objectWriteContext: ObjectWriteContext
+    abstract val objectWriteContext: ObjectWriteContext?
 
     /**
      * Accessor that can be used to get access to object that is used as target for generated output; this is usually

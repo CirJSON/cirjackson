@@ -1,0 +1,19 @@
+package @package@
+
+import org.cirjson.cirjackson.core.Version
+import org.cirjson.cirjackson.core.Versioned
+import org.cirjson.cirjackson.core.util.VersionUtil
+
+class PackageVersion : Versioned {
+
+    override fun version(): Version {
+        return VERSION
+    }
+
+    companion object {
+
+        val VERSION = VersionUtil.parseVersion("@projectVersion@", "@projectGroupId@", "@projectArtifactId@")
+
+    }
+
+}

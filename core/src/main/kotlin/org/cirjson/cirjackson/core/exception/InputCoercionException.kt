@@ -26,5 +26,5 @@ import org.cirjson.cirjackson.core.CirJsonToken
  * @property targetType Accessor for getting information about target type (in form of [Class]) for which coercion
  * failed.
  */
-class InputCoercionException(processor: CirJsonParser?, message: String, val inputType: CirJsonToken,
+class InputCoercionException(processor: CirJsonParser?, message: String, val inputType: CirJsonToken?,
         val targetType: Class<*>) : StreamReadException(processor, message)

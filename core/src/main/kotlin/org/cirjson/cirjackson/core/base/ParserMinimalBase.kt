@@ -804,7 +804,8 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *******************************************************************************************************************
      */
 
-    protected fun constructNotNumericType(actualToken: CirJsonToken, expectedNumericType: Int): InputCoercionException {
+    protected fun constructNotNumericType(actualToken: CirJsonToken?,
+            expectedNumericType: Int): InputCoercionException {
         val message = "Current token ($actualToken) not numeric, can not use numeric value accessors"
         val targetType = when (expectedNumericType) {
             NUMBER_INT -> Int::class.java
@@ -819,7 +820,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         return constructInputCoercion(message, actualToken, targetType)
     }
 
-    protected fun constructInputCoercion(message: String, inputType: CirJsonToken,
+    protected fun constructInputCoercion(message: String, inputType: CirJsonToken?,
             targetType: Class<*>): InputCoercionException {
         return InputCoercionException(this, message, inputType, targetType)
     }

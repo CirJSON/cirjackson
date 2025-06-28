@@ -788,7 +788,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * If current token is of type [CirJsonToken.VALUE_NUMBER_INT] or [CirJsonToken.VALUE_NUMBER_FLOAT], returns one of
      * [NumberType] constants; otherwise returns `null`.
      */
-    abstract val numberType: NumberType
+    abstract val numberType: NumberType?
 
     /**
      * If current token is of type [CirJsonToken.VALUE_NUMBER_FLOAT], returns one of [NumberTypeFP] constants; otherwise
@@ -951,7 +951,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws StreamReadException for decoding problems
      */
     @Throws(CirJacksonException::class)
-    abstract fun getBinaryValue(base64Variant: Base64Variant): ByteArray
+    abstract fun getBinaryValue(base64Variant: Base64Variant): ByteArray?
 
     /**
      * Convenience alternative to [getBinaryValue] that defaults to using [Base64Variants.defaultVariant] as the default
@@ -964,7 +964,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws StreamReadException for decoding problems
      */
     @get:Throws(CirJacksonException::class)
-    open val binaryValue: ByteArray
+    open val binaryValue: ByteArray?
         get() = getBinaryValue(Base64Variants.defaultVariant)
 
     /**

@@ -273,7 +273,7 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
     override val bigDecimalValue: BigDecimal
         get() = delegate.bigDecimalValue
 
-    override val numberType: NumberType
+    override val numberType: NumberType?
         get() = delegate.numberType
 
     override val numberTypeFP: NumberTypeFP?
@@ -352,7 +352,7 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
         get() = delegate.embeddedObject
 
     @Throws(CirJacksonException::class)
-    override fun getBinaryValue(base64Variant: Base64Variant): ByteArray {
+    override fun getBinaryValue(base64Variant: Base64Variant): ByteArray? {
         return delegate.getBinaryValue(base64Variant)
     }
 

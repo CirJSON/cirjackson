@@ -495,7 +495,7 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
         get() = delegate.streamWriteContext
 
     override val objectWriteContext: ObjectWriteContext
-        get() = delegate.objectWriteContext
+        get() = delegate.objectWriteContext!!
 
     /*
      *******************************************************************************************************************
