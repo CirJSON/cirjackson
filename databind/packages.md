@@ -17,3 +17,18 @@ Classes used for exposing logical structure of POJOs as Jackson sees it, and exp
 The main entrypoint for code, then, is
 [org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitorWrapper] and other types are recursively
 needed during traversal.
+
+# Package org.cirjson.cirjackson.databind.util
+
+Utility classes for Databind package.
+
+# Package org.cirjson.cirjackson.databind.util.internal
+
+This package contains an implementation of a bounded [java.util.concurrent.ConcurrentMap] data structure.
+
+This package is intended only for use internally by Jackson libraries and has
+missing features compared to the full http://code.google.com/p/concurrentlinkedhashmap/ implementation.
+
+The [org.cirjson.cirjackson.databind.util.internal.PrivateMaxEntriesMap] class supplies an efficient, scalable,
+thread-safe, bounded map. As with the`Java Collections Framework` the "Concurrent" prefix is used to indicate that the
+map is not governed by a single exclusion lock.
