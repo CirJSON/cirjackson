@@ -1,6 +1,5 @@
 package org.cirjson.cirjackson.annotations
 
-import org.cirjson.cirjackson.annotations.CirJsonAutoDetect.Visibility
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KVisibility
