@@ -21,6 +21,8 @@ class TypeFactory {
 
     companion object {
 
+        const val DEFAULT_MAX_CACHE_SIZE = 200
+
         /**
          * Method for constructing a marker type that indicates missing generic type information, which is handled same
          * as simple type for `Any`.

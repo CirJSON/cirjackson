@@ -18,7 +18,7 @@ interface CacheProvider {
      * @return [LookupCache] instance for constructing
      * [org.cirjson.cirjackson.databind.deserialization.DeserializerCache].
      */
-    fun forDeserializerCache(config: DeserializationConfig): LookupCache<KotlinType, ValueDeserializer<*>>
+    fun forDeserializerCache(config: DeserializationConfig): LookupCache<KotlinType, ValueDeserializer<Any>>
 
     /**
      * Method to provide a [LookupCache] instance for constructing
@@ -26,7 +26,7 @@ interface CacheProvider {
      *
      * @return [LookupCache] instance for constructing [org.cirjson.cirjackson.databind.serialization.SerializerCache].
      */
-    fun forSerializerCache(config: SerializationConfig): LookupCache<TypeKey, ValueSerializer<*>>
+    fun forSerializerCache(config: SerializationConfig): LookupCache<TypeKey, ValueSerializer<Any>>
 
     /**
      * Method to provide a [LookupCache] instance for constructing [org.cirjson.cirjackson.databind.type.TypeFactory].

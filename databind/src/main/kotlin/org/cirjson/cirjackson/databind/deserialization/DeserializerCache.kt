@@ -8,4 +8,10 @@ class DeserializerCache : Snapshottable<DeserializerCache> {
         TODO("Not yet implemented")
     }
 
+    companion object {
+
+        const val DEFAULT_MAX_CACHE_SIZE = 1000
+
+    }
+
 }
