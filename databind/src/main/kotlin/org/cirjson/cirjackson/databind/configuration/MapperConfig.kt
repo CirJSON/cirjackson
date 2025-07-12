@@ -55,4 +55,13 @@ abstract class MapperConfig<T : MapperConfig<T>> : MixInResolver {
 
     abstract fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value
 
+    /*
+     *******************************************************************************************************************
+     * Configuration: other
+     *******************************************************************************************************************
+     */
+
+    val cacheProvider: CacheProvider
+        get() = TODO("Not yet implemented")
+
 }

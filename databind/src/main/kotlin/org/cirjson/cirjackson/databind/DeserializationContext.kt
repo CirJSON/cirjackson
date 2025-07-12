@@ -12,8 +12,8 @@ import kotlin.reflect.KClass
 
 abstract class DeserializationContext protected constructor(protected val myStreamFactory: TokenStreamFactory,
         protected val myFactory: DeserializerFactory, protected val myCache: DeserializerCache,
-        protected val myConfig: DeserializationConfig, protected val mySchema: FormatSchema,
-        protected val myInjectableValues: InjectableValues) : DatabindContext(), ObjectReadContext {
+        protected val myConfig: DeserializationConfig, protected val mySchema: FormatSchema?,
+        protected val myInjectableValues: InjectableValues?) : DatabindContext(), ObjectReadContext {
 
     /*
      *******************************************************************************************************************
@@ -127,6 +127,17 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     @Throws(DatabindException::class)
     fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String): T {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Methods for problem reporting, in cases where recovery is not considered possible: POJO definition problem
+     *******************************************************************************************************************
+     */
+
+    @Throws(DatabindException::class)
+    override fun <T> reportBadDefinition(type: KotlinType, message: String): T {
         TODO("Not yet implemented")
     }
 
