@@ -5,6 +5,6 @@ import org.cirjson.cirjackson.core.PrettyPrinter
 import org.cirjson.cirjackson.core.SerializableString
 import org.cirjson.cirjackson.core.io.CharacterEscapes
 
-class GeneratorSettings(val prettyPrinter: PrettyPrinter?, val schema: FormatSchema,
-        val characterEscapes: CharacterEscapes, val rootValueSeparator: SerializableString) {
+class GeneratorSettings(val prettyPrinter: PrettyPrinter?, val schema: FormatSchema?,
+        val characterEscapes: CharacterEscapes?, val rootValueSeparator: SerializableString?) {
 }
