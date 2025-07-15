@@ -361,10 +361,26 @@ enum class MapperFeature(val isEnabledByDefault: Boolean) {
      */
     APPLY_DEFAULT_VALUES(true);
 
-    val mask = 1 shl ordinal
+    val longMask = 1L shl ordinal
 
-    fun isEnabledIn(flags: Int): Boolean {
-        return flags and mask != 0
+    fun isEnabledIn(flags: Long): Boolean {
+        return flags and longMask != 0L
+    }
+
+    companion object {
+
+        fun collectLongDefaults(): Long {
+            var flags = 0L
+
+            for (feature in entries) {
+                if (feature.isEnabledByDefault) {
+                    flags = flags or feature.longMask
+                }
+            }
+
+            return flags
+        }
+
     }
 
 }

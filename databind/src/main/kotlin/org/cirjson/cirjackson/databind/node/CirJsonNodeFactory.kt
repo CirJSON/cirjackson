@@ -107,4 +107,10 @@ open class CirJsonNodeFactory : CirJsonNodeCreator {
         TODO("Not yet implemented")
     }
 
+    companion object {
+
+        val instance = CirJsonNodeFactory()
+
+    }
+
 }

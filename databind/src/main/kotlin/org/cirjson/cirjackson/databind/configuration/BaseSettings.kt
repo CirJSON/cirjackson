@@ -55,7 +55,7 @@ import java.util.*
 class BaseSettings(val annotationIntrospector: AnnotationIntrospector?,
         val propertyNamingStrategy: PropertyNamingStrategy?, val accessorNaming: AccessorNamingStrategy.Provider,
         val defaultTyper: TypeResolverBuilder<*>?, val polymorphicTypeValidator: PolymorphicTypeValidator,
-        val dateFormat: DateFormat, val handlerInstantiator: HandlerInstantiator, val locale: Locale,
+        val dateFormat: DateFormat, val handlerInstantiator: HandlerInstantiator?, val locale: Locale,
         private val myTimeZone: TimeZone?, val base64Variant: Base64Variant, val cacheProvider: CacheProvider,
         val nodeFactory: CirJsonNodeFactory, private val myConstructorDetector: ConstructorDetector?) {
 
@@ -147,7 +147,7 @@ class BaseSettings(val annotationIntrospector: AnnotationIntrospector?,
                 cacheProvider, nodeFactory, myConstructorDetector)
     }
 
-    fun with(handlerInstantiator: HandlerInstantiator): BaseSettings {
+    fun with(handlerInstantiator: HandlerInstantiator?): BaseSettings {
         if (this.handlerInstantiator === handlerInstantiator) {
             return this
         }

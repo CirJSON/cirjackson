@@ -8,7 +8,8 @@ import org.cirjson.cirjackson.databind.MapperFeature
 import org.cirjson.cirjackson.databind.introspection.MixInResolver
 import kotlin.reflect.KClass
 
-abstract class MapperConfig<T : MapperConfig<T>> : MixInResolver {
+abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected val myBase: BaseSettings,
+        protected val myMapperFeatures: Long) : MixInResolver {
 
     /*
      *******************************************************************************************************************
