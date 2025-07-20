@@ -8,5 +8,5 @@ package org.cirjson.cirjackson.databind.configuration
  * Note that JDK serialization is supported by switching this object in place of mapper. This requires some acrobatics
  * on the `return` direction.
  */
-abstract class MapperBuilderState {
+abstract class MapperBuilderState(source: MapperBuilder<*, *>) {
 }
