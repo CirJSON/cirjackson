@@ -43,6 +43,11 @@ open class DeserializerFactoryConfig protected constructor(allAdditionalDeserial
     protected val myValueInstantiators = allValueInstantiators ?: NO_VALUE_INSTANTIATORS
 
     /**
+     * Constructor for creating basic configuration with no additional handlers.
+     */
+    constructor() : this(null, null, null, null)
+
+    /**
      * Fluent/factory method used to construct a configuration object that has the same deserializer providers as this
      * instance, plus one specified as argument. Additional provider will be added before existing ones, meaning it has
      * priority over existing definitions.

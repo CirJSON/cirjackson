@@ -19,7 +19,7 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
             streamReadFeatures: Int, formatReadFeatures: Int, configOverrides: ConfigOverrides,
             coercionConfigs: CoercionConfigs, typeFactory: TypeFactory, classIntrospector: ClassIntrospector,
             mixins: MixInHandler, subtypeResolver: SubtypeResolver, defaultAttributes: ContextAttributes,
-            rootNames: RootNameLookup, abstractTypeResolver: Array<AbstractTypeResolver>) : super(builder,
+            rootNames: RootNameLookup, abstractTypeResolvers: Array<AbstractTypeResolver>) : super(builder,
             mapperFeatures, typeFactory, classIntrospector, mixins, subtypeResolver, configOverrides, defaultAttributes,
             rootNames) {
     }

@@ -1,16 +1,14 @@
-package org.cirjson.cirjackson.databind
+package org.cirjson.cirjackson.databind.introspection
 
-abstract class CirJacksonModule {
+open class BasicClassIntrospector : ClassIntrospector {
 
     /*
      *******************************************************************************************************************
-     * Lifecycle: registration
+     * Lifecycle
      *******************************************************************************************************************
      */
 
-    abstract fun setupModule(context: SetupContext)
-
-    interface SetupContext {
+    constructor() : super() {
     }
 
 }

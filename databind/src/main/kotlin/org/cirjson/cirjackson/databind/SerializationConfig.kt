@@ -23,7 +23,7 @@ class SerializationConfig : MapperConfigBase<SerializationFeature, Serialization
             streamWriteFeatures: Int, formatWriteFeatures: Int, configOverrides: ConfigOverrides,
             typeFactory: TypeFactory, classIntrospector: ClassIntrospector, mixins: MixInHandler,
             subtypeResolver: SubtypeResolver, defaultAttributes: ContextAttributes, rootNames: RootNameLookup,
-            filterProvider: FilterProvider) : super(builder, mapperFeatures, typeFactory, classIntrospector, mixins,
+            filterProvider: FilterProvider?) : super(builder, mapperFeatures, typeFactory, classIntrospector, mixins,
             subtypeResolver, configOverrides, defaultAttributes, rootNames) {
     }
 

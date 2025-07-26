@@ -211,9 +211,9 @@ abstract class MapperBuilderState(source: MapperBuilder<*, *>) {
         return myDeserializationFeatures
     }
 
-    protected val myDatatypeFeatures: DatatypeFeatures?
+    protected val myDatatypeFeatures: DatatypeFeatures
 
-    internal fun internalDatatypeFeatures(): DatatypeFeatures? {
+    internal fun internalDatatypeFeatures(): DatatypeFeatures {
         return myDatatypeFeatures
     }
 
@@ -284,8 +284,8 @@ abstract class MapperBuilderState(source: MapperBuilder<*, *>) {
         mySerializationFeatures = source.internalSerializationFeatures()
         myDeserializationFeatures = source.internalDeserializationFeatures()
         myDatatypeFeatures = source.internalDatatypeFeatures()
-        myStreamReadFeature = source.internalStreamReadFeature()
-        myStreamWriteFeature = source.internalStreamWriteFeature()
+        myStreamReadFeature = source.internalStreamReadFeatures()
+        myStreamWriteFeature = source.internalStreamWriteFeatures()
         myFormatReadFeatures = source.internalFormatReadFeatures()
         myFormatWriteFeatures = source.internalFormatWriteFeatures()
     }

@@ -1,22 +1,24 @@
 package org.cirjson.cirjackson.databind.configuration
 
-import org.cirjson.cirjackson.core.Base64Variants
-import org.cirjson.cirjackson.core.PrettyPrinter
-import org.cirjson.cirjackson.core.TokenStreamFactory
+import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsontype.DefaultBaseTypeLimitingValidator
 import org.cirjson.cirjackson.databind.cirjsontype.PolymorphicTypeValidator
 import org.cirjson.cirjackson.databind.cirjsontype.SubtypeResolver
 import org.cirjson.cirjackson.databind.cirjsontype.TypeResolverProvider
+import org.cirjson.cirjackson.databind.cirjsontype.implementation.StandardSubtypeResolver
+import org.cirjson.cirjackson.databind.deserialization.BeanDeserializerFactory
 import org.cirjson.cirjackson.databind.deserialization.DeserializationProblemHandler
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
 import org.cirjson.cirjackson.databind.introspection.*
 import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
+import org.cirjson.cirjackson.databind.serialization.BeanSerializerFactory
 import org.cirjson.cirjackson.databind.serialization.FilterProvider
 import org.cirjson.cirjackson.databind.serialization.SerializerFactory
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.LinkedNode
+import org.cirjson.cirjackson.databind.util.RootNameLookup
 import org.cirjson.cirjackson.databind.util.StandardDateFormat
 import java.util.*
 
@@ -255,9 +257,9 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
         return myDeserializationFeatures
     }
 
-    protected var myDatatypeFeatures: DatatypeFeatures?
+    protected var myDatatypeFeatures: DatatypeFeatures
 
-    internal fun internalDatatypeFeatures(): DatatypeFeatures? {
+    internal fun internalDatatypeFeatures(): DatatypeFeatures {
         return myDatatypeFeatures
     }
 
@@ -270,19 +272,19 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
     /**
      * States of [StreamReadFeatures][StreamReadFeature] to enable/disable.
      */
-    protected var myStreamReadFeature: Int
+    protected var myStreamReadFeatures: Int
 
-    internal fun internalStreamReadFeature(): Int {
-        return myStreamReadFeature
+    internal fun internalStreamReadFeatures(): Int {
+        return myStreamReadFeatures
     }
 
     /**
      * States of [StreamWriteFeatures][StreamWriteFeature] to enable/disable.
      */
-    protected var myStreamWriteFeature: Int
+    protected var myStreamWriteFeatures: Int
 
-    internal fun internalStreamWriteFeature(): Int {
-        return myStreamWriteFeature
+    internal fun internalStreamWriteFeatures(): Int {
+        return myStreamWriteFeatures
     }
 
     /**
@@ -329,8 +331,8 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
 
         myModules = null
 
-        myStreamReadFeature = streamFactory.streamReadFeatures
-        myStreamWriteFeature = streamFactory.streamWriteFeatures
+        myStreamReadFeatures = streamFactory.streamReadFeatures
+        myStreamWriteFeatures = streamFactory.streamWriteFeatures
         myFormatReadFeatures = streamFactory.formatReadFeatures
         myFormatWriteFeatures = streamFactory.formatWriteFeatures
 
@@ -405,10 +407,105 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
         mySerializationFeatures = state.internalSerializationFeatures()
         myDeserializationFeatures = state.internalDeserializationFeatures()
         myDatatypeFeatures = state.internalDatatypeFeatures()
-        myStreamReadFeature = state.internalStreamReadFeature()
-        myStreamWriteFeature = state.internalStreamWriteFeature()
+        myStreamReadFeatures = state.internalStreamReadFeature()
+        myStreamWriteFeatures = state.internalStreamWriteFeature()
         myFormatReadFeatures = state.internalFormatReadFeatures()
         myFormatWriteFeatures = state.internalFormatWriteFeatures()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Methods for the actual build process
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to call to create actual mapper instance.
+     *
+     * Implementation detail: usually construction occurs by passing `this` builder instance to constructor of specific
+     * mapper type builder builds.
+     */
+    abstract fun build(): M
+
+    /**
+     * Method called by mapper being constructed to first save state (delegated to `saveState()` method), then apply
+     * modules (if any), and then return the saved state (but retain reference to it). If the method has been called
+     * previously, it will simply return retained state.
+     */
+    open fun saveStateApplyModules(): MapperBuilderState {
+        if (mySavedState == null) {
+            mySavedState = saveState()
+
+            if (myModules != null) {
+                val context = constructModuleContext()
+                myModules!!.values.forEach { it.setupModule(context) }
+                context.applyChanges(this)
+            }
+        }
+
+        return mySavedState!!
+    }
+
+    protected open fun constructModuleContext(): ModuleContextBase {
+        return ModuleContextBase(this, myConfigOverrides)
+    }
+
+    protected abstract fun saveState(): MapperBuilderState
+
+    /*
+     *******************************************************************************************************************
+     * Secondary factory methods
+     *******************************************************************************************************************
+     */
+
+    open fun buildSerializationConfig(configOverrides: ConfigOverrides, mixins: MixInHandler, typeFactory: TypeFactory,
+            classIntrospector: ClassIntrospector, subtypeResolver: SubtypeResolver, rootNames: RootNameLookup,
+            filterProvider: FilterProvider?): SerializationConfig {
+        return SerializationConfig(this, myMapperFeatures, mySerializationFeatures, myStreamWriteFeatures,
+                myFormatWriteFeatures, configOverrides, typeFactory, classIntrospector, mixins, subtypeResolver,
+                defaultAttributes(), rootNames, filterProvider)
+    }
+
+    open fun buildDeserializationConfig(configOverrides: ConfigOverrides, mixins: MixInHandler,
+            typeFactory: TypeFactory, classIntrospector: ClassIntrospector, subtypeResolver: SubtypeResolver,
+            rootNames: RootNameLookup, coercionConfigs: CoercionConfigs): DeserializationConfig {
+        return DeserializationConfig(this, myMapperFeatures, myDeserializationFeatures, myStreamReadFeatures,
+                myFormatReadFeatures, configOverrides, coercionConfigs, typeFactory, classIntrospector, mixins,
+                subtypeResolver, defaultAttributes(), rootNames, myAbstractTypeResolvers)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors, features
+     *******************************************************************************************************************
+     */
+
+    open fun isEnabled(feature: MapperFeature): Boolean {
+        return feature.isEnabledIn(myMapperFeatures)
+    }
+
+    open fun isEnabled(feature: DeserializationFeature): Boolean {
+        return feature.isEnabledIn(myDeserializationFeatures)
+    }
+
+    open fun isEnabled(feature: SerializationFeature): Boolean {
+        return feature.isEnabledIn(mySerializationFeatures)
+    }
+
+    open fun isEnabled(feature: DatatypeFeature): Boolean {
+        return myDatatypeFeatures.isEnabled(feature)
+    }
+
+    open fun isEnabled(feature: StreamReadFeature): Boolean {
+        return feature.isEnabledIn(myStreamReadFeatures)
+    }
+
+    open fun isEnabled(feature: StreamWriteFeature): Boolean {
+        return feature.isEnabledIn(myStreamWriteFeatures)
+    }
+
+    open fun datatypeFeatures(): DatatypeFeatures {
+        return myDatatypeFeatures
     }
 
     /*
@@ -418,7 +515,171 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
      */
 
     open fun baseSettings(): BaseSettings {
-        TODO("Not yet implemented")
+        return myBaseSettings
+    }
+
+    open fun streamFactory(): TokenStreamFactory {
+        return myStreamFactory
+    }
+
+    open fun annotationIntrospector(): AnnotationIntrospector? {
+        return myBaseSettings.annotationIntrospector
+    }
+
+    /**
+     * Overridable method for changing default [ContextAttributes] instance to use if not explicitly specified during
+     * the build process.
+     */
+    open fun defaultAttributes(): ContextAttributes {
+        return myDefaultAttributes ?: ContextAttributes.EMPTY
+    }
+
+    /**
+     * Overridable method for changing default [ContextAttributes] instance to use if not explicitly specified during
+     * the build process.
+     */
+    protected open fun defaultDefaultAttributes(): ContextAttributes {
+        return ContextAttributes.EMPTY
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors, introspection
+     *******************************************************************************************************************
+     */
+
+    open fun typeFactory(): TypeFactory {
+        return myTypeFactory ?: defaultTypeFactory().also { myTypeFactory = it }
+    }
+
+    /**
+     * Overridable method for changing default [TypeFactory] instance to use
+     */
+    protected open fun defaultTypeFactory(): TypeFactory {
+        return TypeFactory.DEFAULT_INSTANCE
+    }
+
+    open fun classIntrospector(): ClassIntrospector {
+        return myClassIntrospector ?: defaultClassIntrospector().also { myClassIntrospector = it }
+    }
+
+    /**
+     * Overridable method for changing default [ClassIntrospector] instance to use
+     */
+    protected open fun defaultClassIntrospector(): ClassIntrospector {
+        return BasicClassIntrospector()
+    }
+
+    open fun typeResolverProvider(): TypeResolverProvider {
+        return myTypeResolverProvider ?: defaultTypeResolverProvider().also { myTypeResolverProvider = it }
+    }
+
+    /**
+     * Overridable method for changing default [TypeResolverProvider] instance to use
+     */
+    protected open fun defaultTypeResolverProvider(): TypeResolverProvider {
+        return TypeResolverProvider()
+    }
+
+    open fun subtypeResolver(): SubtypeResolver {
+        return mySubtypeResolver ?: defaultSubtypeResolver().also { mySubtypeResolver = it }
+    }
+
+    /**
+     * Overridable method for changing default [SubtypeResolver] instance to use
+     */
+    protected open fun defaultSubtypeResolver(): SubtypeResolver {
+        return StandardSubtypeResolver()
+    }
+
+    open fun mixInHandler(): MixInHandler {
+        return myMixInHandler ?: defaultMixInHandler().also { myMixInHandler = it }
+    }
+
+    /**
+     * Overridable method for changing default [MixInHandler] instance to use
+     */
+    protected open fun defaultMixInHandler(): MixInHandler {
+        return MixInHandler(null)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors, serialization factories, related
+     *******************************************************************************************************************
+     */
+
+    open fun serializationContexts(): SerializationContexts {
+        return mySerializationContexts ?: defaultSerializationContexts().also { mySerializationContexts = it }
+    }
+
+    /**
+     * Overridable method for changing default [SerializationContexts] instance to use
+     */
+    protected open fun defaultSerializationContexts(): SerializationContexts {
+        return SerializationContexts.DefaultImplementation()
+    }
+
+    open fun serializerFactory(): SerializerFactory {
+        return mySerializerFactory ?: defaultSerializerFactory().also { mySerializerFactory = it }
+    }
+
+    /**
+     * Overridable method for changing default [SerializerFactory] instance to use
+     */
+    protected open fun defaultSerializerFactory(): SerializerFactory {
+        return BeanSerializerFactory.INSTANCE
+    }
+
+    open fun filterProvider(): FilterProvider? {
+        return myFilterProvider
+    }
+
+    open fun defaultPrettyPrinter(): PrettyPrinter {
+        return myDefaultPrettyPrinter ?: defaultDefaultPrettyPrinter().also { myDefaultPrettyPrinter = it }
+    }
+
+    /**
+     * Overridable method for changing default [PrettyPrinter] instance to use
+     */
+    protected open fun defaultDefaultPrettyPrinter(): PrettyPrinter {
+        return DEFAULT_PRETTY_PRINTER
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors, deserialization factories, related
+     *******************************************************************************************************************
+     */
+
+    open fun deserializationContexts(): DeserializationContexts {
+        return myDeserializationContexts ?: defaultDeserializationContexts().also { myDeserializationContexts = it }
+    }
+
+    /**
+     * Overridable method for changing default [DeserializationContexts] instance to use
+     */
+    protected open fun defaultDeserializationContexts(): DeserializationContexts {
+        return DeserializationContexts.DefaultImplementation()
+    }
+
+    open fun deserializerFactory(): DeserializerFactory {
+        return myDeserializerFactory ?: defaultDeserializerFactory().also { myDeserializerFactory = it }
+    }
+
+    /**
+     * Overridable method for changing default [DeserializerFactory] instance to use
+     */
+    protected open fun defaultDeserializerFactory(): DeserializerFactory {
+        return BeanDeserializerFactory.INSTANCE
+    }
+
+    open fun injectableValues(): InjectableValues? {
+        return myInjectableValues
+    }
+
+    open fun deserializationProblemHandlers(): LinkedNode<DeserializationProblemHandler>? {
+        return myProblemHandlers
     }
 
     /*
