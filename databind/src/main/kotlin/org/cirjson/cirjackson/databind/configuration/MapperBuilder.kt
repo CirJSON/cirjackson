@@ -10,6 +10,7 @@ import org.cirjson.cirjackson.databind.cirjsontype.PolymorphicTypeValidator
 import org.cirjson.cirjackson.databind.cirjsontype.SubtypeResolver
 import org.cirjson.cirjackson.databind.cirjsontype.TypeResolverProvider
 import org.cirjson.cirjackson.databind.cirjsontype.implementation.StandardSubtypeResolver
+import org.cirjson.cirjackson.databind.configuration.MapperBuilder.Companion.findModules
 import org.cirjson.cirjackson.databind.deserialization.BeanDeserializerFactory
 import org.cirjson.cirjackson.databind.deserialization.DeserializationProblemHandler
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
@@ -76,7 +77,7 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
     /**
      * Modules registered for addition, indexed by registration id.
      */
-    protected var myModules: Map<Any, CirJacksonModule>?
+    protected var myModules: MutableMap<Any, CirJacksonModule>?
 
     internal fun internalModules(): Map<Any, CirJacksonModule>? {
         return myModules
@@ -988,8 +989,71 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that will drop all modules added (via [addModule] and similar calls) to this builder.
+     */
+    open fun removeAllModules(): B {
+        myModules = null
+        return castedThis()
+    }
+
+    /**
+     * Method will add given module to be registered when mapper is built, possibly replacing an earlier instance of the
+     * module (as specified by its [CirJacksonModule.registrationId]). Actual registration occurs in addition order
+     * (considering last add to count, in case of re-registration for same id) when [build] is called.
+     */
     open fun addModule(module: CirJacksonModule): B {
-        TODO("Not yet implemented")
+        val moduleId = module.registrationId
+
+        if (myModules == null) {
+            myModules = LinkedHashMap()
+        } else {
+            myModules!!.remove(moduleId)
+        }
+
+        for (dependency in module.dependencies) {
+            myModules!!.putIfAbsent(dependency.registrationId, dependency)
+        }
+
+        myModules!![moduleId] = module
+        return castedThis()
+    }
+
+    open fun addModules(vararg modules: CirJacksonModule): B {
+        for (module in modules) {
+            addModule(module)
+        }
+
+        return castedThis()
+    }
+
+    open fun addModules(modules: Iterable<CirJacksonModule>): B {
+        for (module in modules) {
+            addModule(module)
+        }
+
+        return castedThis()
+    }
+
+    /**
+     * Convenience method that is functionally equivalent to:
+     * ```
+     * addModules(findModules())
+     * ```
+     *
+     * As with [findModules], no caching is done for modules, so care needs to be taken to either create and share a
+     * single mapper instance; or to cache introspected set of modules.
+     */
+    open fun findAndAddModules(): B {
+        return addModules(findModules())
+    }
+
+    /**
+     * "Accessor" method that will expose the set of registered modules, in addition order, to given handler.
+     */
+    open fun withModules(handler: (CirJacksonModule) -> Unit): B {
+        myModules?.values?.forEach(handler)
+        return castedThis()
     }
 
     /*
@@ -1026,6 +1090,39 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
         val DEFAULT_TYPE_RESOLVER_PROVIDER = TypeResolverProvider()
 
         val NO_ABSTRACT_TYPE_RESOLVERS = emptyArray<AbstractTypeResolver>()
+
+        /**
+         * Method for locating available methods, using JDK [ServiceLoader] facility, along with module-provided SPI.
+         *
+         * Note that method does not do any caching, so calls should be considered potentially expensive.
+         */
+        fun findModules(): List<CirJacksonModule> {
+            return findModules(null)
+        }
+
+        /**
+         * Method for locating available methods, using JDK [ServiceLoader] facility, along with module-provided SPI.
+         *
+         * Note that method does not do any caching, so calls should be considered potentially expensive.
+         */
+        fun findModules(classLoader: ClassLoader?): List<CirJacksonModule> {
+            val modules = arrayListOf<CirJacksonModule>()
+            val loader = getServiceLoader(CirJacksonModule::class, classLoader)
+
+            for (module in loader) {
+                modules.add(module)
+            }
+
+            return modules
+        }
+
+        private fun <T : Any> getServiceLoader(clazz: KClass<T>, classLoader: ClassLoader?): ServiceLoader<T> {
+            return if (classLoader == null) {
+                ServiceLoader.load(clazz.java)
+            } else {
+                ServiceLoader.load(clazz.java, classLoader)
+            }
+        }
 
     }
 
