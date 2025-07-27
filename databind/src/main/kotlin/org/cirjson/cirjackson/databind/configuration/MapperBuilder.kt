@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.databind.configuration
 
+import org.cirjson.cirjackson.annotations.CirJsonInclude
+import org.cirjson.cirjackson.annotations.CirJsonSetter
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
 import org.cirjson.cirjackson.databind.*
@@ -16,11 +18,13 @@ import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
 import org.cirjson.cirjackson.databind.serialization.BeanSerializerFactory
 import org.cirjson.cirjackson.databind.serialization.FilterProvider
 import org.cirjson.cirjackson.databind.serialization.SerializerFactory
+import org.cirjson.cirjackson.databind.type.LogicalType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.LinkedNode
 import org.cirjson.cirjackson.databind.util.RootNameLookup
 import org.cirjson.cirjackson.databind.util.StandardDateFormat
 import java.util.*
+import kotlin.reflect.KClass
 
 abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
 
@@ -684,12 +688,319 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
 
     /*
      *******************************************************************************************************************
+     * Changing features: mapper, serialization, deserialization
+     *******************************************************************************************************************
+     */
+
+    open fun enable(vararg features: MapperFeature): B {
+        for (feature in features) {
+            myMapperFeatures = myMapperFeatures or feature.longMask
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: MapperFeature): B {
+        for (feature in features) {
+            myMapperFeatures = myMapperFeatures and feature.longMask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: MapperFeature, state: Boolean): B {
+        myMapperFeatures = if (state) {
+            myMapperFeatures or feature.longMask
+        } else {
+            myMapperFeatures and feature.longMask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun enable(vararg features: SerializationFeature): B {
+        for (feature in features) {
+            mySerializationFeatures = mySerializationFeatures or feature.mask
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: SerializationFeature): B {
+        for (feature in features) {
+            mySerializationFeatures = mySerializationFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: SerializationFeature, state: Boolean): B {
+        mySerializationFeatures = if (state) {
+            mySerializationFeatures or feature.mask
+        } else {
+            mySerializationFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun enable(vararg features: DeserializationFeature): B {
+        for (feature in features) {
+            myDeserializationFeatures = myDeserializationFeatures or feature.mask
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: DeserializationFeature): B {
+        for (feature in features) {
+            myDeserializationFeatures = myDeserializationFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: DeserializationFeature, state: Boolean): B {
+        myDeserializationFeatures = if (state) {
+            myDeserializationFeatures or feature.mask
+        } else {
+            myDeserializationFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun enable(vararg features: DatatypeFeature): B {
+        for (feature in features) {
+            myDatatypeFeatures = myDatatypeFeatures.with(feature)
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: DatatypeFeature): B {
+        for (feature in features) {
+            myDatatypeFeatures = myDatatypeFeatures.without(feature)
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: DatatypeFeature, state: Boolean): B {
+        myDatatypeFeatures = if (state) {
+            myDatatypeFeatures.with(feature)
+        } else {
+            myDatatypeFeatures.without(feature)
+        }
+
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing features: parser, generator
+     *******************************************************************************************************************
+     */
+
+    open fun enable(vararg features: StreamReadFeature): B {
+        for (feature in features) {
+            myStreamReadFeatures = myStreamReadFeatures or feature.mask
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: StreamReadFeature): B {
+        for (feature in features) {
+            myStreamReadFeatures = myStreamReadFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: StreamReadFeature, state: Boolean): B {
+        myStreamReadFeatures = if (state) {
+            myStreamReadFeatures or feature.mask
+        } else {
+            myStreamReadFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun enable(vararg features: StreamWriteFeature): B {
+        for (feature in features) {
+            myStreamWriteFeatures = myStreamWriteFeatures or feature.mask
+        }
+
+        return castedThis()
+    }
+
+    open fun disable(vararg features: StreamWriteFeature): B {
+        for (feature in features) {
+            myStreamWriteFeatures = myStreamWriteFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    open fun configure(feature: StreamWriteFeature, state: Boolean): B {
+        myStreamWriteFeatures = if (state) {
+            myStreamWriteFeatures or feature.mask
+        } else {
+            myStreamWriteFeatures and feature.mask.inv()
+        }
+
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing settings: config overrides
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for changing config overrides for specific type, through callback to specific handler.
+     */
+    open fun withConfigOverride(forType: KClass<*>, handler: (MutableConfigOverride) -> Unit): B {
+        handler.invoke(myConfigOverrides.findOrCreateOverride(forType))
+        return castedThis()
+    }
+
+    /**
+     * Method for changing various aspects of configuration overrides.
+     */
+    open fun withAllConfigOverrides(handler: (ConfigOverrides) -> Unit): B {
+        handler.invoke(myConfigOverrides)
+        return castedThis()
+    }
+
+    /**
+     * Method for changing currently configured default [VisibilityChecker], object used for determining whether given
+     * property element (method, field, constructor) can be auto-detected or not. Checker to modify is used for all POJO
+     * types for which there is no specific per-type checker.
+     *
+     * @param handler Function that is given current default visibility checker and that needs to return either checker
+     * as is, or a new instance created using one or more of `withVisibility` (and similar) calls.
+     */
+    open fun changeDefaultVisibility(handler: (VisibilityChecker) -> VisibilityChecker): B {
+        val oldVisibilityChecker = myConfigOverrides.defaultVisibility
+        val newVisibilityChecker = handler.invoke(oldVisibilityChecker)
+
+        if (newVisibilityChecker !== oldVisibilityChecker) {
+            myConfigOverrides.setDefaultVisibility(newVisibilityChecker)
+        }
+
+        return castedThis()
+    }
+
+    /**
+     * Method for changing currently default settings for property inclusion, used for determining whether POJO
+     * properties with certain value should be excluded or not: the most common case being exclusion of `null` values.
+     */
+    open fun changeDefaultPropertyInclusion(handler: (CirJsonInclude.Value) -> CirJsonInclude.Value): B {
+        val oldInclusion = myConfigOverrides.defaultInclusion
+        val newInclusion = handler.invoke(oldInclusion)
+
+        if (newInclusion !== oldInclusion) {
+            myConfigOverrides.setDefaultInclusion(newInclusion)
+        }
+
+        return castedThis()
+    }
+
+    /**
+     * Method for changing currently default settings for handling of `null` values during deserialization, regarding
+     * whether they are set as-is, ignored completely, or possible transformed into "empty" value of the target type (if
+     * any).
+     */
+    open fun changeDefaultNullHandling(handler: (CirJsonSetter.Value) -> CirJsonSetter.Value): B {
+        val oldNullHandling = myConfigOverrides.defaultNullHandling
+        val newNullHandling = handler.invoke(oldNullHandling)
+
+        if (newNullHandling !== oldNullHandling) {
+            myConfigOverrides.setDefaultNullHandling(newNullHandling)
+        }
+
+        return castedThis()
+    }
+
+    /**
+     * Method for setting default Setter configuration, regarding things like merging, null-handling; used for
+     * properties for which there are no per-type or per-property overrides (via annotations or config overrides).
+     */
+    open fun defaultMergeable(boolean: Boolean?): B {
+        myConfigOverrides.setDefaultMergeable(boolean)
+        return castedThis()
+    }
+
+    /**
+     * Method for setting default Setter configuration, regarding things like merging, null-handling; used for
+     * properties for which there are no per-type or per-property overrides (via annotations or config overrides).
+     */
+    open fun defaultLeniency(boolean: Boolean?): B {
+        myConfigOverrides.setDefaultLeniency(boolean)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing settings: coercion config
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for changing coercion config for specific logical types, through callback to specific handler.
+     */
+    open fun withCoercionConfig(forType: LogicalType, handler: (MutableCoercionConfig) -> Unit): B {
+        handler.invoke(myCoercionConfigs.findOrCreateCoercion(forType))
+        return castedThis()
+    }
+
+    /**
+     * Method for changing coercion config for specific physical type, through callback to specific handler.
+     */
+    open fun withCoercionConfig(forType: KClass<*>, handler: (MutableCoercionConfig) -> Unit): B {
+        handler.invoke(myCoercionConfigs.findOrCreateCoercion(forType))
+        return castedThis()
+    }
+
+    /**
+     * Method for changing target-type-independent coercion configuration defaults.
+     */
+    open fun withCoercionConfigDefaults(handler: (MutableCoercionConfig) -> Unit): B {
+        handler.invoke(myCoercionConfigs.defaultCoercions())
+        return castedThis()
+    }
+
+    /**
+     * Method for changing various aspects of configuration overrides.
+     */
+    open fun withAllCoercionConfigs(handler: (CoercionConfigs) -> Unit): B {
+        handler.invoke(myCoercionConfigs)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
      * Module registration, discovery, access
      *******************************************************************************************************************
      */
 
     open fun addModule(module: CirJacksonModule): B {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Other helper methods
+     *******************************************************************************************************************
+     */
+
+    @Suppress("UNCHECKED_CAST")
+    protected fun castedThis(): B {
+        return this as B
     }
 
     companion object {
