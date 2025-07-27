@@ -13,6 +13,24 @@ open class MixInHandler : MixInResolver {
     constructor(overrides: MixInResolver?) {
     }
 
+    open fun withOverrides(overrides: MixInResolver?): MixInHandler {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Mutators
+     *******************************************************************************************************************
+     */
+
+    open fun addLocalDefinitions(sourceMixins: Map<KClass<*>, KClass<*>?>): MixInHandler {
+        TODO("Not yet implemented")
+    }
+
+    open fun addLocalDefinition(target: KClass<*>, mixinSource: KClass<*>?): MixInHandler {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * MixInResolver implementation

@@ -2,13 +2,12 @@ package org.cirjson.cirjackson.databind.configuration
 
 import org.cirjson.cirjackson.annotations.CirJsonInclude
 import org.cirjson.cirjackson.annotations.CirJsonSetter
+import org.cirjson.cirjackson.annotations.CirJsonTypeInfo
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.util.DefaultPrettyPrinter
 import org.cirjson.cirjackson.databind.*
-import org.cirjson.cirjackson.databind.cirjsontype.DefaultBaseTypeLimitingValidator
-import org.cirjson.cirjackson.databind.cirjsontype.PolymorphicTypeValidator
-import org.cirjson.cirjackson.databind.cirjsontype.SubtypeResolver
-import org.cirjson.cirjackson.databind.cirjsontype.TypeResolverProvider
+import org.cirjson.cirjackson.databind.cirjsontype.*
+import org.cirjson.cirjackson.databind.cirjsontype.implementation.DefaultTypeResolverBuilder
 import org.cirjson.cirjackson.databind.cirjsontype.implementation.StandardSubtypeResolver
 import org.cirjson.cirjackson.databind.configuration.MapperBuilder.Companion.findModules
 import org.cirjson.cirjackson.databind.deserialization.BeanDeserializerFactory
@@ -21,9 +20,12 @@ import org.cirjson.cirjackson.databind.serialization.FilterProvider
 import org.cirjson.cirjackson.databind.serialization.SerializerFactory
 import org.cirjson.cirjackson.databind.type.LogicalType
 import org.cirjson.cirjackson.databind.type.TypeFactory
+import org.cirjson.cirjackson.databind.type.TypeModifier
+import org.cirjson.cirjackson.databind.util.ArrayBuilders
 import org.cirjson.cirjackson.databind.util.LinkedNode
 import org.cirjson.cirjackson.databind.util.RootNameLookup
 import org.cirjson.cirjackson.databind.util.StandardDateFormat
+import java.text.DateFormat
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -1054,6 +1056,486 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
     open fun withModules(handler: (CirJacksonModule) -> Unit): B {
         myModules?.values?.forEach(handler)
         return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing base settings
+     *******************************************************************************************************************
+     */
+
+    open fun baseSettings(baseSettings: BaseSettings): B {
+        myBaseSettings = baseSettings
+        return castedThis()
+    }
+
+    /**
+     * Method for replacing [AnnotationIntrospector] used by the mapper instance to be built. Note that doing this will
+     * replace the current introspector, which may lead to unavailability of core CirJackson annotations. If you want to
+     * combine handling of multiple introspectors, have a look at [AnnotationIntrospectorPair].
+     *
+     * @see AnnotationIntrospectorPair
+     */
+    open fun annotationIntrospector(introspector: AnnotationIntrospector): B {
+        myBaseSettings = myBaseSettings.withAnnotationIntrospector(introspector)
+        return castedThis()
+    }
+
+    /**
+     * Method for replacing default [ContextAttributes] that the mapper uses: usually one initialized with a set of
+     * default shared attributes, but potentially also with a custom implementation.
+     *
+     * NOTE: instance specified will need to be thread-safe for usage, similar to the default
+     * ([ContextAttributes.Implementation]).
+     *
+     * @param attributes Default instance to use, if not `null`, or `null` for "use empty default set".
+     *
+     * @return This Builder instance to allow call-chaining
+     */
+    open fun defaultAttributes(attributes: ContextAttributes): B {
+        myDefaultAttributes = attributes
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing introspection helpers
+     *******************************************************************************************************************
+     */
+
+    open fun typeFactory(typeFactory: TypeFactory): B {
+        myTypeFactory = typeFactory
+        return castedThis()
+    }
+
+    open fun addTypeModifier(modifier: TypeModifier?): B {
+        myTypeFactory = typeFactory().withModifier(modifier)
+        return castedThis()
+    }
+
+    open fun typeResolverProvider(provider: TypeResolverProvider?): B {
+        myTypeResolverProvider = provider
+        return castedThis()
+    }
+
+    open fun classIntrospector(classIntrospector: ClassIntrospector?): B {
+        myClassIntrospector = classIntrospector
+        return castedThis()
+    }
+
+    open fun subtypeResolver(resolver: SubtypeResolver?): B {
+        mySubtypeResolver = resolver
+        return castedThis()
+    }
+
+    open fun polymorphicTypeValidator(polymorphicTypeValidator: PolymorphicTypeValidator): B {
+        myBaseSettings = myBaseSettings.with(polymorphicTypeValidator)
+        return castedThis()
+    }
+
+    /**
+     * Method for configuring [HandlerInstantiator] to use for creating instances of handlers (such as serializers,
+     * deserializers, type and type id resolvers), given a class.
+     *
+     * @param handlerInstantiator Instantiator to use; if `null`, use the default implementation
+     *
+     * @return Builder instance itself to allow chaining
+     */
+    open fun handlerInstantiator(handlerInstantiator: HandlerInstantiator?): B {
+        myBaseSettings = myBaseSettings.with(handlerInstantiator)
+        return castedThis()
+    }
+
+    /**
+     * Method for configuring [PropertyNamingStrategy] to use for adapting POJO property names (internal) into content
+     * property names (external).
+     *
+     * @param strategy Strategy instance to use; if `null`, use the default implementation
+     *
+     * @return Builder instance itself to allow chaining
+     */
+    open fun propertyNamingStrategy(strategy: PropertyNamingStrategy?): B {
+        myBaseSettings = myBaseSettings.with(strategy)
+        return castedThis()
+    }
+
+    /**
+     * Method for configuring [AccessorNamingStrategy] to use for auto-detecting accessor ("getter") and mutator
+     * ("setter") methods based on naming of methods.
+     *
+     * @param strategy Strategy instance to use; if `null`, use the default implementation
+     *
+     * @return Builder instance itself to allow chaining
+     */
+    open fun accessorNaming(strategy: AccessorNamingStrategy.Provider?): B {
+        myBaseSettings = myBaseSettings.with(strategy ?: DefaultAccessorNamingStrategy.Provider())
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing factories, serialization, related
+     *******************************************************************************************************************
+     */
+
+    open fun serializerFactory(factory: SerializerFactory?): B {
+        mySerializerFactory = factory
+        return castedThis()
+    }
+
+    open fun serializationContexts(contexts: SerializationContexts?): B {
+        mySerializationContexts = contexts
+        return castedThis()
+    }
+
+    /**
+     * Method for configuring this mapper to use specified [FilterProvider] for mapping Filter Ids to actual filter
+     * instances.
+     *
+     * Note that usually it is better to use method in [ObjectWriter], but sometimes this method is more convenient. For
+     * example, some frameworks only allow configuring of ObjectMapper instances and not [ObjectWriters][ObjectWriter].
+     */
+    open fun filterProvider(provider: FilterProvider?): B {
+        myFilterProvider = provider
+        return castedThis()
+    }
+
+    open fun serializationContexts(prettyPrinter: PrettyPrinter?): B {
+        myDefaultPrettyPrinter = prettyPrinter
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing factories, deserialization, related
+     *******************************************************************************************************************
+     */
+
+    open fun deserializerFactory(factory: DeserializerFactory?): B {
+        myDeserializerFactory = factory
+        return castedThis()
+    }
+
+    open fun deserializationContexts(contexts: DeserializationContexts?): B {
+        myDeserializationContexts = contexts
+        return castedThis()
+    }
+
+    open fun injectableValues(values: InjectableValues?): B {
+        myInjectableValues = values
+        return castedThis()
+    }
+
+    open fun nodeFactory(factory: CirJsonNodeFactory): B {
+        myBaseSettings = myBaseSettings.with(factory)
+        return castedThis()
+    }
+
+    /**
+     * Method for specifying [ConstructorDetector] to use for determining some aspects of creator auto-detection
+     * (specifically auto-detection of constructor, and in particular behavior with single-argument constructors).
+     */
+    open fun constructorDetector(constructorDetector: ConstructorDetector?): B {
+        myBaseSettings = myBaseSettings.with(constructorDetector)
+        return castedThis()
+    }
+
+    open fun cacheProvider(cacheProvider: CacheProvider): B {
+        myBaseSettings = myBaseSettings.with(cacheProvider)
+        val typeFactory = typeFactory().withCache(cacheProvider.forTypeFactory())
+        return typeFactory(typeFactory)
+    }
+
+    /**
+     * Method used for adding a [DeserializationProblemHandler] for this builder, at the head of the list (meaning it
+     * has priority over handler registered earlier).
+     */
+    open fun addHandler(handler: DeserializationProblemHandler): B {
+        if (!LinkedNode.contains(myProblemHandlers, handler)) {
+            myProblemHandlers = LinkedNode(handler, myProblemHandlers)
+        }
+
+        return castedThis()
+    }
+
+    /**
+     * Method that may be used to remove all [DeserializationProblemHandlers][DeserializationProblemHandler] added to
+     * this builder (if any).
+     */
+    open fun clearProblemHandlers(): B {
+        myProblemHandlers = null
+
+        return castedThis()
+    }
+
+    /**
+     * Method for inserting specified [AbstractTypeResolver] as the first resolver in a chain of possibly multiple
+     * resolvers.
+     */
+    open fun addAbstractTypeResolver(resolver: AbstractTypeResolver): B {
+        myAbstractTypeResolvers = ArrayBuilders.insertInListNoDup(myAbstractTypeResolvers, resolver)
+
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing settings, date/time
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for configuring the default [DateFormat] to use when serializing time values as Strings, and deserializing
+     * from CirJSON Strings. If you need per-request configuration, factory methods in [ObjectReader] and [ObjectWriter]
+     * instead.
+     */
+    open fun defaultDateFormat(format: DateFormat): B {
+        myBaseSettings = myBaseSettings.with(format)
+        configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+        return castedThis()
+    }
+
+    /**
+     * Method for overriding default TimeZone to use for formatting. Default value used is UTC (NOT default TimeZone of
+     * JVM).
+     */
+    open fun defaultTimeZone(timeZone: TimeZone?): B {
+        myBaseSettings = myBaseSettings.with(timeZone)
+        configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
+        return castedThis()
+    }
+
+    /**
+     * Method for overriding default locale to use for formatting. Default value used is [Locale.default].
+     */
+    open fun defaultLocale(locale: Locale): B {
+        myBaseSettings = myBaseSettings.with(locale)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Changing settings, formatting
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that will configure default [Base64Variant] that `ByteArray` serializers and deserializers will use.
+     *
+     * @param variant Base64 variant to use
+     *
+     * @return This mapper, for convenience to allow chaining
+     */
+    open fun defaultBase64Variant(variant: Base64Variant): B {
+        myBaseSettings = myBaseSettings.with(variant)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuring Mix-ins
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that may be used to completely change mix-in handling by providing alternate [MixInHandler]
+     * implementation. Most of the time this is NOT the method you want to call, and rather are looking for
+     * [mixInOverrides].
+     */
+    open fun mixInHandler(handler: MixInHandler?): B {
+        myMixInHandler = handler
+        return castedThis()
+    }
+
+    /**
+     * Method that allows defining "override" mix-in resolver: something that is checked first,
+     * before simple mix-in definitions.
+     */
+    open fun mixInOverrides(resolver: MixInResolver?): B {
+        myMixInHandler = mixInHandler().withOverrides(resolver)
+        return castedThis()
+    }
+
+    /**
+     * Method to use for defining mix-in annotations to use for augmenting annotations that processable (serializable /
+     * deserializable) classes have. This convenience method is equivalent to iterating over all entries and calling
+     * [addMixIn] with `key` and `value` of each entry.
+     */
+    open fun addMixIns(sourceMixins: Map<KClass<*>, KClass<*>?>): B {
+        myMixInHandler = mixInHandler().addLocalDefinitions(sourceMixins)
+        return castedThis()
+    }
+
+    /**
+     * Method to use for defining mix-in annotations to use for augmenting annotations that classes have, for
+     * configuration serialization and/or deserialization processing purposes. Mixing in is done when introspecting
+     * class annotations and properties. Annotations from "mixin" class (and its supertypes) will **override**
+     * annotations that target classes (and their super-types) have.
+     *
+     * Note that standard mixin handler implementations will only allow a single mix-in source class per target, so if
+     * there was a previous mix-in defined target, it will be cleared. This also means that you can remove mix-in
+     * definition by specifying `mixinSource` of `null` (although preferred mechanism is [removeMixIn])
+     *
+     * @param target Target class on which to add annotations
+     *
+     * @param mixinSource Class that has annotations to add
+     *
+     * @return This builder instance to allow call-chaining
+     */
+    open fun addMixIn(target: KClass<*>, mixinSource: KClass<*>?): B {
+        myMixInHandler = mixInHandler().addLocalDefinition(target, mixinSource)
+        return castedThis()
+    }
+
+    /**
+     * Method that allows making sure that specified `target` class does not have associated mix-in annotations:
+     * basically can be used to undo an earlier call to [addMixIn].
+     *
+     * NOTE: removing mix-ins for given class does not try to remove possible mix-ins for any of its super classes and
+     * super interfaces; only direct mix-in addition (if any) is removed.
+     *
+     * @param target Target class for which no mix-ins should remain after call
+     *
+     * @return This builder instance to allow call-chaining
+     */
+    open fun removeMixIn(target: KClass<*>): B {
+        myMixInHandler = mixInHandler().addLocalDefinition(target, null)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Subtype registration
+     *******************************************************************************************************************
+     */
+
+    open fun registerSubtypes(vararg subtypes: KClass<*>): B {
+        subtypeResolver().registerSubtypes(*subtypes)
+        return castedThis()
+    }
+
+    open fun registerSubtypes(vararg subtypes: NamedType): B {
+        subtypeResolver().registerSubtypes(*subtypes)
+        return castedThis()
+    }
+
+    open fun registerSubtypes(subtypes: Collection<KClass<*>>): B {
+        subtypeResolver().registerSubtypes(subtypes)
+        return castedThis()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Default typing (temporarily)
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Convenience method that is equivalent to calling
+     * ```
+     * activateDefaultTyping(subtypeValidator, DefaultTyping.OBJECT_AND_NON_CONCRETE)
+     * ```
+     *
+     * NOTE: choice of [PolymorphicTypeValidator] to configure is of crucial importance to security when deserializing
+     * untrusted content: this because allowing deserializing of any type can lead to malicious attacks using
+     * "deserialization gadgets". Implementations should use allow-listing to specify acceptable types unless the source
+     * of content is fully trusted to only send safe types.
+     */
+    open fun activateDefaultTyping(subtypeValidator: PolymorphicTypeValidator): B {
+        return activateDefaultTyping(subtypeValidator, DefaultTyping.OBJECT_AND_NON_CONCRETE)
+    }
+
+    /**
+     * Convenience method that is equivalent to calling
+     * ```
+     * activateDefaultTyping(subtypeValidator, applicability, CirJsonTypeInfo.As.WRAPPER_ARRAY);
+     * ```
+     *
+     * NOTE: choice of [PolymorphicTypeValidator] to configure is of crucial importance to security when deserializing
+     * untrusted content: this because allowing deserializing of any type can lead to malicious attacks using
+     * "deserialization gadgets". Implementations should use allow-listing to specify acceptable types unless the source
+     * of content is fully trusted to only send safe types.
+     */
+    open fun activateDefaultTyping(subtypeValidator: PolymorphicTypeValidator, applicability: DefaultTyping): B {
+        return activateDefaultTyping(subtypeValidator, applicability, CirJsonTypeInfo.As.WRAPPER_ARRAY)
+    }
+
+    /**
+     * Method for enabling automatic inclusion of type information, needed for proper deserialization of polymorphic
+     * types (unless types have been annotated with [CirJsonTypeInfo]).
+     *
+     * NOTE: use of [CirJsonTypeInfo.As.EXTERNAL_PROPERTY] is **NOT SUPPORTED**; and attempts of do so will throw an
+     * [IllegalArgumentException] to make this limitation explicit.
+     *
+     * NOTE: choice of [PolymorphicTypeValidator] to configure is of crucial importance to security when deserializing
+     * untrusted content: this because allowing deserializing of any type can lead to malicious attacks using
+     * "deserialization gadgets". Implementations should use allow-listing to specify acceptable types unless the source
+     * of content is fully trusted to only send safe types.
+     *
+     * @param applicability Defines kinds of types for which additional type information is added; see [DefaultTyping]
+     * for more information.
+     */
+    open fun activateDefaultTyping(subtypeValidator: PolymorphicTypeValidator, applicability: DefaultTyping,
+            includeAs: CirJsonTypeInfo.As): B {
+        if (includeAs == CirJsonTypeInfo.As.EXTERNAL_PROPERTY) {
+            throw IllegalArgumentException("Cannot use includeAs of $includeAs for DefaultTyping")
+        }
+
+        return setDefaultTyping(defaultDefaultTypingResolver(subtypeValidator, applicability, includeAs))
+    }
+
+    /**
+     * Method for enabling automatic inclusion of type information -- needed for proper deserialization of polymorphic
+     * types (unless types have been annotated with [CirJsonTypeInfo]) -- using "As.PROPERTY" inclusion mechanism and
+     * specified property name to use for inclusion (default being "@class" since default type information always uses
+     * class name as type identifier)
+     *
+     * NOTE: choice of [PolymorphicTypeValidator] to configure is of crucial importance to security when deserializing
+     * untrusted content: this because allowing deserializing of any type can lead to malicious attacks using
+     * "deserialization gadgets". Implementations should use allow-listing to specify acceptable types unless the source
+     * of content is fully trusted to only send safe types.
+     */
+    open fun activateDefaultTypingAsProperty(subtypeValidator: PolymorphicTypeValidator, applicability: DefaultTyping,
+            propertyName: String?): B {
+        return setDefaultTyping(defaultDefaultTypingResolver(subtypeValidator, applicability, propertyName))
+    }
+
+    /**
+     * Method for disabling automatic inclusion of type information; if so, only explicitly annotated types (ones with
+     * [CirJsonTypeInfo]) will have additional embedded type information.
+     */
+    open fun deactivateDefaultTyping(): B {
+        return setDefaultTyping(null)
+    }
+
+    /**
+     * Method for enabling automatic inclusion of type information, using the specified handler object for determining
+     * which types this affects, as well as details of how information is embedded.
+     *
+     * NOTE: use of Default Typing can be a potential security risk if incoming content comes from untrusted sources, so
+     * care should be taken to use a [TypeResolverBuilder] that can limit allowed classes to deserialize.
+     *
+     * @param typeResolverBuilder Type information inclusion handler
+     */
+    open fun setDefaultTyping(typeResolverBuilder: TypeResolverBuilder<*>?): B {
+        myBaseSettings = myBaseSettings.with(typeResolverBuilder)
+        return castedThis()
+    }
+
+    /**
+     * Overridable method for changing default [TypeResolverBuilder] to construct for "default typing".
+     */
+    protected open fun defaultDefaultTypingResolver(subtypeValidator: PolymorphicTypeValidator,
+            applicability: DefaultTyping, includeAs: CirJsonTypeInfo.As): TypeResolverBuilder<*> {
+        return DefaultTypeResolverBuilder(subtypeValidator, applicability, includeAs)
+    }
+
+    /**
+     * Overridable method for changing default [TypeResolverBuilder] to construct for "default typing".
+     */
+    protected open fun defaultDefaultTypingResolver(subtypeValidator: PolymorphicTypeValidator,
+            applicability: DefaultTyping, propertyName: String?): TypeResolverBuilder<*> {
+        return DefaultTypeResolverBuilder(subtypeValidator, applicability, propertyName)
     }
 
     /*

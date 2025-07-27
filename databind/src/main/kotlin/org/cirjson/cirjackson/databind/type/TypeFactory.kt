@@ -24,6 +24,14 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
         TODO("Not yet implemented")
     }
 
+    fun withModifier(modifier: TypeModifier?): TypeFactory {
+        TODO("Not yet implemented")
+    }
+
+    fun withCache(cache: LookupCache<Any, KotlinType>): TypeFactory {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Public general-purpose factory methods
