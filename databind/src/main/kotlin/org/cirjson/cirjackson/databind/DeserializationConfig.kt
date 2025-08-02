@@ -30,6 +30,10 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
      *******************************************************************************************************************
      */
 
+    override fun useRootWrapping(): Boolean {
+        TODO("Not yet implemented")
+    }
+
     fun isEnabled(feature: DeserializationFeature): Boolean {
         TODO("Not yet implemented")
     }

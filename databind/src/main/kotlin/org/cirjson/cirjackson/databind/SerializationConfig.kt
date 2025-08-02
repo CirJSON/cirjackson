@@ -33,6 +33,10 @@ class SerializationConfig : MapperConfigBase<SerializationFeature, Serialization
      *******************************************************************************************************************
      */
 
+    override fun useRootWrapping(): Boolean {
+        TODO("Not yet implemented")
+    }
+
     fun isEnabled(feature: SerializationFeature): Boolean {
         TODO("Not yet implemented")
     }
