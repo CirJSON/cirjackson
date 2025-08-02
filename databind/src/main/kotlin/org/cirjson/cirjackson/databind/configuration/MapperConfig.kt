@@ -21,9 +21,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
         TODO("Not yet implemented")
     }
 
-    fun isEnabled(feature: DatatypeFeature): Boolean {
-        TODO("Not yet implemented")
-    }
+    abstract fun isEnabled(feature: DatatypeFeature): Boolean
 
     /*
      *******************************************************************************************************************
