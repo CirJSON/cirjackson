@@ -4,7 +4,7 @@ import org.cirjson.cirjackson.core.util.Snapshottable
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.util.LookupCache
 import org.cirjson.cirjackson.databind.util.SimpleLookupCache
-import kotlin.reflect.KType
+import java.lang.reflect.Type
 
 class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any, KotlinType>,
         internal val myModifiers: Array<TypeModifier>?, private val myClassLoader: ClassLoader?) :
@@ -38,11 +38,11 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
-    fun constructType(type: KType): KotlinType {
+    fun constructType(type: Type): KotlinType {
         TODO("Not yet implemented")
     }
 
-    fun resolveMemberType(type: KType, contextBindings: TypeBindings): KotlinType {
+    fun resolveMemberType(type: Type, contextBindings: TypeBindings): KotlinType {
         TODO("Not yet implemented")
     }
 

@@ -6,6 +6,7 @@ import org.cirjson.cirjackson.databind.introspection.ClassIntrospector
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
+import kotlin.reflect.KClass
 
 class DeserializationConfig : MapperConfigBase<DeserializationFeature, DeserializationConfig> {
 
@@ -22,6 +23,32 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
             rootNames: RootNameLookup, abstractTypeResolvers: Array<AbstractTypeResolver>) : super(builder,
             mapperFeatures, typeFactory, classIntrospector, mixins, subtypeResolver, configOverrides, defaultAttributes,
             rootNames) {
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle, factory methods from MapperConfigBase
+     *******************************************************************************************************************
+     */
+
+    override fun withBase(newBase: BaseSettings): DeserializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun with(datatypeFeatures: DatatypeFeatures): DeserializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun withRootName(rootName: PropertyName?): DeserializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun withView(view: KClass<*>?): DeserializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun with(attributes: ContextAttributes): DeserializationConfig {
+        TODO("Not yet implemented")
     }
 
     /*

@@ -902,12 +902,12 @@ abstract class MapperBuilder<M : ObjectMapper, B : MapperBuilder<M, B>> {
      * Method for changing currently default settings for property inclusion, used for determining whether POJO
      * properties with certain value should be excluded or not: the most common case being exclusion of `null` values.
      */
-    open fun changeDefaultPropertyInclusion(handler: (CirJsonInclude.Value) -> CirJsonInclude.Value): B {
+    open fun changeDefaultPropertyInclusion(handler: (CirJsonInclude.Value?) -> CirJsonInclude.Value?): B {
         val oldInclusion = myConfigOverrides.defaultInclusion
         val newInclusion = handler.invoke(oldInclusion)
 
         if (newInclusion !== oldInclusion) {
-            myConfigOverrides.setDefaultInclusion(newInclusion)
+            myConfigOverrides.setDefaultInclusion(newInclusion!!)
         }
 
         return castedThis()

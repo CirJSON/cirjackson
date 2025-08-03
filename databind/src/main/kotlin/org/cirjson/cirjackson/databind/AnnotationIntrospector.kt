@@ -1,11 +1,14 @@
 package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat
+import org.cirjson.cirjackson.annotations.CirJsonIgnoreProperties
 import org.cirjson.cirjackson.annotations.CirJsonInclude
+import org.cirjson.cirjackson.annotations.CirJsonIncludeProperties
 import org.cirjson.cirjackson.core.Versioned
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.introspection.Annotated
 import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
+import org.cirjson.cirjackson.databind.introspection.VisibilityChecker
 
 abstract class AnnotationIntrospector : Versioned {
 
@@ -16,6 +19,26 @@ abstract class AnnotationIntrospector : Versioned {
      */
 
     open fun findRootName(config: MapperConfig<*>, annotatedClass: AnnotatedClass): PropertyName? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findPropertyIgnoralByName(config: MapperConfig<*>, annotated: Annotated): CirJsonIgnoreProperties.Value? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findPropertyInclusionByName(config: MapperConfig<*>,
+            annotated: Annotated): CirJsonIncludeProperties.Value? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Property auto-detection
+     *******************************************************************************************************************
+     */
+
+    open fun findAutoDetectVisibility(config: MapperConfig<*>, annotatedClass: AnnotatedClass,
+            checker: VisibilityChecker): VisibilityChecker {
         TODO("Not yet implemented")
     }
 

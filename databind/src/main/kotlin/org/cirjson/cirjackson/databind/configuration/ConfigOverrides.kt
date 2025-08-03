@@ -14,12 +14,9 @@ import kotlin.reflect.KClass
  */
 open class ConfigOverrides protected constructor(
         protected var myOverrides: MutableMap<KClass<*>, MutableConfigOverride>?,
-        defaultInclusion: CirJsonInclude.Value, defaultNullHandling: CirJsonSetter.Value,
+        protected var myDefaultInclusion: CirJsonInclude.Value, defaultNullHandling: CirJsonSetter.Value,
         defaultVisibility: VisibilityChecker, defaultMergeable: Boolean?, defaultLeniency: Boolean?) :
         Snapshottable<ConfigOverrides> {
-
-    var defaultInclusion = defaultInclusion
-        protected set
 
     var defaultNullHandling = defaultNullHandling
         protected set
@@ -52,7 +49,8 @@ open class ConfigOverrides protected constructor(
             }
         }
 
-        return ConfigOverrides(newOverrides, defaultInclusion, defaultNullHandling, defaultVisibility, defaultMergeable,
+        return ConfigOverrides(newOverrides, myDefaultInclusion, defaultNullHandling, defaultVisibility,
+                defaultMergeable,
                 defaultLeniency)
     }
 
@@ -103,11 +101,14 @@ open class ConfigOverrides protected constructor(
      *******************************************************************************************************************
      */
 
+    open val defaultInclusion: CirJsonInclude.Value?
+        get() = myDefaultInclusion
+
     /**
      * Alternate accessor needed due to complexities of Record auto-discovery: needs to obey custom overrides but also
      * give alternate "default" if no customizations made.
      */
-    val defaultRecordVisibility: VisibilityChecker
+    open val defaultRecordVisibility: VisibilityChecker
         get() = defaultVisibility.takeUnless { it == DEFAULT_VISIBILITY_CHECKER } ?: DEFAULT_RECORD_VISIBILITY_CHECKER
 
     /*
@@ -117,7 +118,7 @@ open class ConfigOverrides protected constructor(
      */
 
     open fun setDefaultInclusion(value: CirJsonInclude.Value): ConfigOverrides {
-        defaultInclusion = value
+        myDefaultInclusion = value
         return this
     }
 
@@ -154,7 +155,7 @@ open class ConfigOverrides protected constructor(
 
     override fun toString(): String {
         val stringBuilder =
-                StringBuilder("[ConfigOverrides ").append("incl=").append(defaultInclusion).append(", nulls=")
+                StringBuilder("[ConfigOverrides ").append("incl=").append(myDefaultInclusion).append(", nulls=")
                         .append(defaultNullHandling).append(", merge=").append(defaultMergeable).append(", leniency=")
                         .append(defaultLeniency).append(", visibility=").append(defaultVisibility).append(", typed=")
 

@@ -1,15 +1,13 @@
 package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.databind.cirjsontype.SubtypeResolver
-import org.cirjson.cirjackson.databind.configuration.ConfigOverrides
-import org.cirjson.cirjackson.databind.configuration.ContextAttributes
-import org.cirjson.cirjackson.databind.configuration.MapperBuilder
-import org.cirjson.cirjackson.databind.configuration.MapperConfigBase
+import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.introspection.ClassIntrospector
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.serialization.FilterProvider
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
+import kotlin.reflect.KClass
 
 class SerializationConfig : MapperConfigBase<SerializationFeature, SerializationConfig> {
 
@@ -25,6 +23,32 @@ class SerializationConfig : MapperConfigBase<SerializationFeature, Serialization
             subtypeResolver: SubtypeResolver, defaultAttributes: ContextAttributes, rootNames: RootNameLookup,
             filterProvider: FilterProvider?) : super(builder, mapperFeatures, typeFactory, classIntrospector, mixins,
             subtypeResolver, configOverrides, defaultAttributes, rootNames) {
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle, factory methods from MapperConfigBase
+     *******************************************************************************************************************
+     */
+
+    override fun withBase(newBase: BaseSettings): SerializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun with(datatypeFeatures: DatatypeFeatures): SerializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun withRootName(rootName: PropertyName?): SerializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun withView(view: KClass<*>?): SerializationConfig {
+        TODO("Not yet implemented")
+    }
+
+    override fun with(attributes: ContextAttributes): SerializationConfig {
+        TODO("Not yet implemented")
     }
 
     /*
