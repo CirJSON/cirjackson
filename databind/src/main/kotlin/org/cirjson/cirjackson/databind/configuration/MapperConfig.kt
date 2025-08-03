@@ -1,10 +1,6 @@
 package org.cirjson.cirjackson.databind.configuration
 
-import org.cirjson.cirjackson.annotations.CirJsonFormat
-import org.cirjson.cirjackson.annotations.CirJsonIgnoreProperties
-import org.cirjson.cirjackson.annotations.CirJsonInclude
-import org.cirjson.cirjackson.annotations.CirJsonIncludeProperties
-import org.cirjson.cirjackson.annotations.CirJsonSetter
+import org.cirjson.cirjackson.annotations.*
 import org.cirjson.cirjackson.core.Base64Variant
 import org.cirjson.cirjackson.core.SerializableString
 import org.cirjson.cirjackson.core.io.SerializedString
@@ -227,7 +223,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      * Accessor for default property inclusion to use for serialization, used unless overridden by per-type or
      * per-property overrides.
      */
-    abstract val defaultPropertyInclusion: CirJsonInclude.Value
+    abstract val defaultPropertyInclusion: CirJsonInclude.Value?
 
     /**
      * Accessor for default property inclusion to use for serialization, considering possible per-type override for
@@ -235,7 +231,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      *
      * NOTE: if no override found, defaults to value returned by [defaultPropertyInclusion].
      */
-    abstract fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value
+    abstract fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value?
 
     /**
      * Accessor for default property inclusion to use for serialization, considering possible per-type override for
@@ -244,7 +240,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      * @param defaultInclusion Inclusion setting to return if no overrides found.
      */
     open fun getDefaultPropertyInclusion(baseType: KClass<*>,
-            defaultInclusion: CirJsonInclude.Value): CirJsonInclude.Value {
+            defaultInclusion: CirJsonInclude.Value?): CirJsonInclude.Value? {
         return getConfigOverride(baseType).include ?: defaultInclusion
     }
 
@@ -311,15 +307,17 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      * Accessor for the object used for determining whether specific property elements (method, constructors, fields)
      * can be auto-detected based on their visibility (access modifiers). Can be changed to allow different minimum
      * visibility levels for auto-detection. Note that this is the global handler; individual types (classes) can
-     * further override the active checker used (using [CirJsonAutoDetect] annotation)
+     * further override the active checker used (using [org.cirjson.cirjackson.annotations.CirJsonAutoDetect]
+     * annotation)
      */
     abstract val defaultVisibilityChecker: VisibilityChecker
 
     /**
      * Accessor for the object used for determining whether specific property elements (method, constructors, fields)
      * can be auto-detected based on their visibility (access modifiers). This is based on global defaults (as would be
-     * returned by [defaultVisibilityChecker], but then modified by possible class annotation (see [CirJsonAutoDetect])
-     * and/or per-type config override (see [ConfigOverride.visibility]).
+     * returned by [defaultVisibilityChecker], but then modified by possible class annotation (see
+     * [org.cirjson.cirjackson.annotations.CirJsonAutoDetect]) and/or per-type config override (see
+     * [ConfigOverride.visibility]).
      */
     abstract fun getDefaultVisibilityChecker(baseType: KClass<*>, actualClass: AnnotatedClass): VisibilityChecker
 

@@ -92,10 +92,10 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
         TODO("Not yet implemented")
     }
 
-    override val defaultPropertyInclusion: CirJsonInclude.Value
+    override val defaultPropertyInclusion: CirJsonInclude.Value?
         get() = TODO("Not yet implemented")
 
-    override fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value {
+    override fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value? {
         TODO("Not yet implemented")
     }
 
