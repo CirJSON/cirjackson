@@ -72,10 +72,10 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
      *******************************************************************************************************************
      */
 
-    override val activeView: KClass<*>?
+    final override val activeView: KClass<*>?
         get() = TODO("Not yet implemented")
 
-    override val attributes: ContextAttributes
+    final override val attributes: ContextAttributes
         get() = TODO("Not yet implemented")
 
     /*
@@ -84,52 +84,52 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
      *******************************************************************************************************************
      */
 
-    override fun getConfigOverride(type: KClass<*>): ConfigOverride {
+    final override fun getConfigOverride(type: KClass<*>): ConfigOverride {
         TODO("Not yet implemented")
     }
 
-    override fun findConfigOverride(type: KClass<*>): ConfigOverride? {
+    final override fun findConfigOverride(type: KClass<*>): ConfigOverride? {
         TODO("Not yet implemented")
     }
 
-    override val defaultPropertyInclusion: CirJsonInclude.Value?
+    final override val defaultPropertyInclusion: CirJsonInclude.Value?
         get() = TODO("Not yet implemented")
 
-    override fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value? {
+    final override fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value? {
         TODO("Not yet implemented")
     }
 
-    override fun getDefaultInclusion(baseType: KClass<*>, propertyType: KClass<*>): CirJsonInclude.Value {
+    final override fun getDefaultInclusion(baseType: KClass<*>, propertyType: KClass<*>): CirJsonInclude.Value {
         TODO("Not yet implemented")
     }
 
-    override fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value {
+    final override fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value {
         TODO("Not yet implemented")
     }
 
-    override fun getDefaultPropertyIgnorals(baseType: KClass<*>): CirJsonIgnoreProperties.Value? {
+    final override fun getDefaultPropertyIgnorals(baseType: KClass<*>): CirJsonIgnoreProperties.Value? {
         TODO("Not yet implemented")
     }
 
-    override fun getDefaultPropertyIgnorals(baseType: KClass<*>,
+    final override fun getDefaultPropertyIgnorals(baseType: KClass<*>,
             actualClass: AnnotatedClass): CirJsonIgnoreProperties.Value? {
         TODO("Not yet implemented")
     }
 
-    override fun getDefaultPropertyInclusions(baseType: KClass<*>,
+    final override fun getDefaultPropertyInclusions(baseType: KClass<*>,
             actualClass: AnnotatedClass): CirJsonIncludeProperties.Value? {
         TODO("Not yet implemented")
     }
 
-    override val defaultVisibilityChecker: VisibilityChecker
+    final override val defaultVisibilityChecker: VisibilityChecker
         get() = TODO("Not yet implemented")
 
-    override fun getDefaultVisibilityChecker(baseType: KClass<*>,
+    final override fun getDefaultVisibilityChecker(baseType: KClass<*>,
             actualClass: AnnotatedClass): VisibilityChecker {
         TODO("Not yet implemented")
     }
 
-    override val defaultNullHandling: CirJsonSetter.Value
+    final override val defaultNullHandling: CirJsonSetter.Value
         get() = TODO("Not yet implemented")
 
     override val defaultMergeable: Boolean?
@@ -159,7 +159,7 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
      *******************************************************************************************************************
      */
 
-    override fun findMixInClassFor(kClass: KClass<*>): KClass<*> {
+    final override fun findMixInClassFor(kClass: KClass<*>): KClass<*> {
         TODO("Not yet implemented")
     }
 
