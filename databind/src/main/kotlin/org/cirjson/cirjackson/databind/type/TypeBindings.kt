@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.databind.type
 
 import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.util.hasClass
 import kotlin.reflect.KClass
 import kotlin.reflect.KTypeParameter
 
@@ -9,8 +10,8 @@ import kotlin.reflect.KTypeParameter
  *
  * @property myUnboundVariables Names of potentially unresolved type variables.
  */
-open class TypeBindings private constructor(names: Array<String>?, types: Array<KotlinType>?,
-        private val myUnboundVariables: Array<String>?) {
+open class TypeBindings private constructor(names: Array<String?>?, types: Array<KotlinType?>?,
+        private val myUnboundVariables: Array<String?>?) {
 
     /**
      * Array of type (type variable) names.
@@ -24,10 +25,215 @@ open class TypeBindings private constructor(names: Array<String>?, types: Array<
 
     private val myHashCode = myTypes.contentHashCode()
 
+    /*
+     *******************************************************************************************************************
+     * Construction
+     *******************************************************************************************************************
+     */
+
     init {
         if (myNames.size != myTypes.size) {
             throw IllegalArgumentException("Mismatching names (${myNames.size}), types (${myTypes.size})")
         }
+    }
+
+    /**
+     * Method for creating an instance that has same bindings as this object, plus an indicator for additional type
+     * variable that may be unbound within this context; this is needed to resolve recursive self-references.
+     */
+    open fun withUnboundVariable(name: String): TypeBindings {
+        val length = myUnboundVariables?.size ?: 0
+        val unboundVariables = myUnboundVariables?.takeUnless { length > 0 }?.copyOf(length + 1) ?: arrayOfNulls(1)
+        return TypeBindings(myNames, myTypes, unboundVariables)
+    }
+
+    /**
+     * Create a new instance with the same bindings as this object, except with the given variable removed. This is used
+     * to create generic types that are "partially raw", i.e. only have some variables bound.
+     */
+    open fun withoutVariable(name: String): TypeBindings {
+        val index = myNames.indexOf(name)
+
+        if (index == -1) {
+            return this
+        }
+
+        val newTypes = myTypes.copyOf()
+        newTypes[index] = null
+        return TypeBindings(myNames, newTypes, myUnboundVariables)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Find type bound to specified name, if there is one; returns bound type if so, `null` if not.
+     */
+    open fun findBoundType(name: String): KotlinType? {
+        for (i in myNames.indices) {
+            if (name == myNames[i]) {
+                var type = myTypes[i]
+
+                if (type is ResolvedRecursiveType) {
+                    val otherType = type.selfReferencedType
+
+                    if (otherType != null) {
+                        type = otherType
+                    }
+                }
+
+                return type
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Returns `true` if a shallow search of the type bindings includes a placeholder type which uses reference
+     * equality, thus cannot produce cache hits. This is an optimization to avoid churning memory in the cache
+     * unnecessarily. Note that it is still possible for nested type information to contain such placeholder types (see
+     * `NestedTypes1604Test` for an example) so it's vital that they produce a distribution of hashCode values, even if
+     * they may push reusable data out of the cache.
+     */
+    private fun invalidCacheKey(): Boolean {
+        for (type in myTypes) {
+            if (type is IdentityEqualityType) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    open fun isEmpty(): Boolean {
+        return myTypes.isEmpty()
+    }
+
+    /**
+     * Returns number of bindings contained
+     */
+    open val size
+        get() = myTypes.size
+
+    open fun getBoundName(index: Int): String? {
+        return myNames.getOrNull(index)
+    }
+
+    /**
+     * Get the type bound to the variable at `index`. If the type is [not bound][withoutVariable] but the index is
+     * within [size] constraints, this method returns [TypeFactory.unknownType] for compatibility. If the index is out
+     * of [size] constraints, this method will still return `null`.
+     */
+    open fun getBoundType(index: Int): KotlinType? {
+        if (index !in myTypes.indices) {
+            return null
+        }
+
+        return myTypes[index] ?: TypeFactory.unknownType()
+    }
+
+    /**
+     * Get the type bound to the variable at `index`. If the type is [not bound][withoutVariable] or the index is within
+     * [size] constraints, this method returns `null`.
+     */
+    open fun getBoundTypeOrNull(index: Int): KotlinType? {
+        return myTypes.getOrNull(index)
+    }
+
+    /**
+     * Accessor for getting bound types in declaration order
+     */
+    open val typeParameters: List<KotlinType>
+        get() {
+            if (myTypes.isEmpty()) {
+                return emptyList()
+            }
+
+            return Array(myTypes.size) { myTypes[it] ?: TypeFactory.unknownType() }.toList()
+        }
+
+    open fun hasUnbound(name: String): Boolean {
+        return myUnboundVariables?.contains(name) ?: false
+    }
+
+    /**
+     * Factory method that will create an object that can be used as a key for
+     * caching purposes by [TypeFactory]
+     *
+     * @return An object which can be used as a key in TypeFactory, or `null` if no key can be created.
+     */
+    open fun asKey(rawBase: KClass<*>): Any? {
+        if (invalidCacheKey()) {
+            return null
+        }
+
+        return AsKey(rawBase, myTypes, myHashCode)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Standard methods
+     *******************************************************************************************************************
+     */
+
+    override fun toString(): String {
+        if (myTypes.isEmpty()) {
+            return "<>"
+        }
+
+        val stringBuilder = StringBuilder()
+        stringBuilder.append('<')
+
+        for (i in myTypes.indices) {
+            if (i > 0) {
+                stringBuilder.append(',')
+            }
+
+            val type = myTypes[i]
+
+            if (type != null) {
+                stringBuilder.append(type.genericSignature)
+            } else {
+                stringBuilder.append('?')
+            }
+        }
+
+        stringBuilder.append('>')
+        return stringBuilder.toString()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+
+        if (other == null) {
+            return false
+        }
+
+        if (!other.hasClass(this::class)) {
+            return false
+        }
+
+        return myHashCode == (other as TypeBindings).myHashCode && myTypes.contentEquals(other.myTypes)
+    }
+
+    override fun hashCode(): Int {
+        return myHashCode
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Package accessible methods
+     *******************************************************************************************************************
+     */
+
+    internal fun typeParameterArray(): Array<KotlinType?> {
+        return myTypes
     }
 
     /*
@@ -84,7 +290,7 @@ open class TypeBindings private constructor(names: Array<String>?, types: Array<
     /**
      * Helper type used to allow caching of generic types
      */
-    internal class AsKey(private val myRaw: KClass<*>, private val myParams: Array<KotlinType>, hash: Int) {
+    internal class AsKey(private val myRaw: KClass<*>, private val myParams: Array<KotlinType?>, hash: Int) {
 
         private val myHash = 31 * myRaw.hashCode() + hash
 
@@ -129,32 +335,32 @@ open class TypeBindings private constructor(names: Array<String>?, types: Array<
 
     companion object {
 
-        val NO_STRINGS = emptyArray<String>()
+        private val NO_STRINGS = emptyArray<String?>()
 
-        val NO_TYPES = emptyArray<KotlinType>()
+        private val NO_TYPES = emptyArray<KotlinType?>()
 
         val EMPTY = TypeBindings(null, null, null)
 
         /**
          * Factory method for constructing bindings for given class using specified type parameters.
          */
-        fun create(erasedType: KClass<*>, typeList: List<KotlinType>?): TypeBindings {
+        fun create(erasedType: KClass<*>, typeList: List<KotlinType?>?): TypeBindings {
             return create(erasedType, typeList?.takeUnless { it.isEmpty() }?.toTypedArray() ?: NO_TYPES)
         }
 
-        fun create(erasedType: KClass<*>, types: Array<KotlinType>?): TypeBindings {
+        fun create(erasedType: KClass<*>, types: Array<KotlinType?>?): TypeBindings {
             val realTypes = types ?: NO_TYPES
 
             when (realTypes.size) {
-                1 -> return create(erasedType, realTypes[0])
-                2 -> return create(erasedType, realTypes[0], realTypes[1])
+                1 -> return create(erasedType, realTypes[0]!!)
+                2 -> return create(erasedType, realTypes[0]!!, realTypes[1]!!)
             }
 
             val vars = erasedType.typeParameters
             val names = if (vars.isEmpty()) {
                 NO_STRINGS
             } else {
-                Array(vars.size) { vars[it].name }
+                Array<String?>(vars.size) { vars[it].name }
             }
 
             if (names.size != vars.size) {
@@ -221,7 +427,7 @@ open class TypeBindings private constructor(names: Array<String>?, types: Array<
          * Alternate factory method that may be called if it is possible that type does or does not require type
          * parameters; this is mostly useful for collection- and map-like types.
          */
-        fun createIfNeeded(erasedType: KClass<*>, types: Array<KotlinType>?): TypeBindings {
+        fun createIfNeeded(erasedType: KClass<*>, types: Array<KotlinType?>?): TypeBindings {
             val vars = erasedType.typeParameters
 
             if (vars.isEmpty()) {
@@ -230,7 +436,7 @@ open class TypeBindings private constructor(names: Array<String>?, types: Array<
 
             val realTypes = types ?: NO_TYPES
             val length = vars.size
-            val names = Array(length) { vars[it].name }
+            val names = Array<String?>(length) { vars[it].name }
 
             if (names.size != vars.size) {
                 throw IllegalArgumentException(

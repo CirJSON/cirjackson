@@ -121,7 +121,7 @@ abstract class KotlinType : ResolvedType, Type {
      *
      * @return Newly created type instance with same type information, specified handler
      */
-    internal abstract fun withTypeHandler(handler: Any?): KotlinType
+    abstract fun withTypeHandler(handler: Any?): KotlinType
 
     /**
      * This mutant factory method will construct a new instance that is identical to this instance, except that it will
@@ -131,7 +131,7 @@ abstract class KotlinType : ResolvedType, Type {
      *
      * @return Newly created type instance with same type information, specified handler
      */
-    internal abstract fun withContentTypeHandler(handler: Any?): KotlinType
+    abstract fun withContentTypeHandler(handler: Any?): KotlinType
 
     /**
      * This mutant factory method will construct a new instance that is identical to this instance, except that it will
@@ -141,7 +141,7 @@ abstract class KotlinType : ResolvedType, Type {
      *
      * @return Newly created type instance with same type information, specified handler
      */
-    internal abstract fun withValueHandler(handler: Any?): KotlinType
+    abstract fun withValueHandler(handler: Any?): KotlinType
 
     /**
      * Mutant factory method that will construct a new instance that is identical to this instance, except that it will
@@ -151,7 +151,7 @@ abstract class KotlinType : ResolvedType, Type {
      *
      * @return Newly created type instance with same type information, specified handler
      */
-    internal abstract fun withContentValueHandler(handler: Any?): KotlinType
+    abstract fun withContentValueHandler(handler: Any?): KotlinType
 
     /**
      * Mutant factory method that will try to copy handlers that the specified source type instance had, if any; this
