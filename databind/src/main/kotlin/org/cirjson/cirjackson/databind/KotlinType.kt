@@ -351,7 +351,7 @@ abstract class KotlinType : ResolvedType, Type {
     /**
      * Method that may be used to find parameterization this type has for given type-erased generic target type.
      */
-    abstract fun findTypeParameters(expectedType: KClass<*>): Array<KotlinType>
+    abstract fun findTypeParameters(expectedType: KClass<*>): Array<KotlinType?>
 
     /*
      *******************************************************************************************************************
