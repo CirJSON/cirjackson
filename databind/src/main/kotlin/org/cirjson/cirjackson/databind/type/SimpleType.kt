@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.type
 import org.cirjson.cirjackson.databind.KotlinType
 import kotlin.reflect.KClass
 
+@Suppress("EqualsOrHashCode")
 open class SimpleType : TypeBase {
 
     protected constructor(base: TypeBase) : super(base)
@@ -29,7 +30,7 @@ open class SimpleType : TypeBase {
         TODO("Not yet implemented")
     }
 
-    override fun withContentValueHandler(handler: Any?): KotlinType {
+    override fun withContentValueHandler(handler: Any?): SimpleType {
         TODO("Not yet implemented")
     }
 

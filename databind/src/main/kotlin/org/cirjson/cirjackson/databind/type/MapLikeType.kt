@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.type
 import org.cirjson.cirjackson.databind.KotlinType
 import kotlin.reflect.KClass
 
+@Suppress("EqualsOrHashCode")
 open class MapLikeType : TypeBase {
 
     protected val myKeyType: KotlinType
@@ -24,23 +25,23 @@ open class MapLikeType : TypeBase {
         TODO("Not yet implemented")
     }
 
-    override fun withTypeHandler(handler: Any?): SimpleType {
+    override fun withTypeHandler(handler: Any?): MapLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withContentTypeHandler(handler: Any?): KotlinType {
+    override fun withContentTypeHandler(handler: Any?): MapLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withValueHandler(handler: Any?): SimpleType {
+    override fun withValueHandler(handler: Any?): MapLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withContentValueHandler(handler: Any?): KotlinType {
+    override fun withContentValueHandler(handler: Any?): MapLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withStaticTyping(): SimpleType {
+    override fun withStaticTyping(): MapLikeType {
         TODO("Not yet implemented")
     }
 

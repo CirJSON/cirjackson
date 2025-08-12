@@ -3,9 +3,10 @@ package org.cirjson.cirjackson.databind.type
 import org.cirjson.cirjackson.databind.KotlinType
 import kotlin.reflect.KClass
 
+@Suppress("EqualsOrHashCode")
 open class CollectionLikeType : TypeBase {
 
-    protected val myContentType: KotlinType
+    protected val myElementType: KotlinType
 
     /*
      *******************************************************************************************************************
@@ -14,30 +15,30 @@ open class CollectionLikeType : TypeBase {
      */
 
     protected constructor(base: TypeBase, contentType: KotlinType) : super(base) {
-        myContentType = contentType
+        myElementType = contentType
     }
 
     override fun withContentType(contentType: KotlinType): KotlinType {
         TODO("Not yet implemented")
     }
 
-    override fun withTypeHandler(handler: Any?): SimpleType {
+    override fun withTypeHandler(handler: Any?): CollectionLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withContentTypeHandler(handler: Any?): KotlinType {
+    override fun withContentTypeHandler(handler: Any?): CollectionLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withValueHandler(handler: Any?): SimpleType {
+    override fun withValueHandler(handler: Any?): CollectionLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withContentValueHandler(handler: Any?): KotlinType {
+    override fun withContentValueHandler(handler: Any?): CollectionLikeType {
         TODO("Not yet implemented")
     }
 
-    override fun withStaticTyping(): SimpleType {
+    override fun withStaticTyping(): CollectionLikeType {
         TODO("Not yet implemented")
     }
 
