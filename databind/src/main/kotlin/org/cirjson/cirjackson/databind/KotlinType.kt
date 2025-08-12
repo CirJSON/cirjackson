@@ -362,34 +362,34 @@ abstract class KotlinType : ResolvedType, Type {
     /**
      * Type handler associated with this type, if any.
      */
-    internal val typeHandler: Any?
+    open val typeHandler: Any?
         get() = myTypeHandler
 
     /**
      * Content type handler associated with this type, if any.
      */
-    internal open val contentTypeHandler: Any?
+    open val contentTypeHandler: Any?
         get() = null
 
     /**
      * Value handler associated with this type, if any.
      */
-    internal val valueHandler: Any?
+    val valueHandler: Any?
         get() = myTypeHandler
 
     /**
      * Content value handler associated with this type, if any.
      */
-    internal open val contentValueHandler: Any?
+    open val contentValueHandler: Any?
         get() = null
 
-    internal fun hasValueHandler() = myValueHandler != null
+    fun hasValueHandler() = myValueHandler != null
 
     /**
      * Helper method that checks whether this type, or its (optional) key or content type has [valueHandler] or
      * [typeHandler]; that is, are there any non-standard handlers associated with this type object.
      */
-    internal open fun hasHandlers() = myTypeHandler != null || myValueHandler != null
+    open fun hasHandlers() = myTypeHandler != null || myValueHandler != null
 
     /*
      *******************************************************************************************************************
