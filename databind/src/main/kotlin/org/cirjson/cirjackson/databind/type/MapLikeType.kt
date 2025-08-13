@@ -8,7 +8,7 @@ open class MapLikeType : TypeBase {
 
     protected val myKeyType: KotlinType
 
-    protected val myContentType: KotlinType
+    protected val myValueType: KotlinType
 
     /*
      *******************************************************************************************************************
@@ -16,9 +16,17 @@ open class MapLikeType : TypeBase {
      *******************************************************************************************************************
      */
 
-    protected constructor(base: TypeBase, keyType: KotlinType, contentType: KotlinType) : super(base) {
+    protected constructor(mapType: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            interfaces: Array<KotlinType>?, keyType: KotlinType, valueType: KotlinType, valueHandler: Any?,
+            typeHandler: Any?, isUsedAsStaticType: Boolean) : super(mapType, bindings, superClass, interfaces,
+            31 * keyType.hashCode() + valueType.hashCode(), valueHandler, typeHandler, isUsedAsStaticType) {
         myKeyType = keyType
-        myContentType = contentType
+        myValueType = valueType
+    }
+
+    protected constructor(base: TypeBase, keyType: KotlinType, valueType: KotlinType) : super(base) {
+        myKeyType = keyType
+        myValueType = valueType
     }
 
     override fun withContentType(contentType: KotlinType): KotlinType {

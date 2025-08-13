@@ -161,7 +161,7 @@ abstract class KotlinType : ResolvedType, Type {
      *
      * @return Newly created type instance, or `this`
      */
-    internal fun withHandlersFrom(src: KotlinType): KotlinType {
+    open fun withHandlersFrom(src: KotlinType): KotlinType {
         var type = this
 
         var handler = src.typeHandler

@@ -14,6 +14,13 @@ open class CollectionLikeType : TypeBase {
      *******************************************************************************************************************
      */
 
+    protected constructor(collectionType: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            interfaces: Array<KotlinType>?, elementType: KotlinType, valueHandler: Any?, typeHandler: Any?,
+            isUsedAsStaticType: Boolean) : super(collectionType, bindings, superClass, interfaces,
+            elementType.hashCode(), valueHandler, typeHandler, isUsedAsStaticType) {
+        myElementType = elementType
+    }
+
     protected constructor(base: TypeBase, contentType: KotlinType) : super(base) {
         myElementType = contentType
     }
