@@ -39,6 +39,8 @@ abstract class ResolvedType {
     val isReferenceType: Boolean
         get() = referencedType != null
 
+    abstract val isMapLikeType: Boolean
+
     /*
      *******************************************************************************************************************
      * Public API, type parameter access

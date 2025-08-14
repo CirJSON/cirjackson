@@ -294,6 +294,13 @@ abstract class KotlinType : ResolvedType, Type {
         get() = false
 
     /**
+     * Accessor that returns `true` if type is either true [Map] type, or something similar (meaning it has at least two
+     * type parameters;first one describing key type, second value type)
+     */
+    override val isMapLikeType: Boolean
+        get() = false
+
+    /**
      * Convenience accessor, shorthand for `rawClass == Object::class.java` and used to figure if we basically have
      * "untyped" type object.
      */
