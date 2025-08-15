@@ -119,7 +119,7 @@ open class IterationType : SimpleType {
         classSignature(myClass, stringBuilder, false)
         stringBuilder.append('<')
         myIteratedType.getErasedSignature(stringBuilder)
-        stringBuilder.append('>')
+        stringBuilder.append(">;")
         return stringBuilder
     }
 

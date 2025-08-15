@@ -36,7 +36,7 @@ abstract class ResolvedType {
      * and not regular values themselves. Typical examples include things like
      * [java.util.concurrent.atomic.AtomicReference], and various `Optional` types (in JDK8, Guava).
      */
-    val isReferenceType: Boolean
+    open val isReferenceType: Boolean
         get() = referencedType != null
 
     abstract val isMapLikeType: Boolean
