@@ -8,51 +8,75 @@ open class ResolvedRecursiveType(erasedType: KClass<*>, bindings: TypeBindings?)
 
     var selfReferencedType: KotlinType? = null
         set(value) {
-            TODO("Not yet implemented")
+            if (field != null) {
+                throw IllegalStateException("Trying to re-set self reference; old value = $field, new = $value")
+            }
+
+            field = value!!
+        }
+
+    override val superClass: KotlinType?
+        get() {
+            if (selfReferencedType == null) {
+                return super.superClass
+            }
+
+            return selfReferencedType!!.superClass
+        }
+
+    override val bindings: TypeBindings
+        get() {
+            if (selfReferencedType == null) {
+                return super.bindings
+            }
+
+            return selfReferencedType!!.bindings
         }
 
     override fun getGenericSignature(stringBuilder: StringBuilder): StringBuilder {
-        TODO("Not yet implemented")
+        return selfReferencedType?.getErasedSignature(stringBuilder) ?: stringBuilder.append('?')
     }
 
     override fun getErasedSignature(stringBuilder: StringBuilder): StringBuilder {
-        TODO("Not yet implemented")
+        return selfReferencedType?.getErasedSignature(stringBuilder) ?: stringBuilder
     }
 
     override fun withContentType(contentType: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun withTypeHandler(handler: Any?): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun withContentTypeHandler(handler: Any?): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun withValueHandler(handler: Any?): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun withContentValueHandler(handler: Any?): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun withStaticTyping(): KotlinType {
-        TODO("Not yet implemented")
+        return this
     }
 
     override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
             superInterfaces: Array<KotlinType>): KotlinType? {
-        TODO("Not yet implemented")
+        return null
     }
 
     override val isContainerType: Boolean
-        get() = TODO("Not yet implemented")
+        get() = false
 
     override fun toString(): String {
-        TODO("Not yet implemented")
+        val stringBuilder = StringBuilder(40).append("[recursive type; ")
+        stringBuilder.append(selfReferencedType?.rawClass?.qualifiedName ?: "UNRESOLVED")
+        return stringBuilder.toString()
     }
 
 }

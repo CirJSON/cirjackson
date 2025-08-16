@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.util.LookupCache
 import org.cirjson.cirjackson.databind.util.SimpleLookupCache
 import java.lang.reflect.Type
+import kotlin.reflect.KClass
 
 class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any, KotlinType>,
         internal val myModifiers: Array<TypeModifier>?, private val myClassLoader: ClassLoader?) :
@@ -34,6 +35,17 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
 
     /*
      *******************************************************************************************************************
+     * Low-level helper methods
+     *******************************************************************************************************************
+     */
+
+    @Throws(ClassNotFoundException::class)
+    fun findClass(className: String): KClass<*> {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Public general-purpose factory methods
      *******************************************************************************************************************
      */
@@ -43,6 +55,16 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
     }
 
     fun resolveMemberType(type: Type, contextBindings: TypeBindings): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Actual type resolution, traversal
+     *******************************************************************************************************************
+     */
+
+    internal fun fromClass(context: ClassStack?, rawType: KClass<*>, bindings: TypeBindings): KotlinType {
         TODO("Not yet implemented")
     }
 
