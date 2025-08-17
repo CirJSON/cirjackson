@@ -183,6 +183,10 @@ open class SimpleType : TypeBase {
             return SimpleType(raw, null, null, null, null, null, false)
         }
 
+        internal fun construct(clazz: KClass<*>): SimpleType {
+            return SimpleType(clazz)
+        }
+
     }
 
 }
