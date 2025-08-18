@@ -3,10 +3,13 @@ package org.cirjson.cirjackson.databind.type
 import org.cirjson.cirjackson.core.util.Snapshottable
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.KotlinType
-import org.cirjson.cirjackson.databind.util.ArrayBuilders
-import org.cirjson.cirjackson.databind.util.LookupCache
-import org.cirjson.cirjackson.databind.util.SimpleLookupCache
+import org.cirjson.cirjackson.databind.util.*
 import java.lang.reflect.Type
+import java.util.EnumMap
+import java.util.EnumSet
+import java.util.LinkedList
+import java.util.TreeMap
+import java.util.TreeSet
 import kotlin.reflect.KClass
 
 /**
@@ -118,7 +121,320 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
 
     @Throws(ClassNotFoundException::class)
     fun findClass(className: String): KClass<*> {
-        TODO("Not yet implemented")
+        if ('.' in className) {
+            val primitive = findPrimitive(className)
+
+            if (primitive != null) {
+                return primitive
+            }
+        }
+
+        var problem: Throwable? = null
+        val loader = classLoader ?: Thread.currentThread().contextClassLoader
+
+        if (loader != null) {
+            try {
+                return classForName(className, loader)
+            } catch (e: Exception) {
+                problem = e.rootCause
+            }
+        }
+
+        try {
+            return classForName(className)
+        } catch (e: Exception) {
+            if (problem == null) {
+                problem = e.rootCause
+            }
+        }
+
+        problem.throwIfRuntimeException()
+        throw ClassNotFoundException(problem.message, problem)
+    }
+
+    @Throws(ClassNotFoundException::class)
+    internal fun classForName(name: String, loader: ClassLoader): KClass<*> {
+        return Class.forName(name, true, loader).kotlin
+    }
+
+    @Throws(ClassNotFoundException::class)
+    internal fun classForName(name: String): KClass<*> {
+        return Class.forName(name).kotlin
+    }
+
+    private fun findPrimitive(className: String): KClass<*>? {
+        return when (className) {
+            "int" -> Int::class
+            "long" -> Long::class
+            "float" -> Float::class
+            "double" -> Double::class
+            "boolean" -> Boolean::class
+            "byte" -> Byte::class
+            "char" -> Char::class
+            "short" -> Short::class
+            "void" -> Void::class
+            else -> null
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Type conversion, parameterization resolution methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method for creating a subtype of given base type, as defined by specified subclass; but retaining generic
+     * type information if any. Can be used, for example, to get equivalent of `HashMap<String, Int>` from
+     * `Map<String, Int>` by giving `HashMap::class` as subclass. Shortcut for:
+     * ```
+     * constructSpecializedType(baseType, subclass, false);
+     * ```
+     * that is, will use "strict" compatibility checking, usually used for deserialization purposes (but often not for
+     * serialization).
+     *
+     * @param baseType Declared base type with resolved type parameters
+     *
+     * @param subclass Runtime subtype to use for resolving
+     *
+     * @return Resolved subtype
+     */
+    @Throws(IllegalArgumentException::class)
+    fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
+        return constructSpecializedType(baseType, subclass, false)
+    }
+
+    /**
+     * Factory method for creating a subtype of given base type, as defined by specified subclass; but retaining generic
+     * type information if any. Can be used, for example, to get equivalent of `HashMap<String, Int>` from
+     * `Map<String, Int>` by giving `HashMap::class` as subclass.
+     *
+     * @param baseType Declared base type with resolved type parameters
+     *
+     * @param subclass Runtime subtype to use for resolving
+     *
+     * @param relaxedCompatibilityCheck Whether checking for type-assignment compatibility should be "relaxed"
+     * (`true`) or "strict" (`false`): typically serialization uses relaxed, deserialization strict checking.
+     *
+     * @return Resolved subtype
+     */
+    @Throws(IllegalArgumentException::class)
+    fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>,
+            relaxedCompatibilityCheck: Boolean): KotlinType {
+        val rawBase = baseType.rawClass
+
+        if (rawBase == subclass) {
+            return baseType
+        }
+
+        val newType: KotlinType
+
+        if (rawBase == Any::class) {
+            newType = fromClass(null, subclass, EMPTY_BINDINGS)
+            return newType.withHandlersFrom(baseType)
+        }
+
+        if (!rawBase.isAssignableFrom(subclass)) {
+            throw IllegalArgumentException("Class ${subclass.qualifiedName} not subtype of ${baseType.typeDescription}")
+        }
+
+        if (baseType.isContainerType) {
+            if (baseType.isMapLikeType) {
+                if (subclass == HashMap::class || subclass == LinkedHashMap::class || subclass == EnumMap::class ||
+                        subclass == TreeMap::class) {
+                    newType = fromClass(null, subclass,
+                            TypeBindings.create(subclass, baseType.keyType!!, baseType.contentType!!))
+                    return newType.withHandlersFrom(baseType)
+                }
+            } else if (baseType.isCollectionLikeType) {
+                if (subclass == ArrayList::class || subclass == LinkedList::class || subclass == HashSet::class ||
+                        subclass == TreeSet::class) {
+                    newType = fromClass(null, subclass, TypeBindings.create(subclass, baseType.contentType!!))
+                    return newType.withHandlersFrom(baseType)
+                }
+
+                if (rawBase == EnumSet::class) {
+                    return baseType
+                }
+            }
+        }
+
+        if (baseType.bindings.isEmpty()) {
+            newType = fromClass(null, subclass, EMPTY_BINDINGS)
+            return newType.withHandlersFrom(baseType)
+        }
+
+        val typeParametersCount = subclass.typeParameters.size
+
+        if (typeParametersCount == 0) {
+            newType = fromClass(null, subclass, EMPTY_BINDINGS)
+            return newType.withHandlersFrom(baseType)
+        }
+
+        val typeBindings = bindingsForSubtype(baseType, typeParametersCount, subclass, relaxedCompatibilityCheck)
+        newType = fromClass(null, subclass, typeBindings)
+        return newType.withHandlersFrom(baseType)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun bindingsForSubtype(baseType: KotlinType, typeParametersCount: Int, subclass: KClass<*>,
+            relaxedCompatibilityCheck: Boolean): TypeBindings {
+        val placeholders = Array(typeParametersCount) { PlaceholderForType(it) }
+
+        val bindings = TypeBindings.create(subclass, Array(typeParametersCount) { placeholders[it] })
+        val tempSub = fromClass(null, subclass, bindings)
+        val baseWithPlaceholders = tempSub.findSuperType(baseType.rawClass) ?: throw IllegalArgumentException(
+                "Internal error: unable to locate supertype (${baseType.rawClass.qualifiedName}) from resolved subtype ${subclass.qualifiedName}")
+
+        val error = resolveTypePlaceholders(baseType, baseWithPlaceholders)
+
+        if (error != null) {
+            if (!relaxedCompatibilityCheck) {
+                throw IllegalArgumentException(
+                        "Failed to specialize base type ${baseType.toCanonical()} as ${subclass.qualifiedName}, problem: $error")
+            }
+        }
+
+        return TypeBindings.create(subclass,
+                Array(typeParametersCount) { placeholders[it].actualType() ?: unknownType() })
+    }
+
+    @Throws(IllegalArgumentException::class)
+    private fun resolveTypePlaceholders(sourceType: KotlinType, actualType: KotlinType): String? {
+        val expectedTypes = sourceType.bindings.typeParameters
+        val actualTypes = actualType.bindings.typeParameters
+
+        for (i in expectedTypes.indices) {
+            val expected = expectedTypes[i]
+            val actual = actualTypes.getOrNull(i) ?: unknownType()
+
+            if (!verifyAndResolvePlaceholders(expected, actual)) {
+                if (expected.hasRawClass(Any::class)) {
+                    continue
+                }
+
+                if (i == 0 && sourceType.isMapLikeType && actual.hasRawClass(Any::class)) {
+                    continue
+                }
+
+                if (expected.isInterface && expected.isTypeOrSuperTypeOf(actual.rawClass)) {
+                    continue
+                }
+
+                return "Type parameter #${i + 1}/${expectedTypes.size} differs; can not specialize ${expected.toCanonical()} with ${actual.toCanonical()}"
+            }
+        }
+
+        return null
+    }
+
+    @Throws(IllegalArgumentException::class)
+    private fun verifyAndResolvePlaceholders(expected: KotlinType, actual: KotlinType): Boolean {
+        if (actual is PlaceholderForType) {
+            actual.actualType(expected)
+            return true
+        }
+
+        if (expected.rawClass != actual.rawClass) {
+            return false
+        }
+
+        val expectedTypes = expected.bindings.typeParameters
+        val actualTypes = actual.bindings.typeParameters
+
+        for ((i, expectedTypeParameter) in expectedTypes.withIndex()) {
+            val actualTypeParameter = actualTypes.get(i)
+
+            if (!verifyAndResolvePlaceholders(expectedTypeParameter, actualTypeParameter)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * Method similar to [constructSpecializedType], but that creates a less-specific type of given type. Usually this
+     * is as simple as simply finding supertype with type erasure of `superClass`, but there may be need for some
+     * additional workarounds.
+     */
+    fun constructGeneralizedType(baseType: KotlinType, superClass: KClass<*>): KotlinType {
+        val rawBase = baseType.rawClass
+
+        if (rawBase == superClass) {
+            return baseType
+        }
+
+        val supertype = baseType.findSuperType(superClass)
+
+        if (supertype == null) {
+            if (!superClass.isAssignableFrom(rawBase)) {
+                throw IllegalArgumentException("Class ${superClass.qualifiedName} not a super-type of $baseType")
+            }
+
+            throw IllegalArgumentException(
+                    "Internal error: class ${superClass.qualifiedName} not included as super-type for $baseType")
+        }
+
+        return supertype
+    }
+
+    /**
+     * Factory method for constructing a [KotlinType] out of its canonical representation (see
+     * [KotlinType.toCanonical]).
+     *
+     * @param canonical Canonical string representation of a type
+     *
+     * @throws IllegalArgumentException If canonical representation is malformed, or class that type represents
+     * (including its generic parameters) is not found
+     */
+    @Throws(IllegalArgumentException::class)
+    fun constructFromCanonical(canonical: String): KotlinType {
+        return TypeParser.INSTANCE.parse(this, canonical)
+    }
+
+    /**
+     * Method that is to figure out actual type parameters that given class binds to generic types defined by given
+     * (generic) interface or class. This could mean, for example, trying to figure out key and value types for Map
+     * implementations.
+     *
+     * @param type Subtype (leaf type) that implements `expectedType`
+     */
+    fun findTypeParameters(type: KotlinType, expectedType: KClass<*>): Array<KotlinType?> {
+        return type.findSuperType(expectedType)?.bindings?.typeParameterArray() ?: NO_TYPES
+    }
+
+    /**
+     * Specialized alternative to [findTypeParameters]
+     */
+    fun findFirstTypeParameters(type: KotlinType, expectedType: KClass<*>): KotlinType {
+        return type.findSuperType(expectedType)?.bindings?.getBoundTypeOrNull(0) ?: unknownType()
+    }
+
+    /**
+     * Method that can be called to figure out more specific of two types (if they are related; that is, one implements
+     * or extends the other); or if not related, return the primary type.
+     *
+     * @param type1 Primary type to consider
+     *
+     * @param type2 Secondary type to consider
+     */
+    fun moreSpecificType(type1: KotlinType?, type2: KotlinType?): KotlinType? {
+        type1 ?: return type2
+        type2 ?: return type1
+
+        val raw1 = type1.rawClass
+        val raw2 = type2.rawClass
+
+        if (raw1 == raw2) {
+            return type1
+        }
+
+        if (raw1.isAssignableFrom(raw2)) {
+            return type2
+        }
+
+        return type1
     }
 
     /*
@@ -157,6 +473,10 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
          * factory when constructed.
          */
         val DEFAULT_INSTANCE = TypeFactory()
+
+        private val NO_TYPES = arrayOfNulls<KotlinType>(0)
+
+        private val EMPTY_BINDINGS = TypeBindings.EMPTY
 
         /*
          ***************************************************************************************************************
