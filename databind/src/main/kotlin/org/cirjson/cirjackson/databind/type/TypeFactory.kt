@@ -1,10 +1,15 @@
 package org.cirjson.cirjackson.databind.type
 
+import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.core.util.Snapshottable
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.util.*
+import java.lang.reflect.GenericArrayType
+import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 import java.util.EnumMap
 import java.util.EnumSet
 import java.util.LinkedList
@@ -447,7 +452,148 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
         TODO("Not yet implemented")
     }
 
+    fun constructType(typeReference: TypeReference<*>): KotlinType {
+        TODO("Not yet implemented")
+    }
+
     fun resolveMemberType(type: Type, contextBindings: TypeBindings): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Direct factory methods
+     *******************************************************************************************************************
+     */
+
+    fun constructArrayType(elementType: KClass<*>): ArrayType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructArrayType(elementType: KotlinType): ArrayType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructCollectionType(collectionClass: KClass<out Collection<*>>, elementClass: KClass<*>): CollectionType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructCollectionType(collectionClass: KClass<out Collection<*>>, elementType: KotlinType): CollectionType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructCollectionLikeType(collectionClass: KClass<*>, elementClass: KClass<*>): CollectionLikeType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructCollectionLikeType(collectionClass: KClass<*>, elementType: KotlinType): CollectionLikeType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructMapType(mapClass: KClass<out Map<*, *>>, keyClass: KClass<*>, valueClass: KClass<*>): MapType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructMapType(mapClass: KClass<out Map<*, *>>, keyType: KotlinType, valueType: KotlinType): MapType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructMapLikeType(mapClass: KClass<*>, keyClass: KClass<*>, valueClass: KClass<*>): MapLikeType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructMapLikeType(mapClass: KClass<*>, keyType: KotlinType, valueType: KotlinType): MapLikeType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructSimpleType(rawType: KClass<*>, parameterTypes: Array<KotlinType>): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructReferenceType(rawType: KClass<*>, referredType: KotlinType): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructParametricType(rawType: KClass<*>, vararg parameterClasses: KClass<*>): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructParametricType(rawType: KClass<*>, vararg parameterTypes: KotlinType): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructParametricType(rawType: KClass<*>, parameterTypes: TypeBindings): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Direct factory methods for "raw" variants, used when parameterization is unknown
+     *******************************************************************************************************************
+     */
+
+    fun constructRawCollectionType(collectionClass: KClass<out Collection<*>>): CollectionType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructRawCollectionLikeType(collectionClass: KClass<out Collection<*>>): CollectionLikeType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructRawMapType(mapClass: KClass<out Map<*, *>>): MapType {
+        TODO("Not yet implemented")
+    }
+
+    fun constructRawMapLikeType(mapClass: KClass<out Map<*, *>>): MapLikeType {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Low-level factory methods
+     *******************************************************************************************************************
+     */
+
+    private fun mapType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun collectionType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun referenceType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?, iteratedType: KotlinType): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun constructSimple(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun newSimpleType(rawClass: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun unknownType(): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun findWellKnownSimple(clazz: KClass<*>): KotlinType? {
         TODO("Not yet implemented")
     }
 
@@ -457,7 +603,52 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
+    private fun fromAny(context: ClassStack?, sourceType: Type, bindings: TypeBindings?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun applyModifiers(sourceType: Type, resolvedType: KotlinType): KotlinType {
+        TODO("Not yet implemented")
+    }
+
     internal fun fromClass(context: ClassStack?, rawType: KClass<*>, bindings: TypeBindings): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun resolveSuperClass(context: ClassStack?, rawType: KClass<*>, parentBindings: TypeBindings?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun resolveSuperInterfaces(context: ClassStack?, rawType: KClass<*>,
+            parentBindings: TypeBindings?): Array<KotlinType> {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromWellKnownClass(rawType: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromWellKnownInterface(rawType: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromParameterizedType(context: ClassStack?, parameterizedType: ParameterizedType,
+            parentBindings: TypeBindings?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromArrayType(context: ClassStack?, type: GenericArrayType, parentBindings: TypeBindings?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromVariable(context: ClassStack?, parameterizedType: TypeVariable<*>,
+            parentBindings: TypeBindings?): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    private fun fromWildcard(context: ClassStack?, type: WildcardType, parentBindings: TypeBindings?): KotlinType {
         TODO("Not yet implemented")
     }
 
