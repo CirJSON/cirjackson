@@ -13,6 +13,7 @@ import java.lang.reflect.WildcardType
 import java.util.EnumMap
 import java.util.EnumSet
 import java.util.LinkedList
+import java.util.Properties
 import java.util.TreeMap
 import java.util.TreeSet
 import kotlin.reflect.KClass
@@ -301,7 +302,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
         }
 
         return TypeBindings.create(subclass,
-                Array(typeParametersCount) { placeholders[it].actualType() ?: unknownType() })
+                Array(typeParametersCount) { placeholders[it].actualType() ?: TypeFactory.unknownType() })
     }
 
     @Throws(IllegalArgumentException::class)
@@ -311,7 +312,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
 
         for (i in expectedTypes.indices) {
             val expected = expectedTypes[i]
-            val actual = actualTypes.getOrNull(i) ?: unknownType()
+            val actual = actualTypes.getOrNull(i) ?: TypeFactory.unknownType()
 
             if (!verifyAndResolvePlaceholders(expected, actual)) {
                 if (expected.hasRawClass(Any::class)) {
@@ -413,7 +414,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      * Specialized alternative to [findTypeParameters]
      */
     fun findFirstTypeParameters(type: KotlinType, expectedType: KClass<*>): KotlinType {
-        return type.findSuperType(expectedType)?.bindings?.getBoundTypeOrNull(0) ?: unknownType()
+        return type.findSuperType(expectedType)?.bindings?.getBoundTypeOrNull(0) ?: TypeFactory.unknownType()
     }
 
     /**
@@ -449,15 +450,27 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      */
 
     fun constructType(type: Type): KotlinType {
-        TODO("Not yet implemented")
+        return fromAny(null, type, EMPTY_BINDINGS)
     }
 
     fun constructType(typeReference: TypeReference<*>): KotlinType {
-        TODO("Not yet implemented")
+        return fromAny(null, typeReference.type, EMPTY_BINDINGS)
     }
 
-    fun resolveMemberType(type: Type, contextBindings: TypeBindings): KotlinType {
-        TODO("Not yet implemented")
+    /**
+     * Method to call when resolving types of [Members][java.lang.reflect.Member] like Fields, Methods and Constructor
+     * parameters and there is a [TypeBindings] (that describes binding of type parameters within context) to pass. This
+     * is typically used only by code in databind itself.
+     *
+     * @param type Type of [java.lang.reflect.Member] to resolve
+     *
+     * @param contextBindings Type bindings from the context, often class in which member declared but may be subtype of
+     * that type (to bind actual bound type parameters). Not used if `type` is of type `KClass<?>`.
+     *
+     * @return Fully resolved type
+     */
+    fun resolveMemberType(type: Type, contextBindings: TypeBindings?): KotlinType {
+        return fromAny(null, type, contextBindings)
     }
 
     /*
@@ -466,64 +479,217 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
+    /**
+     * Method for constructing an [ArrayType].
+     *
+     * NOTE: type modifiers are NOT called on array type itself; but are called for element type (and other contained
+     * types)
+     */
     fun constructArrayType(elementType: KClass<*>): ArrayType {
-        TODO("Not yet implemented")
+        return ArrayType.construct(fromAny(null, elementType.java, null), null)
     }
 
+    /**
+     * Method for constructing an [ArrayType].
+     *
+     * NOTE: type modifiers are NOT called on array type itself; but are called for contained types.
+     */
     fun constructArrayType(elementType: KotlinType): ArrayType {
-        TODO("Not yet implemented")
+        return ArrayType.construct(elementType, null)
     }
 
+    /**
+     * Method for constructing a [CollectionType].
+     *
+     * NOTE: type modifiers are NOT called on Collection type itself; but are called for contained types.
+     */
     fun constructCollectionType(collectionClass: KClass<out Collection<*>>, elementClass: KClass<*>): CollectionType {
-        TODO("Not yet implemented")
+        return constructCollectionType(collectionClass, fromClass(null, elementClass, EMPTY_BINDINGS))
     }
 
+    /**
+     * Method for constructing a [CollectionType].
+     *
+     * NOTE: type modifiers are NOT called on Collection type itself; but are called for contained types.
+     */
     fun constructCollectionType(collectionClass: KClass<out Collection<*>>, elementType: KotlinType): CollectionType {
-        TODO("Not yet implemented")
+        val bindings = TypeBindings.createIfNeeded(collectionClass, elementType)
+        val result = fromClass(null, collectionClass, bindings) as CollectionType
+
+        if (bindings.isEmpty()) {
+            val realElementType = result.findSuperType(Collection::class)!!.contentType!!
+
+            if (realElementType != elementType) {
+                throw IllegalArgumentException(
+                        "Non-generic Collection class ${collectionClass.qualifiedName} did not resolve to something with element type $elementType but $realElementType ")
+            }
+        }
+
+        return result
     }
 
+    /**
+     * Method for constructing a [CollectionLikeType].
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself; but are called for contained types.
+     */
     fun constructCollectionLikeType(collectionClass: KClass<*>, elementClass: KClass<*>): CollectionLikeType {
-        TODO("Not yet implemented")
+        return constructCollectionLikeType(collectionClass, fromClass(null, elementClass, EMPTY_BINDINGS))
     }
 
+    /**
+     * Method for constructing a [CollectionLikeType].
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself; but are called for contained types.
+     */
     fun constructCollectionLikeType(collectionClass: KClass<*>, elementType: KotlinType): CollectionLikeType {
-        TODO("Not yet implemented")
+        val type = fromClass(null, collectionClass, TypeBindings.createIfNeeded(collectionClass, elementType))
+        return type as? CollectionLikeType ?: CollectionLikeType.upgradeFrom(type, elementType)
     }
 
+    /**
+     * Method for constructing a [MapType] instance
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself; but are called for contained types.
+     */
     fun constructMapType(mapClass: KClass<out Map<*, *>>, keyClass: KClass<*>, valueClass: KClass<*>): MapType {
-        TODO("Not yet implemented")
+        val (keyType, valueType) = if (mapClass == Properties::class) {
+            CORE_TYPE_STRING to CORE_TYPE_STRING
+        } else {
+            fromClass(null, keyClass, EMPTY_BINDINGS) to fromClass(null, valueClass, EMPTY_BINDINGS)
+        }
+
+        return constructMapType(mapClass, keyType, valueType)
     }
 
+    /**
+     * Method for constructing a [MapType] instance
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself.
+     */
     fun constructMapType(mapClass: KClass<out Map<*, *>>, keyType: KotlinType, valueType: KotlinType): MapType {
-        TODO("Not yet implemented")
+        val bindings = TypeBindings.createIfNeeded(mapClass, arrayOf(keyType, valueType))
+        val result = fromClass(null, mapClass, bindings) as MapType
+
+        if (!bindings.isEmpty()) {
+            return result
+        }
+
+        val type = result.findSuperType(Map::class)!!
+        val realKeyType = type.keyType!!
+
+        if (realKeyType != keyType) {
+            throw IllegalArgumentException(
+                    "Non-generic Map class ${mapClass.qualifiedName} did not resolve to something with key type $keyType but $realKeyType ")
+        }
+
+        val realValueType = type.contentType!!
+
+        if (realValueType != valueType) {
+            throw IllegalArgumentException(
+                    "Non-generic Map class ${mapClass.qualifiedName} did not resolve to something with value type $valueType but $realValueType ")
+        }
+
+        return result
     }
 
+    /**
+     * Method for constructing a [MapLikeType] instance.
+     *
+     * Do not use this method to create a true Map type -- use [constructMapType] instead. Map-like types are only meant
+     * for supporting things that do not implement Map interface and as such cannot use standard Map handlers.
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself; but are called for contained types.
+     */
     fun constructMapLikeType(mapClass: KClass<*>, keyClass: KClass<*>, valueClass: KClass<*>): MapLikeType {
-        TODO("Not yet implemented")
+        return constructMapLikeType(mapClass, fromClass(null, keyClass, EMPTY_BINDINGS),
+                fromClass(null, valueClass, EMPTY_BINDINGS))
     }
 
+    /**
+     * Method for constructing a [MapLikeType] instance.
+     *
+     * Do not use this method to create a true Map type -- use [constructMapType] instead. Map-like types are only meant
+     * for supporting things that do not implement Map interface and as such cannot use standard Map handlers.
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself.
+     */
     fun constructMapLikeType(mapClass: KClass<*>, keyType: KotlinType, valueType: KotlinType): MapLikeType {
-        TODO("Not yet implemented")
+        val type = fromClass(null, mapClass, TypeBindings.createIfNeeded(mapClass, arrayOf(keyType, valueType)))
+        return type as? MapLikeType ?: MapLikeType.upgradeFrom(type, keyType, valueType)
     }
 
-    fun constructSimpleType(rawType: KClass<*>, parameterTypes: Array<KotlinType>): KotlinType {
-        TODO("Not yet implemented")
+    /**
+     * Method for constructing a type instance with specified parameterization.
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself.
+     */
+    fun constructSimpleType(rawType: KClass<*>, parameterTypes: Array<KotlinType?>): KotlinType {
+        return fromClass(null, rawType, TypeBindings.create(rawType, parameterTypes))
     }
 
+    /**
+     * Method for constructing a [ReferenceType] instance with given type parameter (type MUST take one and only one
+     * type parameter)
+     *
+     * NOTE: type modifiers are NOT called on constructed type itself.
+     */
     fun constructReferenceType(rawType: KClass<*>, referredType: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        return ReferenceType.construct(rawType, TypeBindings.create(rawType, referredType), null, null, referredType)
     }
 
+    /**
+     * Factory method for constructing [KotlinType] that represents a parameterized type. For example, to represent type
+     * `List<Set<Int>>`, you could call
+     * ```
+     * val inner = TypeFactory.constructParametricType(Set::class, Integer::class)
+     * return TypeFactory.constructParametricType(List::class, inner)
+     * ```
+     *
+     * @param rawType Type-erased type to parameterize
+     *
+     * @param parameterClasses Type parameters to apply
+     */
     fun constructParametricType(rawType: KClass<*>, vararg parameterClasses: KClass<*>): KotlinType {
-        TODO("Not yet implemented")
+        return constructParametricType(rawType,
+                *Array(parameterClasses.size) { fromClass(null, parameterClasses[it], EMPTY_BINDINGS) })
     }
 
+    /**
+     * Factory method for constructing [KotlinType] that represents a parameterized type. For example, to represent type
+     * `List<Set<Int>>`, you could call
+     * ```
+     * val inner = TypeFactory.constructParametricType(Set::class, intKotlinType)
+     * return TypeFactory.constructParametricType(List::class, inner)
+     * ```
+     *
+     * @param rawType Actual type-erased type
+     *
+     * @param parameterTypes Type parameters to apply
+     *
+     * @return Fully resolved type for given base type and type parameters
+     */
     fun constructParametricType(rawType: KClass<*>, vararg parameterTypes: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        return constructParametricType(rawType,
+                TypeBindings.create(rawType, Array(parameterTypes.size) { parameterTypes[it] }))
     }
 
+    /**
+     * Factory method for constructing [KotlinType] that represents a parameterized type. The type's parameters are
+     * specified as an instance of [TypeBindings]. This is useful if you already have the type's parameters such as
+     * those found on [KotlinType]. For example, you could call
+     * ```
+     * return TypeFactory.constructParametricType(ArrayList::class, kotlinType.bindings)
+     * ```
+     * This effectively applies the parameterized types from one [KotlinType] to another class.
+     *
+     * @param rawType Actual type-erased type
+     *
+     * @param parameterTypes Type bindings for the raw type
+     */
     fun constructParametricType(rawType: KClass<*>, parameterTypes: TypeBindings): KotlinType {
-        TODO("Not yet implemented")
+        val resultType = fromClass(null, rawType, parameterTypes)
+        return applyModifiers(rawType.java, resultType)
     }
 
     /*
@@ -532,20 +698,64 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that can be used to construct "raw" Collection type; meaning that its
+     * parameterization is unknown.
+     * This is similar to using `Any::class` parameterization,
+     * and is equivalent to calling:
+     * ```
+     * typeFactory.constructCollectionType(collectionClass, TypeFactory.unknownType())
+     * ```
+     *
+     * This method should only be used if parameterization is completely unavailable.
+     */
     fun constructRawCollectionType(collectionClass: KClass<out Collection<*>>): CollectionType {
-        TODO("Not yet implemented")
+        return constructCollectionType(collectionClass, TypeFactory.unknownType())
     }
 
+    /**
+     * Method that can be used to construct "raw" Collection-like type; meaning that its
+     * parameterization is unknown.
+     * This is similar to using `Any::class` parameterization,
+     * and is equivalent to calling:
+     * ```
+     * typeFactory.constructCollectionLikeType(collectionClass, TypeFactory.unknownType())
+     * ```
+     *
+     * This method should only be used if parameterization is completely unavailable.
+     */
     fun constructRawCollectionLikeType(collectionClass: KClass<out Collection<*>>): CollectionLikeType {
-        TODO("Not yet implemented")
+        return constructCollectionLikeType(collectionClass, TypeFactory.unknownType())
     }
 
+    /**
+     * Method that can be used to construct "raw" Map type; meaning that its
+     * parameterization is unknown.
+     * This is similar to using `Any::class` parameterization,
+     * and is equivalent to calling:
+     * ```
+     * typeFactory.constructMapType(collectionClass, TypeFactory.unknownType(), TypeFactory.unknownType())
+     * ```
+     *
+     * This method should only be used if parameterization is completely unavailable.
+     */
     fun constructRawMapType(mapClass: KClass<out Map<*, *>>): MapType {
-        TODO("Not yet implemented")
+        return constructMapType(mapClass, TypeFactory.unknownType(), TypeFactory.unknownType())
     }
 
+    /**
+     * Method that can be used to construct "raw" Map-like type; meaning that its
+     * parameterization is unknown.
+     * This is similar to using `Any::class` parameterization,
+     * and is equivalent to calling:
+     * ```
+     * typeFactory.constructMapLikeType(collectionClass, TypeFactory.unknownType(), TypeFactory.unknownType())
+     * ```
+     *
+     * This method should only be used if parameterization is completely unavailable.
+     */
     fun constructRawMapLikeType(mapClass: KClass<out Map<*, *>>): MapLikeType {
-        TODO("Not yet implemented")
+        return constructMapLikeType(mapClass, TypeFactory.unknownType(), TypeFactory.unknownType())
     }
 
     /*
@@ -554,47 +764,126 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
-    private fun mapType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+    private fun mapType(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        val (keyType, valueType) = if (rawClass == Properties::class) {
+            CORE_TYPE_STRING to CORE_TYPE_STRING
+        } else {
+            val typeParameters = bindings.typeParameters
+
+            when (val count = typeParameters.size) {
+                0 -> unknownType() to unknownType()
+                2 -> typeParameters[0] to typeParameters[1]
+                else -> throw IllegalArgumentException(
+                        "Strange Map type ${rawClass.qualifiedName} with $count type parameter${"s".takeIf { count > 1 } ?: ""} ($bindings), can not resolve")
+            }
+        }
+
+        return MapType.construct(rawClass, bindings, superClass, superInterfaces, keyType, valueType)
     }
 
-    private fun collectionType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+    private fun collectionType(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        val typeParameters = bindings.typeParameters
+        val contentType = if (typeParameters.isEmpty()) {
+            unknownType()
+        } else if (typeParameters.size == 1) {
+            typeParameters[0]
+        } else {
+            throw IllegalArgumentException(
+                    "Strange Collection type ${rawClass.qualifiedName}: cannot determine type parameters")
+        }
+
+        return CollectionType.construct(rawClass, bindings, superClass, superInterfaces, contentType)
     }
 
-    private fun referenceType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+    private fun referenceType(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        val typeParameters = bindings.typeParameters
+        val contentType = if (typeParameters.isEmpty()) {
+            unknownType()
+        } else if (typeParameters.size == 1) {
+            typeParameters[0]
+        } else {
+            throw IllegalArgumentException(
+                    "Strange Reference type ${rawClass.qualifiedName}: cannot determine type parameters")
+        }
+
+        return ReferenceType.construct(rawClass, bindings, superClass, superInterfaces, contentType)
     }
 
-    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        val typeParameters = bindings.typeParameters
+        val contentType = if (typeParameters.isEmpty()) {
+            unknownType()
+        } else if (typeParameters.size == 1) {
+            typeParameters[0]
+        } else {
+            throw IllegalArgumentException(
+                    "Strange Iteration type ${rawClass.qualifiedName}: cannot determine type parameters")
+        }
+
+        return iterationType(rawClass, bindings, superClass, superInterfaces, contentType)
     }
 
-    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+    private fun iterationType(rawClass: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?, iteratedType: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        return IterationType.construct(rawClass, bindings, superClass, superInterfaces, iteratedType)
     }
 
-    private fun constructSimple(rawClass: KClass<*>, bindings: TypeBindings, superType: KotlinType?,
+    /**
+     * Factory method to call when no special [KotlinType] is needed, no generic parameters are passed. Default
+     * implementation may check pre-constructed values for "well-known" types, but if none found will simply call
+     * [newSimpleType]
+     */
+    private fun constructSimple(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        if (bindings.isEmpty()) {
+            val result = findWellKnownSimple(rawClass)
+
+            if (result != null) {
+                return result
+            }
+        }
+
+        return newSimpleType(rawClass, bindings, superClass, superInterfaces)
     }
 
-    private fun newSimpleType(rawClass: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+    /**
+     * Factory method that is to create a new [SimpleType] with no checks whatsoever. Default implementation calls the
+     * single argument constructor of [SimpleType].
+     */
+    private fun newSimpleType(rawClass: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType {
-        TODO("Not yet implemented")
+        return SimpleType.construct(rawClass, bindings, superClass, superInterfaces)
     }
 
     private fun unknownType(): KotlinType {
-        TODO("Not yet implemented")
+        return CORE_TYPE_ANY
     }
 
+    /**
+     * Helper method called to see if requested, non-generic-parameterized type is one of common, "well-known" types,
+     * instances of which are pre-constructed and do not need dynamic caching.
+     */
     private fun findWellKnownSimple(clazz: KClass<*>): KotlinType? {
-        TODO("Not yet implemented")
+        return if (clazz.isPrimitive) {
+            when (clazz) {
+                CLASS_BOOLEAN -> CORE_TYPE_BOOLEAN
+                CLASS_INT -> CORE_TYPE_INT
+                CLASS_LONG -> CORE_TYPE_LONG
+                CLASS_DOUBLE -> CORE_TYPE_DOUBLE
+                else -> null
+            }
+        } else {
+            when (clazz) {
+                CLASS_STRING -> CORE_TYPE_STRING
+                CLASS_ANY -> CORE_TYPE_ANY
+                CLASS_CIRJSON_NODE -> CORE_TYPE_CIRJSON_NODE
+                else -> null
+            }
+        }
     }
 
     /*
@@ -655,7 +944,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
     companion object {
 
         /**
-         * Default size used to construct [typeCache].
+         * Default size used to construct [myTypeCache].
          */
         const val DEFAULT_MAX_CACHE_SIZE = 200
 
@@ -709,6 +998,8 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
 
         private val CORE_TYPE_STRING = SimpleType.construct(CLASS_STRING)
 
+        private val CORE_TYPE_ANY = SimpleType.construct(CLASS_ANY)
+
         /**
          * Cache [Comparable] because it is both parametric (relatively costly to resolve) and mostly useless (no
          * special handling), better handle directly
@@ -738,7 +1029,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
          * as simple type for `Any`.
          */
         fun unknownType(): KotlinType {
-            TODO("Not yet implemented")
+            return DEFAULT_INSTANCE.unknownType()
         }
 
     }

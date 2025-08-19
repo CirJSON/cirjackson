@@ -187,6 +187,11 @@ open class SimpleType : TypeBase {
             return SimpleType(clazz)
         }
 
+        internal fun construct(clazz: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+                superInterfaces: Array<KotlinType>?): SimpleType {
+            return SimpleType(clazz, bindings, superClass, superInterfaces)
+        }
+
     }
 
 }
