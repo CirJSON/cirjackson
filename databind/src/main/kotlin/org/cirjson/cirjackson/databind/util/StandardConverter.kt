@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.util
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import kotlin.reflect.full.starProjectedType
+import kotlin.reflect.jvm.javaType
 
 /**
  * Standard implementation of [Converter] that supports explicit type access, instead of relying on type detection of
@@ -25,7 +26,7 @@ abstract class StandardConverter<IN, OUT> : Converter<IN, OUT> {
     }
 
     protected open fun findConverterType(typeFactory: TypeFactory): KotlinType {
-        val thisType = typeFactory.constructType(this::class.starProjectedType)
+        val thisType = typeFactory.constructType(this::class.starProjectedType.javaType)
         val converterType = thisType.findSuperType(Converter::class)
 
         if (converterType == null || converterType.containedTypeCount() < 2) {

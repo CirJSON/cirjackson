@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.type.TypeBindings
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import kotlin.reflect.KType
+import kotlin.reflect.jvm.javaType
 
 /**
  * Interface that defines API used by members (like [AnnotatedMethod]) to dynamically resolve types they have.
@@ -15,7 +16,7 @@ interface TypeResolutionContext {
     class Basic(private val myTypeFactory: TypeFactory, private val myBindings: TypeBindings) : TypeResolutionContext {
 
         override fun resolveType(type: KType): KotlinType {
-            return myTypeFactory.resolveMemberType(type, myBindings)
+            return myTypeFactory.resolveMemberType(type.javaType, myBindings)
         }
 
     }
@@ -27,7 +28,7 @@ interface TypeResolutionContext {
     class Empty(private val myTypeFactory: TypeFactory) : TypeResolutionContext {
 
         override fun resolveType(type: KType): KotlinType {
-            return myTypeFactory.constructType(type)
+            return myTypeFactory.constructType(type.javaType)
         }
 
     }

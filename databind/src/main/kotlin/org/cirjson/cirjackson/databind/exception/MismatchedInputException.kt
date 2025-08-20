@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.core.CirJsonLocation
 import org.cirjson.cirjackson.core.CirJsonParser
 import org.cirjson.cirjackson.databind.DatabindException
 import org.cirjson.cirjackson.databind.KotlinType
+import kotlin.reflect.KClass
 
 /**
  * General exception type used as the base class for all [DatabindExceptions][DatabindException] that are due to input
@@ -21,7 +22,7 @@ open class MismatchedInputException : DatabindException {
     /**
      * Intended target type, with which input did not match, if known; `null` if not known for some reason.
      */
-    var targetType: Class<*>? = null
+    var targetType: KClass<*>? = null
         protected set
 
     protected constructor(parser: CirJsonParser?, message: String) : this(parser, message, null as KotlinType?)
@@ -29,7 +30,7 @@ open class MismatchedInputException : DatabindException {
     protected constructor(parser: CirJsonParser?, message: String, location: CirJsonLocation) : super(parser, message,
             location)
 
-    protected constructor(parser: CirJsonParser?, message: String, targetType: Class<*>) : super(parser, message) {
+    protected constructor(parser: CirJsonParser?, message: String, targetType: KClass<*>) : super(parser, message) {
         this.targetType = targetType
     }
 
@@ -48,7 +49,7 @@ open class MismatchedInputException : DatabindException {
             return MismatchedInputException(parser, message, targetType)
         }
 
-        fun from(parser: CirJsonParser?, targetType: Class<*>, message: String): MismatchedInputException {
+        fun from(parser: CirJsonParser?, targetType: KClass<*>, message: String): MismatchedInputException {
             return MismatchedInputException(parser, message, targetType)
         }
 

@@ -11,78 +11,79 @@ import org.cirjson.cirjackson.core.util.Instantiatable
  * Helper class used for containing settings specifically related to (re)configuring
  * [CirJsonGenerator][org.cirjson.cirjackson.core.CirJsonGenerator] constructed for writing output.
  *
- * @property prettyPrinter To allow for dynamic enabling/disabling of pretty printing, pretty printer can be optionally
+ * @property myPrettyPrinter To allow for dynamic enabling/disabling of pretty printing, pretty printer can be optionally
  * configured for the writer as well
  *
- * @property schema When using data format that uses a schema, schema is passed to generator.
+ * @property mySchema When using data format that uses a schema, schema is passed to generator.
  *
- * @property characterEscapes Caller may want to specify character escaping details, either as defaults or on a
+ * @property myCharacterEscapes Caller may want to specify character escaping details, either as defaults or on a
  * call-by-call basis.
  *
- * @property rootValueSeparator Caller may want to override so-called "root value separator", String added (verbatim,
- * with no quoting or escaping) between values in root context. The default value is a single space character, but this is often changed to linefeed.
+ * @property myRootValueSeparator Caller may want to override so-called "root value separator", String added (verbatim,
+ * with no quoting or escaping) between values in root context. The default value is a single space character, but this
+ * is often changed to linefeed.
  */
-class GeneratorSettings(val prettyPrinter: PrettyPrinter?, val schema: FormatSchema?,
-        val characterEscapes: CharacterEscapes?, val rootValueSeparator: SerializableString?) {
+class GeneratorSettings(val myPrettyPrinter: PrettyPrinter?, val mySchema: FormatSchema?,
+        val myCharacterEscapes: CharacterEscapes?, val myRootValueSeparator: SerializableString?) {
 
     fun with(prettyPrinter: PrettyPrinter?): GeneratorSettings {
-        if (this.prettyPrinter === prettyPrinter) {
+        if (this.myPrettyPrinter === prettyPrinter) {
             return this
         }
 
-        return GeneratorSettings(prettyPrinter, schema, characterEscapes, rootValueSeparator)
+        return GeneratorSettings(prettyPrinter, mySchema, myCharacterEscapes, myRootValueSeparator)
     }
 
     fun with(schema: FormatSchema?): GeneratorSettings {
-        if (this.schema === schema) {
+        if (this.mySchema === schema) {
             return this
         }
 
-        return GeneratorSettings(prettyPrinter, schema, characterEscapes, rootValueSeparator)
+        return GeneratorSettings(myPrettyPrinter, schema, myCharacterEscapes, myRootValueSeparator)
     }
 
     fun with(characterEscapes: CharacterEscapes?): GeneratorSettings {
-        if (this.characterEscapes === characterEscapes) {
+        if (this.myCharacterEscapes === characterEscapes) {
             return this
         }
 
-        return GeneratorSettings(prettyPrinter, schema, characterEscapes, rootValueSeparator)
+        return GeneratorSettings(myPrettyPrinter, mySchema, characterEscapes, myRootValueSeparator)
     }
 
     fun withRootValueSeparator(separator: String?): GeneratorSettings {
         if (separator == null) {
-            if (rootValueSeparator === NULL_ROOT_VALUE_SEPARATOR) {
+            if (myRootValueSeparator === NULL_ROOT_VALUE_SEPARATOR) {
                 return this
             }
 
-            return GeneratorSettings(prettyPrinter, schema, characterEscapes, NULL_ROOT_VALUE_SEPARATOR)
+            return GeneratorSettings(myPrettyPrinter, mySchema, myCharacterEscapes, NULL_ROOT_VALUE_SEPARATOR)
         }
 
         if (separator == rootValueSeparatorAsString()) {
             return this
         }
 
-        return GeneratorSettings(prettyPrinter, schema, characterEscapes, SerializedString(separator))
+        return GeneratorSettings(myPrettyPrinter, mySchema, myCharacterEscapes, SerializedString(separator))
     }
 
     fun withRootValueSeparator(separator: SerializableString?): GeneratorSettings {
         if (separator == null) {
-            if (rootValueSeparator == null) {
+            if (myRootValueSeparator == null) {
                 return this
             }
 
-            return GeneratorSettings(prettyPrinter, schema, characterEscapes, null)
+            return GeneratorSettings(myPrettyPrinter, mySchema, myCharacterEscapes, null)
         }
 
-        if (separator == rootValueSeparator) {
+        if (separator == myRootValueSeparator) {
             return this
         }
 
-        return GeneratorSettings(prettyPrinter, schema, characterEscapes, separator)
+        return GeneratorSettings(myPrettyPrinter, mySchema, myCharacterEscapes, separator)
     }
 
     private fun rootValueSeparatorAsString(): String? {
-        return rootValueSeparator?.value
+        return myRootValueSeparator?.value
     }
 
     /*
@@ -92,39 +93,39 @@ class GeneratorSettings(val prettyPrinter: PrettyPrinter?, val schema: FormatSch
      */
 
     fun getSchema(): FormatSchema? {
-        return schema
+        return mySchema
     }
 
     fun getCharacterEscapes(): CharacterEscapes? {
-        return characterEscapes
+        return myCharacterEscapes
     }
 
     fun getPrettyPrinter(): PrettyPrinter? {
-        if (prettyPrinter == null) {
+        if (myPrettyPrinter == null) {
             return null
         }
 
-        if (prettyPrinter is Instantiatable<*>) {
-            return prettyPrinter.createInstance() as PrettyPrinter?
+        if (myPrettyPrinter is Instantiatable<*>) {
+            return myPrettyPrinter.createInstance() as PrettyPrinter?
         }
 
-        return prettyPrinter
+        return myPrettyPrinter
     }
 
     fun hasPrettyPrinter(): Boolean {
-        return prettyPrinter != null
+        return myPrettyPrinter != null
     }
 
     fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
-        if (rootValueSeparator == null) {
+        if (myRootValueSeparator == null) {
             return defaultSeparator
         }
 
-        if (rootValueSeparator === NULL_ROOT_VALUE_SEPARATOR) {
+        if (myRootValueSeparator === NULL_ROOT_VALUE_SEPARATOR) {
             return null
         }
 
-        return rootValueSeparator
+        return myRootValueSeparator
     }
 
     companion object {

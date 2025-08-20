@@ -15,7 +15,6 @@ import org.cirjson.cirjackson.databind.CirJacksonSerializable
 import org.cirjson.cirjackson.databind.DeserializationContext
 import org.cirjson.cirjackson.databind.DeserializationFeature
 import org.cirjson.cirjackson.databind.configuration.PackageVersion
-import sun.jvm.hotspot.oops.CellTypeState.value
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -835,7 +834,7 @@ open class TokenBuffer : CirJsonGenerator {
 
     override fun writePOJO(pojo: Any?): CirJsonGenerator {
         pojo ?: return writeNull()
-        val raw = value::class
+        val raw = pojo::class
 
         if (raw == ByteArray::class || pojo is RawValue || myObjectWriteContext == null) {
             appendValue(CirJsonToken.VALUE_EMBEDDED_OBJECT, pojo)

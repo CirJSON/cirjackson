@@ -186,7 +186,7 @@ interface BeanProperty : FullyNamed {
             }
 
             val value = introspector.findPropertyInclusion(config, member!!) ?: return baseValue
-            return baseValue.withOverrides(value)
+            return baseValue!!.withOverrides(value)
         }
 
         override fun findAliases(config: MapperConfig<*>): List<PropertyName> {
