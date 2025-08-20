@@ -12,7 +12,7 @@ CirJackson core annotations package (because it cannot have any external depende
 # Package org.cirjson.cirjackson.databind.cirjsonFormatVisitors
 
 Classes used for exposing logical structure of POJOs as Jackson sees it, and exposed via
-[org.cirjson.cirjackson.databind.ObjectMapper.acceptCirJsonFormatVisitor]methods.
+[org.cirjson.cirjackson.databind.ObjectMapper.acceptCirJsonFormatVisitor] methods.
 
 The main entrypoint for code, then, is
 [org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitorWrapper] and other types are recursively
@@ -22,6 +22,12 @@ needed during traversal.
 
 Package that contains most of configuration-related classes; exception being couple of most-commonly used configuration
 things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
+
+# Package org.cirjson.cirjackson.databind.type
+
+Package that contains concrete implementations of [org.cirjson.cirjackson.databind.KotlinType], as well as the factory
+([org.cirjson.cirjackson.databind.type.TypeFactory]) for constructing instances from various input data types (like
+[KClass], [java.lang.reflect.Type]) and programmatically (for structured types, arrays, [Lists][List] and [Maps][Map]).
 
 # Package org.cirjson.cirjackson.databind.util
 
