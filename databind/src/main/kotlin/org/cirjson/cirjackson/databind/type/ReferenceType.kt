@@ -93,8 +93,8 @@ open class ReferenceType : SimpleType {
                 myAnchorType, myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): ReferenceType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): ReferenceType {
         return ReferenceType(raw, myBindings, superClass, superInterfaces, myReferencedType, myAnchorType,
                 myValueHandler, myTypeHandler, isUsedAsStaticType)
     }

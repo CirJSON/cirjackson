@@ -65,8 +65,8 @@ class MapType private constructor(mapType: KClass<*>, bindings: TypeBindings?, s
                 myValueType.withStaticTyping(), myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
         return MapType(raw, bindings, superClass, superInterfaces, myKeyType, myValueType, myValueHandler,
                 myTypeHandler, isUsedAsStaticType)
     }

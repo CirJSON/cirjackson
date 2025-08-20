@@ -107,8 +107,8 @@ open class MapLikeType : TypeBase {
                 myValueType.withStaticTyping(), myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
         return MapLikeType(raw, bindings, superClass, superInterfaces, myKeyType, myValueType, myValueHandler,
                 myTypeHandler, isUsedAsStaticType)
     }

@@ -72,8 +72,8 @@ class ArrayType private constructor(private val myComponentType: KotlinType, bin
                 true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType? {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
         return null
     }
 

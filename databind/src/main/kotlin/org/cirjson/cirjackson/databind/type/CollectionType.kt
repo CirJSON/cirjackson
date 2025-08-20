@@ -56,8 +56,8 @@ class CollectionType private constructor(collectionType: KClass<*>, bindings: Ty
                 myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
         return CollectionType(raw, bindings, superClass, superInterfaces, myElementType, myValueHandler, myTypeHandler,
                 isUsedAsStaticType)
     }

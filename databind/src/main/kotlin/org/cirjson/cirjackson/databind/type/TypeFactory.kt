@@ -5,17 +5,10 @@ import org.cirjson.cirjackson.core.util.Snapshottable
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.util.*
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
-import java.lang.reflect.TypeVariable
-import java.lang.reflect.WildcardType
-import java.util.EnumMap
-import java.util.EnumSet
-import java.util.LinkedList
-import java.util.Properties
-import java.util.TreeMap
-import java.util.TreeSet
+import java.lang.reflect.*
+import java.util.*
+import java.util.concurrent.atomic.AtomicReference
+import java.util.stream.*
 import kotlin.reflect.KClass
 
 /**
@@ -407,7 +400,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      * @param type Subtype (leaf type) that implements `expectedType`
      */
     fun findTypeParameters(type: KotlinType, expectedType: KClass<*>): Array<KotlinType?> {
-        return type.findSuperType(expectedType)?.bindings?.typeParameterArray() ?: NO_TYPES
+        return type.findSuperType(expectedType)?.bindings?.typeParameterArray() ?: NO_TYPES.nullable()
     }
 
     /**
@@ -687,7 +680,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *
      * @param parameterTypes Type bindings for the raw type
      */
-    fun constructParametricType(rawType: KClass<*>, parameterTypes: TypeBindings): KotlinType {
+    fun constructParametricType(rawType: KClass<*>, parameterTypes: TypeBindings?): KotlinType {
         val resultType = fromClass(null, rawType, parameterTypes)
         return applyModifiers(rawType.java, resultType)
     }
@@ -833,24 +826,6 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
     }
 
     /**
-     * Factory method to call when no special [KotlinType] is needed, no generic parameters are passed. Default
-     * implementation may check pre-constructed values for "well-known" types, but if none found will simply call
-     * [newSimpleType]
-     */
-    private fun constructSimple(rawClass: KClass<*>, bindings: TypeBindings, superClass: KotlinType?,
-            superInterfaces: Array<KotlinType>?): KotlinType {
-        if (bindings.isEmpty()) {
-            val result = findWellKnownSimple(rawClass)
-
-            if (result != null) {
-                return result
-            }
-        }
-
-        return newSimpleType(rawClass, bindings, superClass, superInterfaces)
-    }
-
-    /**
      * Factory method that is to create a new [SimpleType] with no checks whatsoever. Default implementation calls the
      * single argument constructor of [SimpleType].
      */
@@ -892,53 +867,251 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory method that can be used if type information is passed as typing returned from `genericXxx` accessors
+     * (usually for a return or argument type).
+     */
     private fun fromAny(context: ClassStack?, sourceType: Type, bindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+        val resultType = when (sourceType) {
+            is Class<*> -> fromClass(context, sourceType.kotlin, EMPTY_BINDINGS)
+            is ParameterizedType -> fromParameterizedType(context, sourceType, bindings)
+            is KotlinType -> return sourceType
+            is GenericArrayType -> fromArrayType(context, sourceType, bindings)
+            is TypeVariable<*> -> fromVariable(context, sourceType, bindings!!)
+            is WildcardType -> fromWildcard(context, sourceType, bindings)
+            else -> throw IllegalArgumentException("Unrecognized Type: $sourceType")
+        }
+
+        return applyModifiers(sourceType, resultType)
     }
 
     private fun applyModifiers(sourceType: Type, resolvedType: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        myModifiers ?: return resolvedType
+        var resultType = resolvedType
+        val bindings = resultType.bindings
+
+        for (modifier in myModifiers) {
+            resultType = modifier.modifyType(resultType, sourceType, bindings, this)
+        }
+
+        return resultType
     }
 
-    internal fun fromClass(context: ClassStack?, rawType: KClass<*>, bindings: TypeBindings): KotlinType {
-        TODO("Not yet implemented")
+    /**
+     * @param bindings Mapping of formal parameter declarations (for generic types) into actual types
+     */
+    internal fun fromClass(context: ClassStack?, rawType: KClass<*>, bindings: TypeBindings?): KotlinType {
+        var result = findWellKnownSimple(rawType)
+
+        if (result != null) {
+            return result
+        }
+
+        val key = if (bindings == null || bindings.isEmpty()) {
+            rawType
+        } else {
+            bindings.asKey(rawType)
+        }
+
+        result = key?.let { myTypeCache[it] }
+
+        if (result != null) {
+            return result
+        }
+
+        val realContext = if (context == null) {
+            ClassStack(rawType)
+        } else {
+            val previous = context.find(rawType)
+
+            if (previous != null) {
+                val selfReference = ResolvedRecursiveType(rawType, EMPTY_BINDINGS)
+                previous.addSelfReference(selfReference)
+                return selfReference
+            }
+
+            context.child(rawType)
+        }
+
+        if (rawType.isArray) {
+            result = ArrayType.construct(fromAny(realContext, rawType.componentType.java, bindings), bindings)
+            realContext.resolveSelfReferences(result)
+
+            if (key != null && !result.hasHandlers()) {
+                myTypeCache.setIfAbsent(key, result)
+            }
+
+            return result
+        }
+
+        val superClass = if (rawType.isInterface) {
+            null
+        } else {
+            resolveSuperClass(realContext, rawType, bindings)
+        }
+
+        val superInterfaces = resolveSuperInterfaces(realContext, rawType, bindings)
+
+        if (rawType == Properties::class) {
+            result = MapType.construct(rawType, bindings, superClass, superInterfaces, CORE_TYPE_STRING,
+                    CORE_TYPE_STRING)
+        } else if (superClass != null) {
+            result = superClass.refine(rawType, bindings, superClass, superInterfaces)
+        }
+
+        if (result != null) {
+            realContext.resolveSelfReferences(result)
+
+            if (key != null && !result.hasHandlers()) {
+                myTypeCache.setIfAbsent(key, result)
+            }
+
+            return result
+        }
+
+        result = fromWellKnownClass(rawType, bindings, superClass, superInterfaces) ?: fromWellKnownInterface(rawType,
+                bindings, superClass, superInterfaces) ?: newSimpleType(rawType, bindings, superClass, superInterfaces)
+
+        realContext.resolveSelfReferences(result)
+
+        if (key != null && !result.hasHandlers()) {
+            myTypeCache.setIfAbsent(key, result)
+        }
+
+        return result
     }
 
-    private fun resolveSuperClass(context: ClassStack?, rawType: KClass<*>, parentBindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+    private fun resolveSuperClass(context: ClassStack?, rawType: KClass<*>,
+            parentBindings: TypeBindings?): KotlinType? {
+        val parent = rawType.java.genericSuperclass ?: return null
+        return fromAny(context, parent, parentBindings)
     }
 
     private fun resolveSuperInterfaces(context: ClassStack?, rawType: KClass<*>,
             parentBindings: TypeBindings?): Array<KotlinType> {
-        TODO("Not yet implemented")
+        val types = rawType.java.genericInterfaces
+
+        if (types.isEmpty()) {
+            return NO_TYPES
+        }
+
+        return Array(types.size) { fromAny(context, types[it], parentBindings) }
     }
 
-    private fun fromWellKnownClass(rawType: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
+    /**
+     * Helper class used to check whether exact class for which type is being constructed is one of well-known base
+     * interfaces or classes that indicates alternate [KotlinType] implementation.
+     */
+    private fun fromWellKnownClass(rawType: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
             superInterfaces: Array<KotlinType>?): KotlinType? {
-        TODO("Not yet implemented")
+        val realBindings = bindings ?: EMPTY_BINDINGS
+
+        if (rawType == Map::class) {
+            return mapType(rawType, realBindings, superClass, superInterfaces)
+        }
+
+        if (rawType == Collection::class) {
+            return collectionType(rawType, realBindings, superClass, superInterfaces)
+        }
+
+        if (rawType == AtomicReference::class || rawType == Optional::class) {
+            return referenceType(rawType, realBindings, superClass, superInterfaces)
+        }
+
+        if (rawType == Iterator::class || rawType == Stream::class) {
+            return iterationType(rawType, realBindings, superClass, superInterfaces)
+        }
+
+        if (BaseStream::class.isAssignableFrom(rawType)) {
+            if (DoubleStream::class.isAssignableFrom(rawType)) {
+                return iterationType(rawType, realBindings, superClass, superInterfaces, CORE_TYPE_DOUBLE)
+            } else if (IntStream::class.isAssignableFrom(rawType)) {
+                return iterationType(rawType, realBindings, superClass, superInterfaces, CORE_TYPE_INT)
+            } else if (LongStream::class.isAssignableFrom(rawType)) {
+                return iterationType(rawType, realBindings, superClass, superInterfaces, CORE_TYPE_LONG)
+            }
+        }
+
+        val referenced = when (rawType) {
+            OptionalInt::class -> CORE_TYPE_INT
+            OptionalLong::class -> CORE_TYPE_LONG
+            OptionalDouble::class -> CORE_TYPE_DOUBLE
+            else -> return null
+        }
+
+        val base = newSimpleType(rawType, realBindings, superClass, superInterfaces)
+        return ReferenceType.upgradeFrom(base, referenced)
     }
 
-    private fun fromWellKnownInterface(rawType: KClass<*>, bindings: TypeBindings?, superType: KotlinType?,
-            superInterfaces: Array<KotlinType>?): KotlinType? {
-        TODO("Not yet implemented")
+    private fun fromWellKnownInterface(rawType: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>): KotlinType? {
+        for (superInterface in superInterfaces) {
+            val result = superInterface.refine(rawType, bindings, superClass, superInterfaces)
+
+            if (result != null) {
+                return result
+            }
+        }
+
+        return null
     }
 
+    /**
+     * This method deals with parameterized types, that is, first class generic classes.
+     */
     private fun fromParameterizedType(context: ClassStack?, parameterizedType: ParameterizedType,
             parentBindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+        val rawType = (parameterizedType.rawType as Class<*>).kotlin
+
+        if (rawType == CLASS_ENUM) {
+            return CORE_TYPE_ENUM
+        }
+
+        if (rawType == CLASS_COMPARABLE) {
+            return CORE_TYPE_COMPARABLE
+        }
+
+        val arguments = parameterizedType.actualTypeArguments
+        val newBindings = if (arguments.isEmpty()) {
+            EMPTY_BINDINGS
+        } else {
+            TypeBindings.create(rawType, Array(arguments.size) { fromAny(context, arguments[it], parentBindings) })
+        }
+
+        return fromClass(context, rawType, newBindings)
     }
 
-    private fun fromArrayType(context: ClassStack?, type: GenericArrayType, parentBindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+    private fun fromArrayType(context: ClassStack?, type: GenericArrayType, bindings: TypeBindings?): KotlinType {
+        val elementType = fromAny(context, type.genericComponentType, bindings)
+        return ArrayType.construct(elementType, bindings)
     }
 
-    private fun fromVariable(context: ClassStack?, parameterizedType: TypeVariable<*>,
-            parentBindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+    private fun fromVariable(context: ClassStack?, variable: TypeVariable<*>,
+            bindings: TypeBindings): KotlinType {
+        val name = variable.name
+        val type = bindings.findBoundType(name)
+
+        if (type != null) {
+            return type
+        }
+
+        if (bindings.hasUnbound(name)) {
+            return CORE_TYPE_ANY
+        }
+
+        val realBindings = bindings.withUnboundVariable(name)
+
+        lateinit var bounds: Array<Type>
+
+        synchronized(variable) {
+            bounds = variable.bounds
+        }
+
+        return fromAny(context, bounds[0], realBindings)
     }
 
-    private fun fromWildcard(context: ClassStack?, type: WildcardType, parentBindings: TypeBindings?): KotlinType {
-        TODO("Not yet implemented")
+    private fun fromWildcard(context: ClassStack?, type: WildcardType, bindings: TypeBindings?): KotlinType {
+        return fromAny(context, type.upperBounds[0], bindings)
     }
 
     companion object {
@@ -954,7 +1127,7 @@ class TypeFactory private constructor(internal val myTypeCache: LookupCache<Any,
          */
         val DEFAULT_INSTANCE = TypeFactory()
 
-        private val NO_TYPES = arrayOfNulls<KotlinType>(0)
+        private val NO_TYPES = emptyArray<KotlinType>()
 
         private val EMPTY_BINDINGS = TypeBindings.EMPTY
 

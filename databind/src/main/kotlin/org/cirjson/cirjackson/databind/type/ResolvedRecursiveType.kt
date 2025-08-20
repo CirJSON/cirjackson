@@ -65,8 +65,8 @@ open class ResolvedRecursiveType(erasedType: KClass<*>, bindings: TypeBindings?)
         return this
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType? {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
         return null
     }
 

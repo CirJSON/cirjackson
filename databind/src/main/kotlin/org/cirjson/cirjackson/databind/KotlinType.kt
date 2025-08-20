@@ -190,8 +190,8 @@ abstract class KotlinType : ResolvedType, Type {
      * other types will return `null` to indicate that no just refinement makes necessary sense, without trying to
      * detect special status through implemented interfaces.
      */
-    abstract fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType?
+    abstract fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType?
 
     /*
      *******************************************************************************************************************

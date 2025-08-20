@@ -58,8 +58,8 @@ open class PlaceholderForType(protected val myOrdinal: Int) :
         return unsupported()
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType? {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
         return unsupported()
     }
 

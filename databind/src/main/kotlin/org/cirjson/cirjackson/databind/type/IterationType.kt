@@ -81,8 +81,8 @@ open class IterationType : SimpleType {
                 myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): IterationType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): IterationType {
         return IterationType(raw, myBindings, superClass, superInterfaces, myIteratedType, myIteratedType,
                 myTypeHandler, isUsedAsStaticType)
     }

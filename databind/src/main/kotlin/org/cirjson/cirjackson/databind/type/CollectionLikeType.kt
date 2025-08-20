@@ -76,8 +76,8 @@ open class CollectionLikeType : TypeBase {
                 myElementType.withStaticTyping(), myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType {
         return CollectionLikeType(raw, bindings, superClass, superInterfaces, myElementType, myValueHandler,
                 myTypeHandler, isUsedAsStaticType)
     }

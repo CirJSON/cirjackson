@@ -81,8 +81,8 @@ open class SimpleType : TypeBase {
         return SimpleType(myClass, myBindings, mySuperClass, mySuperInterfaces, myValueHandler, myTypeHandler, true)
     }
 
-    override fun refine(raw: KClass<*>, bindings: TypeBindings, superClass: KotlinType,
-            superInterfaces: Array<KotlinType>): KotlinType? {
+    override fun refine(raw: KClass<*>, bindings: TypeBindings?, superClass: KotlinType?,
+            superInterfaces: Array<KotlinType>?): KotlinType? {
         return null
     }
 
