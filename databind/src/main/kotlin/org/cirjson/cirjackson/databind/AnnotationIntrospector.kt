@@ -1,9 +1,6 @@
 package org.cirjson.cirjackson.databind
 
-import org.cirjson.cirjackson.annotations.CirJsonFormat
-import org.cirjson.cirjackson.annotations.CirJsonIgnoreProperties
-import org.cirjson.cirjackson.annotations.CirJsonInclude
-import org.cirjson.cirjackson.annotations.CirJsonIncludeProperties
+import org.cirjson.cirjackson.annotations.*
 import org.cirjson.cirjackson.core.Versioned
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.introspection.Annotated
@@ -39,6 +36,24 @@ abstract class AnnotationIntrospector : Versioned {
 
     open fun findAutoDetectVisibility(config: MapperConfig<*>, annotatedClass: AnnotatedClass,
             checker: VisibilityChecker): VisibilityChecker {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Annotations for Polymorphic type handling
+     *******************************************************************************************************************
+     */
+
+    open fun findPolymorphicTypeInfo(config: MapperConfig<*>, annotated: Annotated): CirJsonTypeInfo.Value? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findTypeResolverBuilder(config: MapperConfig<*>, annotated: Annotated): Any? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findTypeIdResolver(config: MapperConfig<*>, annotated: Annotated): Any? {
         TODO("Not yet implemented")
     }
 

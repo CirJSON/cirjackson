@@ -65,4 +65,14 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
         TODO("Not yet implemented")
     }
 
+    /*
+     *******************************************************************************************************************
+     * Abstract type mapping
+     *******************************************************************************************************************
+     */
+
+    fun mapAbstractType(type: KotlinType?): KotlinType? {
+        TODO("Not yet implemented")
+    }
+
 }

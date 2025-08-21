@@ -22,6 +22,10 @@ abstract class DatabindContext {
      *******************************************************************************************************************
      */
 
+    fun introspectClassAnnotations(rawType: KotlinType): AnnotatedClass {
+        TODO("Not yet implemented")
+    }
+
     fun introspectClassAnnotations(rawType: KClass<*>): AnnotatedClass {
         TODO("Not yet implemented")
     }

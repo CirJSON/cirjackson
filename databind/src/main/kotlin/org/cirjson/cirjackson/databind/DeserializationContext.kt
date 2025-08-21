@@ -5,7 +5,6 @@ import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
-import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
 import kotlin.reflect.KClass
@@ -21,7 +20,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    override val config: MapperConfig<*>
+    override val config: DeserializationConfig
         get() = TODO("Not yet implemented")
 
     override val annotationIntrospector: AnnotationIntrospector
