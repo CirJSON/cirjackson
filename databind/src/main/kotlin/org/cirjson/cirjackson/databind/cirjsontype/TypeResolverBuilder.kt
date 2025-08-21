@@ -32,7 +32,7 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
      * Accessor for currently configured default type; implementation class that may be used in case no valid type
      * information is available during type resolution
      */
-    val defaultImplementation: KClass<*>
+    val defaultImplementation: KClass<*>?
 
     /**
      * Method for building type serializer based on current configuration of this builder.
@@ -42,7 +42,7 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
      * @param subtypes Known subtypes of the base type.
      */
     fun buildTypeSerializer(context: SerializerProvider, type: KotlinType,
-            subtypes: Collection<NamedType>): TypeSerializer
+            subtypes: Collection<NamedType>?): TypeSerializer?
 
     /**
      * Method for building type deserializer based on current configuration of this builder.
@@ -52,7 +52,7 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
      * @param subtypes Known subtypes of the base type.
      */
     fun buildTypeDeserializer(context: DeserializationContext, type: KotlinType,
-            subtypes: Collection<NamedType>): TypeDeserializer
+            subtypes: Collection<NamedType>?): TypeDeserializer
 
     /**
      * Initialization method that is called right after constructing the builder instance, in cases where information
@@ -62,7 +62,7 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
      *
      * @return Resulting builder instance (usually this builder, but not necessarily)
      */
-    fun init(settings: CirJsonTypeInfo.Value, resolver: TypeIdResolver): T
+    fun init(settings: CirJsonTypeInfo.Value?, resolver: TypeIdResolver?): T
 
     /**
      * "Mutant factory" method for creating a new instance with different default implementation to use if type id is
@@ -70,11 +70,11 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
      *
      * @return Either this instance (if nothing changed) or a new instance with different default implementation
      */
-    fun withDefaultImplementation(defaultImplementation: KClass<*>): T
+    fun withDefaultImplementation(defaultImplementation: KClass<*>?): T
 
     /**
      * Method for overriding type information.
      */
-    fun withSettings(settings: CirJsonTypeInfo.Value): T
+    fun withSettings(settings: CirJsonTypeInfo.Value?): T
 
 }

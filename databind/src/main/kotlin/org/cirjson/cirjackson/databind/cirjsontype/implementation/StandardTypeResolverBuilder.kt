@@ -19,12 +19,12 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
     }
 
     override fun buildTypeSerializer(context: SerializerProvider, type: KotlinType,
-            subtypes: Collection<NamedType>): TypeSerializer {
+            subtypes: Collection<NamedType>?): TypeSerializer? {
         TODO("Not yet implemented")
     }
 
     override fun buildTypeDeserializer(context: DeserializationContext, type: KotlinType,
-            subtypes: Collection<NamedType>): TypeDeserializer {
+            subtypes: Collection<NamedType>?): TypeDeserializer {
         TODO("Not yet implemented")
     }
 
@@ -34,15 +34,15 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
      *******************************************************************************************************************
      */
 
-    override fun init(settings: CirJsonTypeInfo.Value, resolver: TypeIdResolver): StandardTypeResolverBuilder {
+    override fun init(settings: CirJsonTypeInfo.Value?, resolver: TypeIdResolver?): StandardTypeResolverBuilder {
         TODO("Not yet implemented")
     }
 
-    override fun withDefaultImplementation(defaultImplementation: KClass<*>): StandardTypeResolverBuilder {
+    override fun withDefaultImplementation(defaultImplementation: KClass<*>?): StandardTypeResolverBuilder {
         TODO("Not yet implemented")
     }
 
-    override fun withSettings(settings: CirJsonTypeInfo.Value): StandardTypeResolverBuilder {
+    override fun withSettings(settings: CirJsonTypeInfo.Value?): StandardTypeResolverBuilder {
         TODO("Not yet implemented")
     }
 
@@ -52,7 +52,7 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
      *******************************************************************************************************************
      */
 
-    override val defaultImplementation: KClass<*>
+    override val defaultImplementation: KClass<*>?
         get() = TODO("Not yet implemented")
 
 }

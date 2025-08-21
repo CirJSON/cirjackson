@@ -39,7 +39,7 @@ interface TypeIdResolver {
      * serializer provides) and possibly value of that type. Most common implementation will use suggested type as is.
      */
     @Throws(CirJacksonException::class)
-    fun idFromValueAndType(context: DatabindContext, value: Any, suggestedType: KClass<*>): String
+    fun idFromValueAndType(context: DatabindContext, value: Any, suggestedType: KClass<*>?): String?
 
     /**
      * Method that can be called to figure out type id to use for instances of base type (declared type of property).
