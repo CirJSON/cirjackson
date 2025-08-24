@@ -7,7 +7,36 @@ import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.cirjsontype.*
 import kotlin.reflect.KClass
 
+/**
+ * Default [TypeResolverBuilder] implementation.
+ */
 open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolverBuilder> {
+
+    protected var myIdType: CirJsonTypeInfo.Id
+
+    protected var myIncludeAs: CirJsonTypeInfo.As?
+
+    protected var myTypeProperty: String?
+
+    /**
+     * Whether type id should be exposed to deserializers or not
+     */
+    protected var myTypeIdVisible: Boolean = false
+
+    /**
+     *
+     * Boolean value configured through [CirJsonTypeInfo.requireTypeIdForSubtypes]. If this value is not `null`, this
+     * value should override the global configuration of
+     * [org.cirjson.cirjackson.databind.MapperFeature.REQUIRE_TYPE_ID_FOR_SUBTYPES].
+     */
+    protected var myRequireTypeIdForSubtypes: Boolean? = null
+
+    /**
+     * Default class to use in case type information is not available or is broken.
+     */
+    protected var myDefaultImplementation: KClass<*>? = null
+
+    protected var myCustomIdResolver: TypeIdResolver? = null
 
     /*
      *******************************************************************************************************************
@@ -15,10 +44,30 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
      *******************************************************************************************************************
      */
 
-    constructor() {
+    constructor(settings: CirJsonTypeInfo.Value) {
+        myIdType = settings.idType
+        myIncludeAs = settings.inclusionType
+        myTypeProperty = propName(settings.propertyName, myIdType)
+        myDefaultImplementation = settings.defaultImplementation
+        myTypeIdVisible = settings.visible
+        myRequireTypeIdForSubtypes = settings.requireTypeIdForSubtypes
     }
 
-    constructor(settings: CirJsonTypeInfo.Value?) {
+    constructor(idType: CirJsonTypeInfo.Id, idAs: CirJsonTypeInfo.As?, propName: String?) {
+        myIdType = idType
+        myIncludeAs = idAs
+        myTypeProperty = propName(propName, myIdType)
+    }
+
+    constructor(base: StandardTypeResolverBuilder, defaultImplementation: KClass<*>?) {
+        myIdType = base.myIdType
+        myIncludeAs = base.myIncludeAs
+        myTypeProperty = base.myTypeProperty
+        myTypeIdVisible = base.myTypeIdVisible
+        myCustomIdResolver = base.myCustomIdResolver
+
+        myDefaultImplementation = defaultImplementation
+        myRequireTypeIdForSubtypes = base.myRequireTypeIdForSubtypes
     }
 
     override fun buildTypeSerializer(context: SerializerProvider, type: KotlinType,
@@ -49,6 +98,10 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
         TODO("Not yet implemented")
     }
 
+    protected open fun propName(propName: String?, idType: CirJsonTypeInfo.Id): String? {
+        return propName.takeUnless { it.isNullOrEmpty() } ?: idType.defaultPropertyName
+    }
+
     /*
      *******************************************************************************************************************
      * Accessors
@@ -61,7 +114,7 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
     companion object {
 
         fun noTypeInfoBuilder(): StandardTypeResolverBuilder {
-            TODO("Not yet implemented")
+            return StandardTypeResolverBuilder(CirJsonTypeInfo.Id.NONE, null, null)
         }
 
     }
