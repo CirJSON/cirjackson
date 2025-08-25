@@ -38,7 +38,7 @@ abstract class TypeSerializer {
     /**
      * Name of property that contains type information, if property-based inclusion is used.
      */
-    abstract val propertyName: String
+    abstract val propertyName: String?
 
     /**
      * Accessor for object that handles conversions between types and matching type ids.
@@ -105,7 +105,8 @@ abstract class TypeSerializer {
      * @param typeID Details of what type id is to be written, how.
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeTypePrefix(generator: CirJsonGenerator, context: SerializerProvider, typeID: WritableTypeID)
+    abstract fun writeTypePrefix(generator: CirJsonGenerator, context: SerializerProvider,
+            typeID: WritableTypeID): WritableTypeID?
 
     /**
      * Method called to write the "closing" part of type information for given value, along with possible closing
@@ -119,6 +120,7 @@ abstract class TypeSerializer {
      * @param typeID Details of what type id is to be written, how.
      */
     @Throws(CirJacksonException::class)
-    abstract fun writeTypeSuffix(generator: CirJsonGenerator, context: SerializerProvider, typeID: WritableTypeID)
+    abstract fun writeTypeSuffix(generator: CirJsonGenerator, context: SerializerProvider,
+            typeID: WritableTypeID?): WritableTypeID?
 
 }
