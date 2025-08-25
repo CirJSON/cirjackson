@@ -104,6 +104,10 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     final override val annotationIntrospector: AnnotationIntrospector
         get() = TODO("Not yet implemented")
 
+    override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Serializer discovery: root/non-property value serializers
@@ -137,6 +141,11 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
 
     @Throws(DatabindException::class)
     override fun <T> reportBadDefinition(type: KotlinType, message: String): T {
+        TODO("Not yet implemented")
+    }
+
+    override fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+            extraDescription: String): DatabindException {
         TODO("Not yet implemented")
     }
 

@@ -18,6 +18,17 @@ abstract class DatabindContext {
 
     /*
      *******************************************************************************************************************
+     * Type instantiation/resolution
+     *******************************************************************************************************************
+     */
+
+    abstract fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType
+
+    abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+            extraDescription: String): DatabindException
+
+    /*
+     *******************************************************************************************************************
      *  Annotation, BeanDescription introspection
      *******************************************************************************************************************
      */

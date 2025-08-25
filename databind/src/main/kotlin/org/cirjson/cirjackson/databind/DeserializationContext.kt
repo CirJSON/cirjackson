@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
+import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
 import kotlin.reflect.KClass
@@ -25,6 +26,10 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     override val annotationIntrospector: AnnotationIntrospector
         get() = TODO("Not yet implemented")
+
+    override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
+        TODO("Not yet implemented")
+    }
 
     /*
      *******************************************************************************************************************
@@ -114,7 +119,35 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    fun hasExplicitDeserializerFor(valueType: KClass<*>): Boolean {
+    open fun hasExplicitDeserializerFor(valueType: KClass<*>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, value deserializer access
+     *******************************************************************************************************************
+     */
+
+    fun findContextualValueDeserializer(type: KotlinType, property: BeanProperty?): ValueDeserializer<Any>? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Methods for problem handling
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    open fun handleUnknownTypeId(baseType: KotlinType, id: String, idResolver: TypeIdResolver,
+            extraDescription: String): KotlinType? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun handleMissingTypeId(baseType: KotlinType, idResolver: TypeIdResolver,
+            extraDescription: String): KotlinType? {
         TODO("Not yet implemented")
     }
 
@@ -125,7 +158,12 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     @Throws(DatabindException::class)
-    fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String): T {
+    open fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String): T {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(DatabindException::class)
+    open fun <T> reportInputMismatch(targetType: KotlinType?, message: String): T {
         TODO("Not yet implemented")
     }
 
@@ -137,6 +175,17 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     @Throws(DatabindException::class)
     override fun <T> reportBadDefinition(type: KotlinType, message: String): T {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Methods for constructing semantic exceptions; usually not to be called directly, call `handleXxx()` instead
+     *******************************************************************************************************************
+     */
+
+    override fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+            extraDescription: String): DatabindException {
         TODO("Not yet implemented")
     }
 

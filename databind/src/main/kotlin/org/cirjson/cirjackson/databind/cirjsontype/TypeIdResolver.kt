@@ -32,7 +32,7 @@ interface TypeIdResolver {
      * Method called to serialize type of the type of given value as a String to include in serialized CirJSON content.
      */
     @Throws(CirJacksonException::class)
-    fun idFromValue(context: DatabindContext, value: Any): String
+    fun idFromValue(context: DatabindContext, value: Any): String?
 
     /**
      * Alternative method used for determining type from combination of value and type, using suggested type (that
@@ -47,18 +47,18 @@ interface TypeIdResolver {
      * reason.
      */
     @Throws(CirJacksonException::class)
-    fun idFromBaseType(context: DatabindContext): String
+    fun idFromBaseType(context: DatabindContext): String?
 
     /**
      * Method called to resolve type from given type identifier.
      */
     @Throws(CirJacksonException::class)
-    fun typeFromId(context: DatabindContext, id: String): KotlinType
+    fun typeFromId(context: DatabindContext, id: String): KotlinType?
 
     /**
      * Accessor called for error-reporting and diagnostics purposes.
      */
-    val descriptionForKnownTypeIds: String
+    val descriptionForKnownTypeIds: String?
 
     /**
      * Accessor for mechanism that this resolver uses for determining type id from type. Mostly informational; not
