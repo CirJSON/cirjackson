@@ -208,9 +208,14 @@ abstract class TypeDeserializerBase : TypeDeserializer {
     }
 
     @Throws(CirJacksonException::class)
-    protected open fun handleMissingTypeId(context: DeserializationContext, typeId: String,
-            extraDescription: String): KotlinType? {
+    protected open fun handleMissingTypeId(context: DeserializationContext, extraDescription: String): KotlinType? {
         return context.handleMissingTypeId(myBaseType!!, myIdResolver, extraDescription)
+    }
+
+    protected companion object {
+
+        const val ID_NAME = "__cirJsonId__"
+
     }
 
 }

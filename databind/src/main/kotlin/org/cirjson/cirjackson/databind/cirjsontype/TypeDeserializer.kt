@@ -25,13 +25,13 @@ abstract class TypeDeserializer {
      * Method called to create contextual version, to be used for values of given property. This may be the type itself
      * (as is the case for bean properties), or values contained (for [Collection] or [Map] valued properties).
      */
-    abstract fun forProperty(property: BeanProperty): TypeDeserializer
+    abstract fun forProperty(property: BeanProperty?): TypeDeserializer
 
     /**
      * Accessor for type information inclusion method that deserializer uses; indicates how type information is
      * (expected to be) embedded in CirJSON input.
      */
-    abstract val typeInclusion: CirJsonTypeInfo.As
+    abstract val typeInclusion: CirJsonTypeInfo.As?
 
     /**
      * Name of property that contains type information, if property-based inclusion is used.
@@ -60,7 +60,7 @@ abstract class TypeDeserializer {
      * information).
      */
     @Throws(CirJacksonException::class)
-    abstract fun deserializeTypedFromObject(parser: CirJsonParser, context: DeserializationContext): Any
+    abstract fun deserializeTypedFromObject(parser: CirJsonParser, context: DeserializationContext): Any?
 
     /**
      * Method called to let this type deserializer handle deserialization of "typed" object, when value itself is
@@ -69,7 +69,7 @@ abstract class TypeDeserializer {
      * information).
      */
     @Throws(CirJacksonException::class)
-    abstract fun deserializeTypedFromArray(parser: CirJsonParser, context: DeserializationContext): Any
+    abstract fun deserializeTypedFromArray(parser: CirJsonParser, context: DeserializationContext): Any?
 
     /**
      * Method called to let this type deserializer handle deserialization of "typed" object, when value itself is
@@ -78,7 +78,7 @@ abstract class TypeDeserializer {
      * deserializer (which does not contain type information).
      */
     @Throws(CirJacksonException::class)
-    abstract fun deserializeTypedFromScalar(parser: CirJsonParser, context: DeserializationContext): Any
+    abstract fun deserializeTypedFromScalar(parser: CirJsonParser, context: DeserializationContext): Any?
 
     /**
      * Method called to let this type deserializer handle deserialization of "typed" object, when value itself may have
@@ -87,7 +87,7 @@ abstract class TypeDeserializer {
      * (which may be Map, Collection, wrapper/primitive, etc.).
      */
     @Throws(CirJacksonException::class)
-    abstract fun deserializeTypedFromAny(parser: CirJsonParser, context: DeserializationContext): Any
+    abstract fun deserializeTypedFromAny(parser: CirJsonParser, context: DeserializationContext): Any?
 
     companion object {
 

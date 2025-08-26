@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
+import org.cirjson.cirjackson.databind.util.TokenBuffer
 import kotlin.reflect.KClass
 
 abstract class DeserializationContext protected constructor(protected val myStreamFactory: TokenStreamFactory,
@@ -26,6 +27,10 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     override val annotationIntrospector: AnnotationIntrospector
         get() = TODO("Not yet implemented")
+
+    override fun isEnabled(feature: MapperFeature): Boolean {
+        TODO("Not yet implemented")
+    }
 
     override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
         TODO("Not yet implemented")
@@ -115,6 +120,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     /*
      *******************************************************************************************************************
+     * Annotation, BeanDescription introspection
+     *******************************************************************************************************************
+     */
+
+    override fun introspectBeanDescription(type: KotlinType): BeanDescription {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Miscellaneous config access
      *******************************************************************************************************************
      */
@@ -125,11 +140,32 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     /*
      *******************************************************************************************************************
+     * Factory methods for getting appropriate TokenBuffer instances (possibly overridden by backends for alternate data
+     * formats)
+     *******************************************************************************************************************
+     */
+
+    open fun bufferForInputBuffering(parser: CirJsonParser): TokenBuffer {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Public API, value deserializer access
      *******************************************************************************************************************
      */
 
     fun findContextualValueDeserializer(type: KotlinType, property: BeanProperty?): ValueDeserializer<Any>? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, type handling
+     *******************************************************************************************************************
+     */
+
+    fun constructType(clazz: KClass<*>?): KotlinType? {
         TODO("Not yet implemented")
     }
 
@@ -156,6 +192,11 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * Methods for problem reporting, in cases where recovery is not considered possible: input problem
      *******************************************************************************************************************
      */
+
+    @Throws(DatabindException::class)
+    open fun <T> reportWrongTokenException(targetType: KotlinType, expectedToken: CirJsonToken, message: String): T {
+        TODO("Not yet implemented")
+    }
 
     @Throws(DatabindException::class)
     open fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String): T {

@@ -18,6 +18,14 @@ abstract class DatabindContext {
 
     /*
      *******************************************************************************************************************
+     * Access to specific config settings
+     *******************************************************************************************************************
+     */
+
+    abstract fun isEnabled(feature: MapperFeature): Boolean
+
+    /*
+     *******************************************************************************************************************
      * Type instantiation/resolution
      *******************************************************************************************************************
      */
@@ -33,11 +41,13 @@ abstract class DatabindContext {
      *******************************************************************************************************************
      */
 
-    fun introspectClassAnnotations(rawType: KotlinType): AnnotatedClass {
+    abstract fun introspectBeanDescription(type: KotlinType): BeanDescription
+
+    open fun introspectClassAnnotations(rawType: KotlinType): AnnotatedClass {
         TODO("Not yet implemented")
     }
 
-    fun introspectClassAnnotations(rawType: KClass<*>): AnnotatedClass {
+    open fun introspectClassAnnotations(rawType: KClass<*>): AnnotatedClass {
         TODO("Not yet implemented")
     }
 

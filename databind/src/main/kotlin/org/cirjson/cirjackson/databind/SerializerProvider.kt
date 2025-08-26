@@ -108,6 +108,20 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
         TODO("Not yet implemented")
     }
 
+    override fun isEnabled(feature: MapperFeature): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Annotation, BeanDescription introspection
+     *******************************************************************************************************************
+     */
+
+    override fun introspectBeanDescription(type: KotlinType): BeanDescription {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Serializer discovery: root/non-property value serializers
