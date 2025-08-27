@@ -27,7 +27,7 @@ abstract class TypeSerializer {
      * Method called to create contextual version, to be used for values of given property. This may be the type itself
      * (as is the case for bean properties), or values contained (for [Collection] or [Map] valued properties).
      */
-    abstract fun forProperty(context: SerializerProvider, property: BeanProperty): TypeSerializer
+    abstract fun forProperty(context: SerializerProvider, property: BeanProperty?): TypeSerializer
 
     /**
      * Accessor for type information inclusion method that serializer uses; indicates how type information is embedded

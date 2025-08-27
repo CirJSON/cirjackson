@@ -32,14 +32,14 @@ interface TypeIdResolver {
      * Method called to serialize type of the type of given value as a String to include in serialized CirJSON content.
      */
     @Throws(CirJacksonException::class)
-    fun idFromValue(context: DatabindContext, value: Any): String?
+    fun idFromValue(context: DatabindContext, value: Any?): String?
 
     /**
      * Alternative method used for determining type from combination of value and type, using suggested type (that
      * serializer provides) and possibly value of that type. Most common implementation will use suggested type as is.
      */
     @Throws(CirJacksonException::class)
-    fun idFromValueAndType(context: DatabindContext, value: Any, suggestedType: KClass<*>?): String?
+    fun idFromValueAndType(context: DatabindContext, value: Any?, suggestedType: KClass<*>?): String?
 
     /**
      * Method that can be called to figure out type id to use for instances of base type (declared type of property).
