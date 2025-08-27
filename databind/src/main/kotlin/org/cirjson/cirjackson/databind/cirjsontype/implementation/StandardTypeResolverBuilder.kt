@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.databind.cirjsontype.implementation
 
 import org.cirjson.cirjackson.annotations.CirJsonTypeInfo
+import org.cirjson.cirjackson.databind.DatabindContext
 import org.cirjson.cirjackson.databind.DeserializationContext
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.SerializerProvider
@@ -110,6 +111,56 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
 
     override val defaultImplementation: KClass<*>?
         get() = TODO("Not yet implemented")
+
+    open val typeProperty: String?
+        get() = TODO("Not yet implemented")
+
+    open val typeIdVisible: Boolean
+        get() = TODO("Not yet implemented")
+
+    /*
+     *******************************************************************************************************************
+     * Internal/subtype factory methods
+     *******************************************************************************************************************
+     */
+
+    protected open fun idResolver(context: DatabindContext, baseType: KotlinType,
+            subtypeValidator: PolymorphicTypeValidator, subtypes: Collection<NamedType>?, forSerialization: Boolean,
+            forDeserialization: Boolean): TypeIdResolver {
+        TODO("Not yet implemented")
+    }
+
+    open fun subTypeValidator(context: DatabindContext): PolymorphicTypeValidator {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun verifyBaseTypeValidity(context: DatabindContext,
+            baseType: KotlinType): PolymorphicTypeValidator {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun reportInvalidBaseType(context: DatabindContext, baseType: KotlinType,
+            polymorphicTypeValidator: PolymorphicTypeValidator): PolymorphicTypeValidator {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Overridable helper methods
+     *******************************************************************************************************************
+     */
+
+    protected open fun allowPrimitiveTypes(context: DatabindContext, baseType: KotlinType): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun strictTypeIdHandling(context: DatabindContext, baseType: KotlinType): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun hasTypeResolver(context: DatabindContext, baseType: KotlinType): Boolean {
+        TODO("Not yet implemented")
+    }
 
     companion object {
 
