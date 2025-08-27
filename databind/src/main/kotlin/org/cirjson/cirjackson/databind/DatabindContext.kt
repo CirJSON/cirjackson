@@ -1,7 +1,9 @@
 package org.cirjson.cirjackson.databind
 
+import org.cirjson.cirjackson.databind.cirjsontype.PolymorphicTypeValidator
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
+import org.cirjson.cirjackson.databind.type.TypeFactory
 import kotlin.reflect.KClass
 
 abstract class DatabindContext {
@@ -32,8 +34,15 @@ abstract class DatabindContext {
 
     abstract fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType
 
-    abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+    open fun resolveAndValidateSubType(baseType: KotlinType, subClass: String,
+            polymorphicTypeValidator: PolymorphicTypeValidator): KotlinType? {
+        TODO("Not yet implemented")
+    }
+
+    protected abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String,
             extraDescription: String): DatabindException
+
+    abstract val typeFactory: TypeFactory
 
     /*
      *******************************************************************************************************************

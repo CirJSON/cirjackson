@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.databind.configuration.GeneratorSettings
 import org.cirjson.cirjackson.databind.serialization.SerializerCache
 import org.cirjson.cirjackson.databind.serialization.SerializerFactory
+import org.cirjson.cirjackson.databind.type.TypeFactory
 import kotlin.reflect.KClass
 
 abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
@@ -102,6 +103,9 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      */
 
     final override val annotationIntrospector: AnnotationIntrospector
+        get() = TODO("Not yet implemented")
+
+    override val typeFactory: TypeFactory
         get() = TODO("Not yet implemented")
 
     override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {

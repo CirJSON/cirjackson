@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
+import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.TokenBuffer
 import kotlin.reflect.KClass
 
@@ -26,6 +27,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
         get() = TODO("Not yet implemented")
 
     override val annotationIntrospector: AnnotationIntrospector
+        get() = TODO("Not yet implemented")
+
+    override val typeFactory: TypeFactory
         get() = TODO("Not yet implemented")
 
     override fun isEnabled(feature: MapperFeature): Boolean {
