@@ -57,6 +57,10 @@ abstract class AnnotationIntrospector : Versioned {
         TODO("Not yet implemented")
     }
 
+    open fun findTypeName(config: MapperConfig<*>, annotatedClass: AnnotatedClass): String? {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * General member (field, method/constructor) annotations

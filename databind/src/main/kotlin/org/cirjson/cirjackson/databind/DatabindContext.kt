@@ -26,6 +26,9 @@ abstract class DatabindContext {
 
     abstract fun isEnabled(feature: MapperFeature): Boolean
 
+    val isAnnotationProcessingEnabled: Boolean
+        get() = TODO("Not yet implemented")
+
     /*
      *******************************************************************************************************************
      * Type instantiation/resolution
