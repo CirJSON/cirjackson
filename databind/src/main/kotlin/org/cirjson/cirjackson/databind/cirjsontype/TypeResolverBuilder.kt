@@ -37,22 +37,22 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
     /**
      * Method for building type serializer based on current configuration of this builder.
      *
-     * @param type Base type that constructed resolver will handle; super type of all types it will be used for.
+     * @param baseType Base type that constructed resolver will handle; super type of all types it will be used for.
      *
      * @param subtypes Known subtypes of the base type.
      */
-    fun buildTypeSerializer(context: SerializerProvider, type: KotlinType,
+    fun buildTypeSerializer(context: SerializerProvider, baseType: KotlinType,
             subtypes: Collection<NamedType>?): TypeSerializer?
 
     /**
      * Method for building type deserializer based on current configuration of this builder.
      *
-     * @param type Base type that constructed resolver will handle; super type of all types it will be used for.
+     * @param baseType Base type that constructed resolver will handle; super type of all types it will be used for.
      *
      * @param subtypes Known subtypes of the base type.
      */
-    fun buildTypeDeserializer(context: DeserializationContext, type: KotlinType,
-            subtypes: Collection<NamedType>?): TypeDeserializer
+    fun buildTypeDeserializer(context: DeserializationContext, baseType: KotlinType,
+            subtypes: Collection<NamedType>?): TypeDeserializer?
 
     /**
      * Initialization method that is called right after constructing the builder instance, in cases where information
@@ -75,6 +75,6 @@ interface TypeResolverBuilder<T : TypeResolverBuilder<T>> {
     /**
      * Method for overriding type information.
      */
-    fun withSettings(settings: CirJsonTypeInfo.Value?): T
+    fun withSettings(settings: CirJsonTypeInfo.Value): T
 
 }
