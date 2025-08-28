@@ -8,13 +8,23 @@ import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
 import kotlin.reflect.KClass
 
+/**
+ * Standard [SubtypeResolver] implementation.
+ */
 open class StandardSubtypeResolver : SubtypeResolver {
 
+    protected var myRegisteredSubtypes: MutableSet<NamedType>?
+
     constructor() : super() {
+        myRegisteredSubtypes = null
+    }
+
+    constructor(registeredSubtypes: MutableSet<NamedType>?) {
+        myRegisteredSubtypes = registeredSubtypes
     }
 
     override fun snapshot(): SubtypeResolver {
-        TODO("Not yet implemented")
+        return myRegisteredSubtypes?.let { StandardSubtypeResolver(LinkedHashSet(it)) } ?: StandardSubtypeResolver()
     }
 
     /*
@@ -24,15 +34,21 @@ open class StandardSubtypeResolver : SubtypeResolver {
      */
 
     override fun registerSubtypes(vararg subtypes: NamedType): StandardSubtypeResolver {
-        TODO("Not yet implemented")
+        if (myRegisteredSubtypes == null) {
+            myRegisteredSubtypes = LinkedHashSet()
+        }
+
+        myRegisteredSubtypes!!.addAll(subtypes)
+        return this
     }
 
     override fun registerSubtypes(vararg subtypes: KClass<*>): StandardSubtypeResolver {
-        TODO("Not yet implemented")
+        val types = Array(subtypes.size) { NamedType(subtypes[it]) }
+        return registerSubtypes(*types)
     }
 
     override fun registerSubtypes(subtypes: Collection<KClass<*>>): StandardSubtypeResolver {
-        TODO("Not yet implemented")
+        return registerSubtypes(*subtypes.toTypedArray())
     }
 
     /*
