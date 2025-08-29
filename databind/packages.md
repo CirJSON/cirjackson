@@ -24,6 +24,11 @@ Package that contains interfaces that define how to implement functionality for 
 deserialization. This is needed for complete handling of polymorphic types, where actual type cannot be determined
 statically (declared type is a supertype of actual polymorphic serialized types).
 
+# Package org.cirjson.cirjackson.databind.cirjsontype.implementation
+
+Package that contains standard implementations for [org.cirjson.cirjackson.databind.cirjsontype.TypeResolverBuilder] and
+[org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver].
+
 # Package org.cirjson.cirjackson.databind.configuration
 
 Package that contains most of configuration-related classes; exception being couple of most-commonly used configuration

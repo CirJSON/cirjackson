@@ -72,4 +72,7 @@ abstract class DatabindContext {
     @Throws(DatabindException::class)
     abstract fun <T> reportBadDefinition(type: KotlinType, message: String): T
 
+    @Throws(DatabindException::class)
+    abstract fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String): T
+
 }

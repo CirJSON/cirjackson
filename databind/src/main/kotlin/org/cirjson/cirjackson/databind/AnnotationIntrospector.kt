@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.annotations.*
 import org.cirjson.cirjackson.core.Versioned
+import org.cirjson.cirjackson.databind.cirjsontype.NamedType
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.introspection.Annotated
 import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
@@ -54,6 +55,10 @@ abstract class AnnotationIntrospector : Versioned {
     }
 
     open fun findTypeIdResolver(config: MapperConfig<*>, annotated: Annotated): Any? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findSubtypes(config: MapperConfig<*>, annotated: Annotated): List<NamedType>? {
         TODO("Not yet implemented")
     }
 
