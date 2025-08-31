@@ -8,6 +8,19 @@ import org.cirjson.cirjackson.databind.introspection.Annotated
 import org.cirjson.cirjackson.databind.introspection.AnnotatedClass
 import org.cirjson.cirjackson.databind.introspection.VisibilityChecker
 
+/**
+ * Abstract class that defines API used for introspecting annotation-based configuration for serialization and
+ * deserialization. Separated so that different sets of annotations can be supported, and support plugged-in
+ * dynamically.
+ *
+ * Although default implementations are based on using annotations as the only (or at least main) information source,
+ * custom implementations are not limited in such a way, and in fact there is no expectation they should be. So the name
+ * is a bit of a misnomer; this is a general configuration introspection facility.
+ *
+ * NOTE: due to rapid addition of new methods (and changes to existing methods), it is **strongly** recommended that
+ * custom implementations should not directly extend this class, but rather extend [NopAnnotationIntrospector]. This
+ * way, added methods will not break backwards compatibility of custom annotation introspectors.
+ */
 abstract class AnnotationIntrospector : Versioned {
 
     /*
@@ -115,9 +128,56 @@ abstract class AnnotationIntrospector : Versioned {
         TODO("Not yet implemented")
     }
 
-    open class ReferenceProperty(val type: Type, val name: String) {
+    /*
+     *******************************************************************************************************************
+     * Helper types
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Value type used with managed and back references; contains type and logic name, used to link related references
+     */
+    open class ReferenceProperty(protected val myType: Type, protected val myName: String) {
+
+        open val type: Type
+            get() = myType
+
+        open val name: String
+            get() = myName
+
+        open val isManagedReference: Boolean
+            get() = myType == Type.MANAGED_REFERENCE
+
+        open val isBackReference: Boolean
+            get() = myType == Type.BACK_REFERENCE
 
         enum class Type {
+
+            /**
+             * Reference property that Jackson manages and that is serialized normally (by serializing reference
+             * object), but is used for resolving back references during deserialization. Usually this can be defined by
+             * using [CirJsonManagedReference]
+             */
+            MANAGED_REFERENCE,
+
+            /**
+             * Reference property that Jackson manages by suppressing it during serialization, and reconstructing during
+             * deserialization. Usually this can be defined by using [CirJsonBackReference]
+             */
+            BACK_REFERENCE
+
+        }
+
+        companion object {
+
+            fun managed(name: String): ReferenceProperty {
+                return ReferenceProperty(Type.MANAGED_REFERENCE, name)
+            }
+
+            fun back(name: String): ReferenceProperty {
+                return ReferenceProperty(Type.BACK_REFERENCE, name)
+            }
+
         }
 
     }

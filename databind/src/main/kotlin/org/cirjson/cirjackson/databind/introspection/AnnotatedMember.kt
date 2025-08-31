@@ -9,6 +9,14 @@ abstract class AnnotatedMember protected constructor(protected val myTypeContext
         TODO("Not yet implemented")
     }
 
+    final override fun hasAnnotation(kClass: KClass<*>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun hasOneOf(annotationClasses: Array<KClass<out Annotation>>): Boolean {
+        TODO("Not yet implemented")
+    }
+
     @Throws(UnsupportedOperationException::class, IllegalArgumentException::class)
     abstract fun getValue(pojo: Any): Any?
 
