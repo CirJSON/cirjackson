@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.annotations.*
 import org.cirjson.cirjackson.core.Versioned
+import org.cirjson.cirjackson.databind.annotation.CirJsonPOJOBuilder
 import org.cirjson.cirjackson.databind.annotation.CirJsonSerialize
 import org.cirjson.cirjackson.databind.cirjsontype.NamedType
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
@@ -702,6 +703,56 @@ abstract class AnnotationIntrospector : Versioned {
      */
 
     /**
+     * Method for checking whether given property accessors (method, field) has an annotation that suggests property
+     * name to use for serialization. Should return null if no annotation is found; otherwise a non-null name (possibly
+     * [PropertyName.USE_DEFAULT], which means "use default heuristics").
+     *
+     * @param annotated Property accessor to check
+     *
+     * @return Name to use if found; `null` if not.
+     */
+    open fun findNameForSerialization(config: MapperConfig<*>, annotated: Annotated): PropertyName? {
+        return null
+    }
+
+    /**
+     * Method for checking whether given method has an annotation that suggests the return value of annotated field or
+     * method should be used as "the key" of the object instance; usually serialized as a primitive value such as
+     * String or number.
+     *
+     * @return `true` if such annotation is found and is not disabled; `false` if disabled annotation (block) is found
+     * (to indicate accessor is definitely NOT to be used "as value"); or `null` if no information found.
+     */
+    open fun hasAsKey(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+        return null
+    }
+
+    /**
+     * Method for checking whether given method has an annotation that suggests that the return value of annotated
+     * method should be used as "the value" of the object instance; usually serialized as a primitive value such as
+     * String or number.
+     *
+     * @return `true` if such annotation is found and is not disabled; `false` if disabled annotation (block) is found
+     * (to indicate accessor is definitely NOT to be used "as value"); or `null` if no information found.
+     */
+    open fun hasAsValue(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+        return null
+    }
+
+    /**
+     * Method for checking whether given method has an annotation that suggests that the method is to serve as "any
+     * getter"; method to be used for accessing set of miscellaneous "extra" properties, often bound with matching "any
+     * getter" method.
+     *
+     * @param annotated Annotated entity to check
+     *
+     * @return `true` if such annotation is found (and is not disabled), `false` otherwise
+     */
+    open fun hasAnyGetter(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+        return null
+    }
+
+    /**
      * Finds the explicitly defined name of the given set of `Enum` values, if any. The method overwrites entries in the
      * incoming `names` array with the explicit names found, if any, leaving other entries unmodified.
      *
@@ -717,24 +768,26 @@ abstract class AnnotationIntrospector : Versioned {
      */
     open fun findEnumValues(config: MapperConfig<*>, annotatedClass: AnnotatedClass, enumValues: Array<Enum<*>>,
             names: Array<String?>): Array<String?> {
-        TODO("Not yet implemented")
+        return names
     }
 
     /**
      * Method that is called to check if there are alternative names (aliases) that can be accepted for entries
-     * in addition to primary names that were introspected earlier, related to {@link #findEnumValues}.
-     * These aliases should be returned in `Array<Array<String>> aliases` passed in as argument.
-     * The `aliases.size` is expected to match the number of `Enum` values.
+     * in addition to primary names that were introspected earlier, related to [findEnumValues]. These aliases should be
+     * returned in `Array<Array<String>> aliases` passed in as argument. The `aliases.size` is expected to match the
+     * number of `Enum` values.
      *
      * @param config The configuration of the mapper
+     *
      * @param annotatedClass The annotated class of the enumeration type
+     *
      * @param enumValues The values of the enumeration
+     *
      * @param aliases (in/out) Pre-allocated array where aliases found, if any, may be added (in indexes matching those
      * of `enumValues`)
      */
     open fun findEnumAliases(config: MapperConfig<*>, annotatedClass: AnnotatedClass, enumValues: Array<Enum<*>>,
             aliases: Array<Array<String>?>) {
-        TODO("Not yet implemented")
     }
 
     /**
@@ -750,7 +803,246 @@ abstract class AnnotationIntrospector : Versioned {
      */
     open fun findDefaultEnumValue(config: MapperConfig<*>, annotatedClass: AnnotatedClass,
             enumValues: Array<Enum<*>>): Enum<*>? {
-        TODO("Not yet implemented")
+        return null
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Deserialization: general annotations
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for getting a deserializer definition on specified method or field. Type of definition is either instance
+     * (of type [ValueDeserializer]) or Class (of type `KClass<ValueDeserializer>`); type is returned, a runtime
+     * exception may be thrown by caller.
+     */
+    open fun findDeserializer(config: MapperConfig<*>, annotated: Annotated): Any? {
+        return null
+    }
+
+    /**
+     * Method for getting a deserializer definition for keys of associated `Map` property. Type of definition is either
+     * instance (of type [ValueDeserializer]) or Class (of type `KClass<ValueDeserializer>`); if value of different type
+     * is returned, a runtime exception may be thrown by caller.
+     */
+    open fun findKeyDeserializer(config: MapperConfig<*>, annotated: Annotated): Any? {
+        return null
+    }
+
+    /**
+     * Method for getting a deserializer definition for content (values) of associated `Collection`, `array` or `Map`
+     * property. Type of definition is either instance (of type [ValueDeserializer]) or Class (of type
+     * `KClass<ValueDeserializer>`); if value of different type is returned, a runtime exception may be thrown by caller.
+     */
+    open fun findContentDeserializer(config: MapperConfig<*>, annotated: Annotated): Any? {
+        return null
+    }
+
+    /**
+     * Method for finding [Converter][org.cirjson.cirjackson.databind.util.Converter] that annotated entity (property or
+     * class) has indicated to be used as part of deserialization. If not `null`, either has to be actual
+     * [Converter][org.cirjson.cirjackson.databind.util.Converter] instance, or class for such converter; and resulting
+     * converter will be used after CirJackson has deserializer data into intermediate type (Converter input type), and
+     * Converter needs to convert this into its target type to be set as property value.
+     *
+     * This feature is typically used to convert intermediate CirJackson types (that default deserializers can produce)
+     * into custom type instances.
+     *
+     * Note also that this feature does not necessarily work well with polymorphic type handling, or object identity
+     * handling; if such features are needed an explicit deserializer is usually better way to handle deserialization.
+     *
+     * @param annotated Annotated property (field, method) or class to check for annotations
+     */
+    open fun findDeserializationConverter(config: MapperConfig<*>, annotated: Annotated): Any? {
+        return null
+    }
+
+    /**
+     * Method for finding [Converter][org.cirjson.cirjackson.databind.util.Converter] that annotated property has
+     * indicated needs to be used for values of container type (this also means that method should only be called for
+     * properties of container types, List/Map/array properties).
+     *
+     * If not `null`, either has to be actual [Converter][org.cirjson.cirjackson.databind.util.Converter] instance, or
+     * class for such converter; and resulting converter will be used after Jackson has deserializer data into
+     * intermediate type (Converter input type), and Converter needs to convert this into its target type to be set as
+     * property value.
+     *
+     * Other notes are same as those for [findDeserializationConverter]
+     *
+     * @param annotatedMember Annotated property (field, method) to check.
+     */
+    open fun findDeserializationContentConverter(config: MapperConfig<*>, annotatedMember: AnnotatedMember): Any? {
+        return null
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Deserialization: type refinements
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called to find out possible type refinements to use for deserialization.
+     */
+    open fun refineDeserializationType(config: MapperConfig<*>, annotated: Annotated,
+            baseType: KotlinType): KotlinType {
+        return baseType
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Deserialization: class annotations
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method getting [ValueInstantiator][org.cirjson.cirjackson.databind.deserialization.ValueInstantiator] to use for
+     * given type (class): return value can either be an instance of instantiator, or class of instantiator to create.
+     *
+     * @param annotatedClass Annotated class to introspect
+     */
+    open fun findValueInstantiator(config: MapperConfig<*>, annotatedClass: AnnotatedClass): Any? {
+        return null
+    }
+
+    /**
+     * Method for finding Builder object to use for constructing value instance and binding data (sort of combining
+     * value instantiators that can construct, and deserializers that can bind data).
+     *
+     * Note that unlike accessors for some helper Objects, this method does not allow returning instances: the reason is
+     * that builders have state, and a separate instance needs to be created for each deserialization call.
+     *
+     * @param annotatedClass Annotated class to introspect
+     */
+    open fun findPOJOBuilder(config: MapperConfig<*>, annotatedClass: AnnotatedClass): KClass<*>? {
+        return null
+    }
+
+    /**
+     * @param annotatedClass Annotated class to introspect
+     */
+    open fun findPOJOBuilderConfig(config: MapperConfig<*>, annotatedClass: AnnotatedClass): CirJsonPOJOBuilder.Value? {
+        return null
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Deserialization: property annotations
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for checking whether given property accessors (method, field) has an annotation that suggests property
+     * name to use for deserialization (reading CirJSON into POJOs). Should return null if no annotation is found;
+     * otherwise a non-null name (possibly [PropertyName.USE_DEFAULT], which means "use default heuristics").
+     *
+     * @param annotated Annotated entity to check
+     *
+     * @return Name to use if found; `null` if not.
+     */
+    open fun findNameForDeserialization(config: MapperConfig<*>, annotated: Annotated): PropertyName? {
+        return null
+    }
+
+    /**
+     * Method for checking whether given method has an annotation that suggests that the method is to serve as "any
+     * setter"; method to be used for setting values of any properties for which no dedicated setter method is found.
+     *
+     * @param annotated Annotated entity to check
+     *
+     * @return `true` if such annotation is found (and is not disabled), `false` otherwise
+     */
+    open fun hasAnySetter(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+        return null
+    }
+
+    /**
+     * Method for finding possible settings for property, given annotations on an accessor.
+     */
+    open fun findSetterInfo(config: MapperConfig<*>, annotated: Annotated): CirJsonSetter.Value? {
+        return CirJsonSetter.Value.EMPTY
+    }
+
+    /**
+     * Method for finding merge settings for property, if any.
+     */
+    open fun findMergeInfo(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+        return null
+    }
+
+    /**
+     * Method called to check whether potential Creator (constructor or static factory method) has explicit annotation
+     * to indicate it as actual Creator; and if so, which [CirJsonCreator.Mode] to use.
+     *
+     * NOTE: caller needs to consider possibility of both `null` (no annotation found) and
+     * [CirJsonCreator.Mode.DISABLED] (annotation found, but disabled); latter is necessary as marker in case multiple
+     * introspectors are chained, as well as possibly as when using mix-in annotations.
+     *
+     * @param config Configuration settings in effect (for serialization or deserialization)
+     *
+     * @param annotated Annotated accessor (usually constructor or static method) to check
+     */
+    open fun findCreatorAnnotation(config: MapperConfig<*>, annotated: Annotated): CirJsonCreator.Mode? {
+        return null
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Overridable methods: may be used as low-level extension points.
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that should be used by subclasses for ALL annotation access; overridable so that subclasses may, if they
+     * choose to, mangle actual access to block access ("hide" annotations) or perhaps change it.
+     *
+     * Default implementation is simply:
+     * ```
+     * return annotated.getAnnotation(annotationClass)
+     * ```
+     *
+     * @param annotated Annotated entity to check for specified annotation
+     *
+     * @param annotationClass Type of annotation to find
+     *
+     * @return Value of given annotation (as per `annotationClass`), if entity has one; `null` otherwise
+     */
+    protected open fun <A : Annotation> findAnnotation(annotated: Annotated, annotationClass: KClass<A>): A? {
+        return annotated.getAnnotation(annotationClass)
+    }
+
+    /**
+     * Method that should be used by subclasses for ALL annotation existence access; overridable so that subclasses may,
+     * if they choose to, mangle actual access to block access ("hide" annotations) or perhaps change value seen.
+     *
+     * Default implementation is simply:
+     * ```
+     * return annotated.hasAnnotation(annotationClass)
+     * ```
+     *
+     * @param annotated Annotated entity to check for specified annotation
+     *
+     * @param annotationClass Type of annotation to find
+     *
+     * @return `true` if specified annotation exists in given entity; `false` if not
+     */
+    protected open fun hasAnnotation(annotated: Annotated, annotationClass: KClass<out Annotation>): Boolean {
+        return annotated.hasAnnotation(annotationClass)
+    }
+
+    /**
+     * Alternative lookup method that is used to see if annotation has at least one of annotations of types listed in
+     * second argument.
+     *
+     * @param annotated Annotated entity to check for specified annotation
+     *
+     * @param annotationClasses Types of annotation to find
+     *
+     * @return `true` if at least one of specified annotation exists in given entity; `false` otherwise
+     */
+    protected open fun hasOneOf(annotated: Annotated, annotationClasses: Array<KClass<out Annotation>>): Boolean {
+        return annotated.hasOneOf(annotationClasses)
     }
 
     /*
