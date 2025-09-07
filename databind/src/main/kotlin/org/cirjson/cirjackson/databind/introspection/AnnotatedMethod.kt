@@ -2,11 +2,13 @@ package org.cirjson.cirjackson.databind.introspection
 
 import org.cirjson.cirjackson.databind.KotlinType
 import java.lang.reflect.Member
+import java.lang.reflect.Parameter
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 
 class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: KFunction<*>, annotations: AnnotationMap?,
-        paramAnnotations: Array<AnnotationMap>?) : AnnotatedWithParams(context, annotations, paramAnnotations) {
+        paramAnnotations: Array<AnnotationMap?>?) : AnnotatedWithParams(context, annotations, paramAnnotations) {
 
     /*
      *******************************************************************************************************************
@@ -39,7 +41,33 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: KFun
      *******************************************************************************************************************
      */
 
+    override fun call(): Any? {
+        TODO("Not yet implemented")
+    }
+
+    override fun call(args: Array<Any?>): Any? {
+        TODO("Not yet implemented")
+    }
+
+    override fun call(arg: Any?): Any? {
+        TODO("Not yet implemented")
+    }
+
     override val parameterCount: Int
+        get() = TODO("Not yet implemented")
+
+    override fun getRawParameterType(index: Int): KClass<*> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getParameterType(index: Int): KotlinType {
+        TODO("Not yet implemented")
+    }
+
+    override val nativeKotlinParameters: Array<KParameter>
+        get() = TODO("Not yet implemented")
+
+    override val nativeParameters: Array<Parameter>
         get() = TODO("Not yet implemented")
 
     /*
