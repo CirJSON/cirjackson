@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.databind.introspection
 
 import org.cirjson.cirjackson.databind.KotlinType
+import java.lang.reflect.Member
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 
@@ -12,6 +13,10 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: KFun
      * Lifecycle
      *******************************************************************************************************************
      */
+
+    override fun withAnnotations(fallback: AnnotationMap): AnnotatedMethod {
+        TODO("Not yet implemented")
+    }
 
     override val annotated: KFunction<*>
         get() = TODO("Not yet implemented")
@@ -42,6 +47,17 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: KFun
      * AnnotatedMember implementation
      *******************************************************************************************************************
      */
+
+    override val declaringClass: KClass<*>
+        get() = TODO("Not yet implemented")
+
+    override val member: Member?
+        get() = TODO("Not yet implemented")
+
+    @Throws(IllegalArgumentException::class)
+    override fun setValue(pojo: Any, value: Any) {
+        TODO("Not yet implemented")
+    }
 
     @Throws(IllegalArgumentException::class)
     override fun getValue(pojo: Any): Any? {

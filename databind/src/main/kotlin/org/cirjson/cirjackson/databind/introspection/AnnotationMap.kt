@@ -19,7 +19,7 @@ class AnnotationMap(private val myAnnotations: Map<KClass<*>, Annotation>) : Ann
         TODO("Not yet implemented")
     }
 
-    override fun hasOneOf(vararg kClass: KClass<*>): Boolean {
+    override fun hasOneOf(vararg kClass: Array<KClass<out Annotation>>): Boolean {
         TODO("Not yet implemented")
     }
 
