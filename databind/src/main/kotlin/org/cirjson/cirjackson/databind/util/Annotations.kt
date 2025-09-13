@@ -16,9 +16,9 @@ interface Annotations {
      */
     fun <A : Annotation> get(kClass: KClass<A>): A?
 
-    fun has(kClass: KClass<*>): Boolean
+    fun has(annotationClass: KClass<*>): Boolean
 
-    fun hasOneOf(vararg kClass: Array<KClass<out Annotation>>): Boolean
+    fun hasOneOf(vararg annotationClasses: Array<KClass<out Annotation>>): Boolean
 
     /**
      * Returns number of annotation entries in this collection.
