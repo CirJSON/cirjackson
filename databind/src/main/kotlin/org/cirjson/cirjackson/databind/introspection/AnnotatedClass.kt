@@ -7,11 +7,18 @@ import org.cirjson.cirjackson.databind.util.Annotations
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 
-class AnnotatedClass internal constructor(private val myConfig: MapperConfig<*>?, private val myType: KotlinType?,
-        private val myClass: KClass<*>, private val mySupertypes: List<KotlinType>,
-        private val myPrimaryMixIn: KClass<*>?, val annotations: Annotations, private val myBindings: TypeBindings,
-        private val myMixInResolver: MixInResolver?, private val myCollectAnnotations: Boolean) : Annotated(),
-        TypeResolutionContext {
+class AnnotatedClass : Annotated, TypeResolutionContext {
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle
+     *******************************************************************************************************************
+     */
+
+    internal constructor(config: MapperConfig<*>?, type: KotlinType?, clazz: KClass<*>, supertypes: List<KotlinType>,
+            primaryMixIn: KClass<*>?, annotations: Annotations, bindings: TypeBindings, mixInResolver: MixInResolver?,
+            collectAnnotations: Boolean) : super() {
+    }
 
     /*
      *******************************************************************************************************************
