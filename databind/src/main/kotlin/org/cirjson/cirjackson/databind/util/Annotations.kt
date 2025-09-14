@@ -14,7 +14,7 @@ interface Annotations {
     /**
      * Main access method used to find value for given annotation.
      */
-    fun <A : Annotation> get(kClass: KClass<A>): A?
+    operator fun <A : Annotation> get(kClass: KClass<A>): A?
 
     fun has(annotationClass: KClass<*>): Boolean
 
