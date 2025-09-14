@@ -16,8 +16,8 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
      */
 
     internal constructor(config: MapperConfig<*>?, type: KotlinType?, clazz: KClass<*>, supertypes: List<KotlinType>,
-            primaryMixIn: KClass<*>?, annotations: Annotations, bindings: TypeBindings, mixInResolver: MixInResolver?,
-            collectAnnotations: Boolean) : super() {
+            primaryMixIn: KClass<*>?, classAnnotations: Annotations, bindings: TypeBindings,
+            mixInResolver: MixInResolver?, collectAnnotations: Boolean) : super() {
     }
 
     /*
