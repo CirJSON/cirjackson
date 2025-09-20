@@ -4,6 +4,8 @@ import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.type.TypeBindings
 import org.cirjson.cirjackson.databind.util.Annotations
+import org.cirjson.cirjackson.databind.util.hasClass
+import org.cirjson.cirjackson.databind.util.isNonStaticInnerClass
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
@@ -66,6 +68,24 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
      * interfaces
      */
     val annotations: Annotations
+
+    private var myCreators: Creators? = null
+
+    /**
+     * Member methods of interest; for now ones with 0 or 1 arguments (just optimization, since others won't be used
+     * now)
+     */
+    private var myMemberMethods: AnnotatedMethodMap? = null
+
+    /**
+     * Member fields of interest: ones that are either public, or have at least one annotation.
+     */
+    private var myFields: List<AnnotatedField>? = null
+
+    /**
+     * Lazily determined property to see if this is a non-static inner class.
+     */
+    private var myNonStaticInnerClass: Boolean? = null
 
     /*
      *******************************************************************************************************************
@@ -159,22 +179,94 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
      *******************************************************************************************************************
      */
 
+    fun hasAnnotations(): Boolean {
+        return annotations.size > 0
+    }
+
+    val defaultConstructor: AnnotatedConstructor?
+        get() = creators().defaultConstructor
+
+    val constructors: List<AnnotatedConstructor>
+        get() = creators().constructors
+
+    val factoryMethods: List<AnnotatedMethod>
+        get() = creators().creatorMethods
+
+    fun memberMethods(): Iterable<AnnotatedMethod> {
+        return methods()
+    }
+
+    val memberMethodCount: Int
+        get() = methods().size
+
+    fun findMethod(name: String, parameterTypes: Array<KClass<*>>): AnnotatedMethod? {
+        return methods().find(name, parameterTypes)
+    }
+
+    fun fields(): Iterable<AnnotatedField> {
+        return fieldsInternal()
+    }
+
+    val fieldCount: Int
+        get() = fieldsInternal().size
+
+    val isNonStaticInnerClass: Boolean
+        get() = myNonStaticInnerClass ?: myClass.isNonStaticInnerClass.also { myNonStaticInnerClass = it }
+
     /*
      *******************************************************************************************************************
      * Lazily-operating accessors
      *******************************************************************************************************************
      */
 
-    private fun fields(): List<AnnotatedField> {
-        TODO("Not yet implemented")
+    private fun fieldsInternal(): List<AnnotatedField> {
+        var fields = myFields
+
+        if (fields != null) {
+            return fields
+        }
+
+        fields = if (myType == null) {
+            emptyList()
+        } else {
+            AnnotatedFieldCollector.collectFields(myConfig, this, myMixInResolver, myType, myPrimaryMixIn,
+                    myCollectAnnotations)
+        }
+
+        return fields.also { myFields = it }
     }
 
     private fun methods(): AnnotatedMethodMap {
-        TODO("Not yet implemented")
+        var methods = myMemberMethods
+
+        if (methods != null) {
+            return methods
+        }
+
+        methods = if (myType == null) {
+            AnnotatedMethodMap()
+        } else {
+            AnnotatedMethodCollector.collectMethods(myConfig, this, myMixInResolver, myType, mySupertypes,
+                    myPrimaryMixIn, myCollectAnnotations)
+        }
+
+        return methods.also { myMemberMethods = it }
     }
 
     private fun creators(): Creators {
-        TODO("Not yet implemented")
+        var creators = myCreators
+
+        if (creators != null) {
+            return creators
+        }
+
+        creators = if (myType == null) {
+            NO_CREATORS
+        } else {
+            AnnotatedCreatorCollector.collectCreators(myConfig, this, myType, myPrimaryMixIn, myCollectAnnotations)
+        }
+
+        return creators.also { myCreators = it }
     }
 
     /*
@@ -184,15 +276,23 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
      */
 
     override fun toString(): String {
-        TODO("Not yet implemented")
+        return "[AnnotatedClass ${myClass.qualifiedName}]"
     }
 
     override fun hashCode(): Int {
-        TODO("Not yet implemented")
+        return myClass.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
-        TODO("Not yet implemented")
+        if (other === this) {
+            return true
+        }
+
+        if (other == null || other.hasClass(this::class) || other !is AnnotatedClass) {
+            return false
+        }
+
+        return myClass == other.myClass
     }
 
     /*
@@ -210,5 +310,11 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
      */
     class Creators(val defaultConstructor: AnnotatedConstructor?, val constructors: List<AnnotatedConstructor>,
             val creatorMethods: List<AnnotatedMethod>)
+
+    companion object {
+
+        private val NO_CREATORS = Creators(null, emptyList(), emptyList())
+
+    }
 
 }
