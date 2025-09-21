@@ -18,7 +18,7 @@ abstract class AnnotatedWithParams : AnnotatedMember {
      *******************************************************************************************************************
      */
 
-    protected constructor(context: TypeResolutionContext, annotations: AnnotationMap?,
+    protected constructor(context: TypeResolutionContext?, annotations: AnnotationMap?,
             paramAnnotations: Array<AnnotationMap?>?) : super(context, annotations) {
         myParamAnnotations = paramAnnotations
     }
@@ -47,14 +47,14 @@ abstract class AnnotatedWithParams : AnnotatedMember {
     }
 
     fun getParameter(index: Int): AnnotatedParameter {
-        return AnnotatedParameter(this, getParameterType(index), myTypeContext, getParameterAnnotations(index), index)
+        return AnnotatedParameter(this, getParameterType(index)!!, myTypeContext, getParameterAnnotations(index), index)
     }
 
     abstract val parameterCount: Int
 
-    abstract fun getRawParameterType(index: Int): KClass<*>
+    abstract fun getRawParameterType(index: Int): KClass<*>?
 
-    abstract fun getParameterType(index: Int): KotlinType
+    abstract fun getParameterType(index: Int): KotlinType?
 
     abstract val nativeKotlinParameters: Array<KParameter>
 

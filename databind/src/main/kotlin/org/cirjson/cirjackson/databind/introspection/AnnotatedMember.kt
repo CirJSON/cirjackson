@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  * @property myTypeContext Context object needed for resolving generic type associated with this member (method
  * parameter or return value, or field type).
  */
-abstract class AnnotatedMember protected constructor(protected val myTypeContext: TypeResolutionContext,
+abstract class AnnotatedMember protected constructor(protected val myTypeContext: TypeResolutionContext?,
         protected val myAnnotations: AnnotationMap?) : Annotated() {
 
     /**

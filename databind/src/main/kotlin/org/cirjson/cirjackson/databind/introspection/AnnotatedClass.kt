@@ -288,7 +288,7 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
             return true
         }
 
-        if (other == null || other.hasClass(this::class) || other !is AnnotatedClass) {
+        if (other == null || !other.hasClass(this::class) || other !is AnnotatedClass) {
             return false
         }
 

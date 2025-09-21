@@ -56,11 +56,11 @@ class AnnotatedMethod(context: TypeResolutionContext, private val myMethod: KFun
     override val parameterCount: Int
         get() = TODO("Not yet implemented")
 
-    override fun getRawParameterType(index: Int): KClass<*> {
+    override fun getRawParameterType(index: Int): KClass<*>? {
         TODO("Not yet implemented")
     }
 
-    override fun getParameterType(index: Int): KotlinType {
+    override fun getParameterType(index: Int): KotlinType? {
         TODO("Not yet implemented")
     }
 

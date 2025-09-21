@@ -5,7 +5,7 @@ import java.lang.reflect.Member
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 
-class AnnotatedParameter(val owner: AnnotatedWithParams, override val type: KotlinType, context: TypeResolutionContext,
+class AnnotatedParameter(val owner: AnnotatedWithParams, override val type: KotlinType, context: TypeResolutionContext?,
         annotations: AnnotationMap?, val index: Int) : AnnotatedMember(context, annotations) {
 
     /*
