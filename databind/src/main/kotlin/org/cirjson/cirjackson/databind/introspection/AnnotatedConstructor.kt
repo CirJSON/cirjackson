@@ -20,7 +20,7 @@ class AnnotatedConstructor(context: TypeResolutionContext?, private val myConstr
      *******************************************************************************************************************
      */
 
-    override fun withAnnotations(fallback: AnnotationMap): AnnotatedConstructor {
+    override fun withAnnotations(fallback: AnnotationMap?): AnnotatedConstructor {
         return AnnotatedConstructor(myTypeContext, myConstructor, fallback, myParamAnnotations)
     }
 

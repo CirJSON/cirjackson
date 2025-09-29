@@ -24,7 +24,7 @@ abstract class AnnotatedMember protected constructor(protected val myTypeContext
      * Fluent factory method that will construct a new instance that uses specified instance annotations instead of
      * currently configured ones.
      */
-    abstract fun withAnnotations(fallback: AnnotationMap): Annotated
+    abstract fun withAnnotations(fallback: AnnotationMap?): Annotated
 
     abstract val declaringClass: KClass<*>
 

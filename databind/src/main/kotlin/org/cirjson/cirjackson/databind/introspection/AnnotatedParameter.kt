@@ -14,7 +14,7 @@ class AnnotatedParameter(val owner: AnnotatedWithParams, override val type: Kotl
      *******************************************************************************************************************
      */
 
-    override fun withAnnotations(fallback: AnnotationMap): AnnotatedParameter {
+    override fun withAnnotations(fallback: AnnotationMap?): AnnotatedParameter {
         TODO("Not yet implemented")
     }
 
