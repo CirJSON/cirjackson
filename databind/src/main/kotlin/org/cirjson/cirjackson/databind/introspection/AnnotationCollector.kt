@@ -137,7 +137,7 @@ abstract class AnnotationCollector protected constructor(protected val myData: A
             return false
         }
 
-        override fun hasOneOf(vararg annotationClasses: Array<KClass<out Annotation>>): Boolean {
+        override fun hasOneOf(annotationClasses: Array<KClass<out Annotation>>): Boolean {
             return false
         }
 
@@ -161,7 +161,7 @@ abstract class AnnotationCollector protected constructor(protected val myData: A
             return myType == annotationClass
         }
 
-        override fun hasOneOf(vararg annotationClasses: Array<KClass<out Annotation>>): Boolean {
+        override fun hasOneOf(annotationClasses: Array<KClass<out Annotation>>): Boolean {
             for (annotationClass in annotationClasses) {
                 if (myType == annotationClass) {
                     return true
@@ -196,7 +196,7 @@ abstract class AnnotationCollector protected constructor(protected val myData: A
             return myType1 == annotationClass || myType2 == annotationClass
         }
 
-        override fun hasOneOf(vararg annotationClasses: Array<KClass<out Annotation>>): Boolean {
+        override fun hasOneOf(annotationClasses: Array<KClass<out Annotation>>): Boolean {
             for (annotationClass in annotationClasses) {
                 if (myType1 == annotationClass || myType2 == annotationClass) {
                     return true

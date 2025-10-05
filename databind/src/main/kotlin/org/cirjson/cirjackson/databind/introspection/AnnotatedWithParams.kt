@@ -36,6 +36,10 @@ abstract class AnnotatedWithParams : AnnotatedMember {
         return getParameter(index)
     }
 
+    internal fun replaceParamAnnotations(index: Int, annotationMap: AnnotationMap?): AnnotatedParameter {
+        return replaceParameterAnnotations(index, annotationMap)
+    }
+
     /*
      *******************************************************************************************************************
      * Extended API
