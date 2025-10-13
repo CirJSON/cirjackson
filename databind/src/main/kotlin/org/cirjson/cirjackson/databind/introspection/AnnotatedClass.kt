@@ -6,6 +6,7 @@ import org.cirjson.cirjackson.databind.type.TypeBindings
 import org.cirjson.cirjackson.databind.util.Annotations
 import org.cirjson.cirjackson.databind.util.hasClass
 import org.cirjson.cirjackson.databind.util.isNonStaticInnerClass
+import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
@@ -138,6 +139,10 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
 
     override fun resolveType(type: KType): KotlinType {
         return myConfig!!.typeFactory.resolveMemberType(type.javaType, myBindings)
+    }
+
+    override fun resolveType(type: Type): KotlinType {
+        return myConfig!!.typeFactory.resolveMemberType(type, myBindings)
     }
 
     /*

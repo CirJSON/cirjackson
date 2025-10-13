@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.introspection
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.type.TypeBindings
 import org.cirjson.cirjackson.databind.type.TypeFactory
+import java.lang.reflect.Type
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.javaType
 
@@ -13,10 +14,16 @@ interface TypeResolutionContext {
 
     fun resolveType(type: KType): KotlinType
 
+    fun resolveType(type: Type): KotlinType
+
     class Basic(private val myTypeFactory: TypeFactory, private val myBindings: TypeBindings) : TypeResolutionContext {
 
         override fun resolveType(type: KType): KotlinType {
             return myTypeFactory.resolveMemberType(type.javaType, myBindings)
+        }
+
+        override fun resolveType(type: Type): KotlinType {
+            return myTypeFactory.resolveMemberType(type, myBindings)
         }
 
     }
@@ -29,6 +36,10 @@ interface TypeResolutionContext {
 
         override fun resolveType(type: KType): KotlinType {
             return myTypeFactory.constructType(type.javaType)
+        }
+
+        override fun resolveType(type: Type): KotlinType {
+            return myTypeFactory.constructType(type)
         }
 
     }
