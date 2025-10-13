@@ -4,9 +4,8 @@ import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import kotlin.reflect.KClass
 
-class AnnotatedMethodCollector private constructor(config: MapperConfig<*>?,
-        private val myMixInResolver: MixInResolver?, private val myCollectAnnotations: Boolean) :
-        CollectorBase(config) {
+class AnnotatedMethodCollector private constructor(config: MapperConfig<*>?, mixInResolver: MixInResolver?,
+        private val myCollectAnnotations: Boolean) : CollectorBase(config) {
 
     companion object {
 
