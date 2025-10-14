@@ -12,7 +12,7 @@ open class AnnotationIntrospectorPair(protected val myPrimary: AnnotationIntrosp
 
     companion object {
 
-        fun create(primary: AnnotationIntrospector?, secondary: AnnotationIntrospector?): AnnotationIntrospectorPair {
+        fun create(primary: AnnotationIntrospector?, secondary: AnnotationIntrospector?): AnnotationIntrospector? {
             TODO("Not yet implemented")
         }
 
