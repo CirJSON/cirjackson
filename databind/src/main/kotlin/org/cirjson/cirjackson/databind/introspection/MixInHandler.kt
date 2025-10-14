@@ -41,7 +41,7 @@ open class MixInHandler : MixInResolver {
         TODO("Not yet implemented")
     }
 
-    override fun findMixInClassFor(kClass: KClass<*>): KClass<*> {
+    override fun findMixInClassFor(kClass: KClass<*>): KClass<*>? {
         TODO("Not yet implemented")
     }
 

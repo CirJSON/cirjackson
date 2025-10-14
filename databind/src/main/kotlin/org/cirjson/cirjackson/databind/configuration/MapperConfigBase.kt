@@ -541,7 +541,7 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
     /**
      * Method that will check if there are "mix-in" classes (with mix-in annotations) for given class
      */
-    final override fun findMixInClassFor(kClass: KClass<*>): KClass<*> {
+    final override fun findMixInClassFor(kClass: KClass<*>): KClass<*>? {
         return myMixIns.findMixInClassFor(kClass)
     }
 

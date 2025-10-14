@@ -12,7 +12,7 @@ interface MixInResolver : Snapshottable<MixInResolver> {
     /**
      * Method that will check if there are "mix-in" classes (with mix-in annotations) for given class
      */
-    fun findMixInClassFor(kClass: KClass<*>): KClass<*>
+    fun findMixInClassFor(kClass: KClass<*>): KClass<*>?
 
     /**
      * Method that may be called for optimization purposes, to see if calls to mix-in resolver may be avoided. Return
