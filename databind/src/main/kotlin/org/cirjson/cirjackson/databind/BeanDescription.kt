@@ -7,9 +7,18 @@ import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
  * deserializers. Note that the one implementation type is [BasicBeanDescription], meaning that it is safe to upcast to
  * that type.
  *
- * @property type Bean type information, including raw class and possible generics information
+ * @property myType Bean type information, including raw class and possible generics information
  */
-abstract class BeanDescription(val type: KotlinType) {
+abstract class BeanDescription(protected val myType: KotlinType) {
+
+    /*
+     *******************************************************************************************************************
+     * Simple accessors
+     *******************************************************************************************************************
+     */
+
+    open val type: KotlinType
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************
