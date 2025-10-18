@@ -676,8 +676,7 @@ abstract class AnnotationIntrospector : Versioned {
      * Method for accessing defined property serialization order (which may be partial). May return `null` if no
      * ordering is defined.
      */
-    open fun findSerializationContentConverter(config: MapperConfig<*>,
-            annotatedClass: AnnotatedClass): Array<String>? {
+    open fun findSerializationPropertyOrder(config: MapperConfig<*>, annotatedClass: AnnotatedClass): Array<String>? {
         return null
     }
 
@@ -685,7 +684,7 @@ abstract class AnnotationIntrospector : Versioned {
      * Method for checking whether an annotation indicates that serialized properties for which no explicit is defined
      * should be alphabetically (lexicographically) ordered
      */
-    open fun findSerializationContentConverter(config: MapperConfig<*>, annotated: Annotated): Boolean? {
+    open fun findSerializationSortAlphabetically(config: MapperConfig<*>, annotated: Annotated): Boolean? {
         return null
     }
 

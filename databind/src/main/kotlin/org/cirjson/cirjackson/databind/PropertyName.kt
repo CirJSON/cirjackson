@@ -49,6 +49,10 @@ open class PropertyName(simpleName: String?, val namespace: String?) : FullyName
             TODO("Not yet implemented")
         }
 
+        fun merge(name1: PropertyName?, name2: PropertyName?): PropertyName? {
+            TODO("Not yet implemented")
+        }
+
     }
 
 }
