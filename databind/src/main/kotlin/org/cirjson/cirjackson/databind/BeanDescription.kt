@@ -17,8 +17,11 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      *******************************************************************************************************************
      */
 
+    /**
+     * Accessor for declared type of bean being introspected, including full generic type information (from declaration)
+     */
     open val type: KotlinType
-        get() = TODO("Not yet implemented")
+        get() = myType
 
     /*
      *******************************************************************************************************************
