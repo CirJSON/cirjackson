@@ -585,7 +585,7 @@ val Named?.nonNullName: String
     }
 
 /**
- * Returns either single-quoted (apostrophe) `'this'` (if `this` not `null`), or '"[null]"' if `this` is `null`.
+ * Returns either single-quoted (apostrophe) `'this'` (if `this` not `null`), or `"[null]"` if `this` is `null`.
  */
 @Suppress("KDocUnresolvedReference")
 fun String?.name(): String {

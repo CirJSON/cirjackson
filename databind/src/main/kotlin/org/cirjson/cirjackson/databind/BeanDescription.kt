@@ -76,7 +76,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
     /**
      * Method for locating all back-reference properties (setters, fields) bean has
      */
-    abstract fun findBackReferences(): List<BeanPropertyDefinition>
+    abstract fun findBackReferences(): List<BeanPropertyDefinition>?
 
     /*
      *******************************************************************************************************************
@@ -131,7 +131,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      *
      * @return Container for introspected Creator candidates, if any
      */
-    abstract val potentialCreators: PotentialCreators?
+    abstract val potentialCreators: PotentialCreators
 
     /*
      *******************************************************************************************************************
@@ -165,7 +165,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      */
     abstract fun findAnySetterAccessor(): AnnotatedMember?
 
-    abstract fun findMethod(name: String, paramTypes: Array<KClass<*>>): AnnotatedMember?
+    abstract fun findMethod(name: String, paramTypes: Array<KClass<*>>): AnnotatedMethod?
 
     /*
      *******************************************************************************************************************
@@ -238,6 +238,6 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      * Method for finding out if the POJO specifies default view(s) to use for properties, considering both per-type
      * annotations and global default settings.
      */
-    abstract fun findDefaultViews(): Array<KClass<*>>
+    abstract fun findDefaultViews(): Array<KClass<*>>?
 
 }
