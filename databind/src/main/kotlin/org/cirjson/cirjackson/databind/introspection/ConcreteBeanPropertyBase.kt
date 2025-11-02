@@ -10,11 +10,12 @@ import kotlin.reflect.KClass
 
 abstract class ConcreteBeanPropertyBase protected constructor(metadata: PropertyMetadata?) : BeanProperty {
 
-    override val metadata = metadata ?: PropertyMetadata.STANDARD_REQUIRED_OR_OPTIONAL
-
     constructor(source: ConcreteBeanPropertyBase) : this(source.metadata)
 
     override val isRequired: Boolean
+        get() = TODO("Not yet implemented")
+
+    override val metadata: PropertyMetadata
         get() = TODO("Not yet implemented")
 
     override val isVirtual: Boolean
