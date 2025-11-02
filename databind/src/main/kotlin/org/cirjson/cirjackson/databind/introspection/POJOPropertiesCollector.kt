@@ -59,4 +59,13 @@ open class POJOPropertiesCollector protected constructor(protected val myConfig:
     open val objectIdInfo: ObjectIdInfo
         get() = TODO("Not yet implemented")
 
+    companion object {
+
+        internal fun create(config: MapperConfig<*>, forSerialization: Boolean, type: KotlinType,
+                classDefinition: AnnotatedClass, accessorNaming: AccessorNamingStrategy): POJOPropertiesCollector {
+            return POJOPropertiesCollector(config, forSerialization, type, classDefinition, accessorNaming)
+        }
+
+    }
+
 }
