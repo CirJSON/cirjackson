@@ -25,7 +25,10 @@ open class DefaultAccessorNamingStrategy protected constructor(protected val myC
         TODO("Not yet implemented")
     }
 
-    interface BaseNameValidator {
+    fun interface BaseNameValidator {
+
+        fun accept(firstChar: Char, baseName: String, offset: Int): Boolean
+
     }
 
     /*
