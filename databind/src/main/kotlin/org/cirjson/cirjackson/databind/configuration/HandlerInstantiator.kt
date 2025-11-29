@@ -146,7 +146,7 @@ abstract class HandlerInstantiator {
     /**
      * Method called to construct a [VirtualBeanPropertyWriter] instance of the specified type.
      */
-    open fun virtualPropertyWriterInstance(config: MapperConfig<*>, annotated: Annotated,
+    open fun virtualPropertyWriterInstance(config: MapperConfig<*>,
             implementationClass: KClass<*>): VirtualBeanPropertyWriter? {
         return null
     }

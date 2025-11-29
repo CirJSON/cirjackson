@@ -1,14 +1,26 @@
 package org.cirjson.cirjackson.databind.serialization
 
-import org.cirjson.cirjackson.databind.KotlinType
-import org.cirjson.cirjackson.databind.PropertyMetadata
-import org.cirjson.cirjackson.databind.PropertyName
-import org.cirjson.cirjackson.databind.SerializerProvider
+import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonObjectFormatVisitor
+import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
+import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
+import org.cirjson.cirjackson.databind.util.Annotations
 import kotlin.reflect.KClass
 
 open class BeanPropertyWriter : PropertyWriter {
+
+    /*
+     *******************************************************************************************************************
+     * Construction, configuration
+     *******************************************************************************************************************
+     */
+
+    protected constructor(propertyDefinition: BeanPropertyDefinition, member: AnnotatedMember?,
+            contextAnnotations: Annotations?, declaredType: KotlinType?, serializer: ValueSerializer<*>?,
+            typeSerializer: TypeSerializer?, serializerType: KotlinType?, suppressNulls: Boolean,
+            suppressableValue: Any?, includeInViews: Array<KClass<*>>?) : super(propertyDefinition) {
+    }
 
     protected constructor() : super(PropertyMetadata.STANDARD_REQUIRED_OR_OPTIONAL) {
     }

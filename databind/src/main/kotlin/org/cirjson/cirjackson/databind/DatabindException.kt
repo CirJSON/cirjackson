@@ -32,15 +32,15 @@ open class DatabindException : CirJacksonException {
 
     companion object {
 
-        fun from(parser: CirJsonParser, message: String): DatabindException {
+        fun from(parser: CirJsonParser?, message: String): DatabindException {
             return DatabindException(parser, message)
         }
 
-        fun from(parser: CirJsonParser, message: String, cause: Throwable): DatabindException {
+        fun from(parser: CirJsonParser?, message: String, cause: Throwable): DatabindException {
             return DatabindException(parser, message, cause)
         }
 
-        fun from(generator: CirJsonGenerator, message: String): DatabindException {
+        fun from(generator: CirJsonGenerator?, message: String): DatabindException {
             return DatabindException(generator, message)
         }
 

@@ -41,11 +41,19 @@ open class PropertyName(simpleName: String?, val namespace: String?) : FullyName
 
     companion object {
 
+        private const val USE_DEFAULT_STRING = ""
+
         private const val NO_NAME_STRING = ""
+
+        val USE_DEFAULT = PropertyName(USE_DEFAULT_STRING, null)
 
         val NO_NAME = PropertyName(String(NO_NAME_STRING.toByteArray()), null)
 
         fun construct(simpleName: String?): PropertyName {
+            TODO("Not yet implemented")
+        }
+
+        fun construct(simpleName: String?, namespace: String?): PropertyName {
             TODO("Not yet implemented")
         }
 

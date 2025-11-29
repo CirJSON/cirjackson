@@ -668,6 +668,46 @@ fun KClass<*>.defaultValue(): Any {
     }
 }
 
+/**
+ * Helper method for finding wrapper type for given primitive type (why isn't there one in JDK?). NOTE: throws
+ * [IllegalArgumentException] if given type is NOT primitive type (caller has to check).
+ */
+fun Class<*>.wrapperType(): Class<*> {
+    return when (this) {
+        Integer.TYPE -> Int::class.java
+        java.lang.Long.TYPE -> Long::class.java
+        java.lang.Boolean.TYPE -> Boolean::class.java
+        java.lang.Double.TYPE -> Double::class.java
+        java.lang.Float.TYPE -> Float::class.java
+        java.lang.Byte.TYPE -> Byte::class.java
+        java.lang.Short.TYPE -> Short::class.java
+        Character.TYPE -> Char::class.java
+        else -> throw IllegalArgumentException("Class ${this.name} is not a primitive type")
+    }
+}
+
+/**
+ * Method that can be used to find primitive type for given class if (but only if) it is either wrapper type or
+ * primitive type; returns `null` if type is neither.
+ */
+fun Class<*>.primitiveType(): Class<*>? {
+    if (isPrimitive) {
+        return null
+    }
+
+    return when (this) {
+        Integer::class.java -> Integer.TYPE
+        java.lang.Long::class.java -> java.lang.Long.TYPE
+        java.lang.Boolean::class.java -> java.lang.Boolean.TYPE
+        java.lang.Double::class.java -> java.lang.Double.TYPE
+        java.lang.Float::class.java -> java.lang.Float.TYPE
+        java.lang.Byte::class.java -> java.lang.Byte.TYPE
+        java.lang.Short::class.java -> java.lang.Short.TYPE
+        Character::class.java -> Character.TYPE
+        else -> null
+    }
+}
+
 /*
  ***********************************************************************************************************************
  * Access checking/handling methods
@@ -819,11 +859,9 @@ val KClass<*>.isJdkClass: Boolean
  * ```
  * return jdkMajorVersion >= 17
  * ```
- * that also catches any possible exceptions, so it is safe to call
- * from static contexts.
+ * that also catches any possible exceptions, so it is safe to call from static contexts.
  *
- * @return {@code true} if we can determine that the code is running on
- * JDK 17 or above; {@code false} otherwise.
+ * @return `true` if we can determine that the code is running on JDK 17 or above; `false` otherwise.
  */
 val isJDK17OrAbove: Boolean
     get() = try {
