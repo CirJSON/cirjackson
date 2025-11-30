@@ -10,8 +10,8 @@ package org.cirjson.cirjackson.annotations
  * If used, all otherwise unmapped key-value pairs from CirJSON Object values are added using mutator.
  *
  * @property isEnabled Optional argument that defines whether this annotation is active or not. The only use for value
- * 'false' if for overriding purposes. Overriding may be necessary when used with "mix-in annotations" (aka "annotation
- * overrides"). For most cases, however, default value of "true" is just fine and should be omitted.
+ * `false` if for overriding purposes. Overriding may be necessary when used with "mix-in annotations" (aka "annotation
+ * overrides"). For most cases, however, default value of `true` is just fine and should be omitted.
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_SETTER,
         AnnotationTarget.FIELD)

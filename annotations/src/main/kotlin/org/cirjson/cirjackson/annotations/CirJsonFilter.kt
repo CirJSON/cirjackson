@@ -8,7 +8,7 @@ package org.cirjson.cirjackson.annotations
  * Filters to use are usually of type `org.cirjson.cirjackson.databind.serialization.PropertyFilter` and are registered
  * through `org.cirjson.cirjackson.databind.ObjectMapper`
  *
- * @property value ID of filter to use; if empty String (""), no filter is to be used.
+ * @property value ID of filter to use; if empty String (`""`), no filter is to be used.
  */
 @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.TYPE, AnnotationTarget.FUNCTION, AnnotationTarget.FIELD,
         AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
