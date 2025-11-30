@@ -924,7 +924,7 @@ open class CirJacksonAnnotationIntrospector : AnnotationIntrospector() {
             return PropertyName.construct(property.value, namespace)
         }
 
-        if (useDefault || hasOneOf(annotated, ANNOTATIONS_TO_INFER_SERIALIZATION)) {
+        if (useDefault || hasOneOf(annotated, ANNOTATIONS_TO_INFER_DESERIALIZATION)) {
             return PropertyName.USE_DEFAULT
         }
 
