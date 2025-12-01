@@ -1,10 +1,14 @@
 package org.cirjson.cirjackson.databind.introspection
 
 import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.util.hasClass
 import java.lang.reflect.Member
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 
+/**
+ * Placeholder used by virtual properties as placeholder for underlying [AnnotatedMember].
+ */
 open class VirtualAnnotatedMember(typeContext: TypeResolutionContext?, protected val myDeclaringClass: KClass<*>,
         protected val myName: String, protected val myType: KotlinType) : AnnotatedMember(typeContext, null) {
 
@@ -15,7 +19,7 @@ open class VirtualAnnotatedMember(typeContext: TypeResolutionContext?, protected
      */
 
     override fun withAnnotations(fallback: AnnotationMap?): Annotated {
-        TODO("Not yet implemented")
+        return this
     }
 
     /*
@@ -25,19 +29,19 @@ open class VirtualAnnotatedMember(typeContext: TypeResolutionContext?, protected
      */
 
     override val annotated: KAnnotatedElement?
-        get() = TODO("Not yet implemented")
+        get() = null
 
     override val modifiers: Int
-        get() = TODO("Not yet implemented")
+        get() = 0
 
     override val name: String
-        get() = TODO("Not yet implemented")
+        get() = myName
 
     override val rawType: KClass<*>
-        get() = TODO("Not yet implemented")
+        get() = myType.rawClass
 
     override val type: KotlinType
-        get() = TODO("Not yet implemented")
+        get() = myType
 
     /*
      *******************************************************************************************************************
@@ -46,17 +50,19 @@ open class VirtualAnnotatedMember(typeContext: TypeResolutionContext?, protected
      */
 
     override val declaringClass: KClass<*>
-        get() = TODO("Not yet implemented")
+        get() = myDeclaringClass
 
     override val member: Member?
-        get() = TODO("Not yet implemented")
+        get() = null
 
+    @Throws(IllegalArgumentException::class)
     override fun setValue(pojo: Any, value: Any) {
-        TODO("Not yet implemented")
+        throw IllegalArgumentException("Cannot set virtual property '$myName'")
     }
 
+    @Throws(IllegalArgumentException::class)
     override fun getValue(pojo: Any): Any? {
-        TODO("Not yet implemented")
+        throw IllegalArgumentException("Cannot get virtual property '$myName'")
     }
 
     /*
@@ -66,15 +72,23 @@ open class VirtualAnnotatedMember(typeContext: TypeResolutionContext?, protected
      */
 
     override fun hashCode(): Int {
-        TODO("Not yet implemented")
+        return myName.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
-        TODO("Not yet implemented")
+        if (this === other) {
+            return true
+        }
+
+        if (!other.hasClass(this::class) || other !is VirtualAnnotatedMember) {
+            return false
+        }
+
+        return myDeclaringClass == other.myDeclaringClass && myName == other.myName
     }
 
     override fun toString(): String {
-        TODO("Not yet implemented")
+        return "[virtual $fullName]"
     }
 
 }

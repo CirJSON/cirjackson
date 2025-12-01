@@ -27,15 +27,19 @@ open class PropertyName(simpleName: String?, val namespace: String?) : FullyName
     open val simpleName: String
         get() = TODO("Not yet implemented")
 
-    fun hasSimpleName(): Boolean {
+    open fun hasSimpleName(): Boolean {
         TODO("Not yet implemented")
     }
 
-    fun hasSimpleName(string: String?): Boolean {
+    open fun hasSimpleName(string: String?): Boolean {
         TODO("Not yet implemented")
     }
 
-    fun hasNamespace(): Boolean {
+    open fun hasNamespace(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    open fun isEmpty(): Boolean {
         TODO("Not yet implemented")
     }
 

@@ -39,7 +39,7 @@ fun AnnotatedClass.findCanonicalRecordConstructor(config: MapperConfig<*>,
             }
         }
 
-        val implicits = Array(argumentCount) {
+        val implicits = Array<PropertyName?>(argumentCount) {
             PropertyName.construct(recordFields[it].name)
         }
 

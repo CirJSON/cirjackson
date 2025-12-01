@@ -1,7 +1,7 @@
 package org.cirjson.cirjackson.annotations
 
+import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 import kotlin.reflect.KVisibility
 
 /**
@@ -86,7 +86,7 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
          */
         DEFAULT;
 
-        fun <V> isVisible(member: KProperty<V>): Boolean {
+        fun isVisible(member: KCallable<*>): Boolean {
             return when (this) {
                 ANY -> true
 
