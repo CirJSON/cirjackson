@@ -5,8 +5,8 @@ import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
 
 open class PropertyMetadata protected constructor(protected val myRequired: Boolean?,
         protected val myDescription: String?, protected val myIndex: Int?, defaultValue: String?,
-        protected val myMergeInfo: MergeInfo?, protected val myValueNulls: Nulls?,
-        protected val myContentNulls: Nulls?) {
+        @Transient protected val myMergeInfo: MergeInfo?, protected var myValueNulls: Nulls?,
+        protected var myContentNulls: Nulls?) {
 
     /*
      *******************************************************************************************************************
