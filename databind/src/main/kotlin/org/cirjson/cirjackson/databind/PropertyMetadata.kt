@@ -14,7 +14,7 @@ open class PropertyMetadata protected constructor(protected val myRequired: Bool
      *******************************************************************************************************************
      */
 
-    val isRequired: Boolean
+    open val isRequired: Boolean
         get() = TODO("Not yet implemented")
 
     class MergeInfo private constructor(val getter: AnnotatedMember, val fromDefaults: Boolean) {
