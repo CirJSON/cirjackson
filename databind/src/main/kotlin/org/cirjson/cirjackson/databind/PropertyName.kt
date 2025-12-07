@@ -2,7 +2,7 @@ package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.databind.util.FullyNamed
 
-open class PropertyName(simpleName: String?, val namespace: String?) : FullyNamed {
+open class PropertyName(simpleName: String?, protected val myNamespace: String?) : FullyNamed {
 
     constructor(simpleName: String?) : this(simpleName, null)
 
