@@ -6,6 +6,7 @@ import org.cirjson.cirjackson.core.StreamWriteFeature
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.util.Named
 import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.PropertyName
 import org.cirjson.cirjackson.databind.annotation.CirJacksonStandardImplementation
 import java.io.IOException
 import java.lang.reflect.*
@@ -591,6 +592,14 @@ val Named?.nonNullName: String
 fun String?.name(): String {
     this ?: return "[null]"
     return apostrophed()
+}
+
+/**
+ * Returns either single-quoted (apostrophe) `'name'` (if `name` not `null`), or `"[null]"` if `name` is `null`.
+ */
+fun PropertyName?.name(): String {
+    this ?: return "[null]"
+    return simpleName.apostrophed()
 }
 
 /*

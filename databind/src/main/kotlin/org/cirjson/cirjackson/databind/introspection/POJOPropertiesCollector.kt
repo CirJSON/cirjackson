@@ -10,7 +10,7 @@ open class POJOPropertiesCollector protected constructor(protected val myConfig:
 
     /*
      *******************************************************************************************************************
-     * Construction
+     * Public API
      *******************************************************************************************************************
      */
 
@@ -58,6 +58,23 @@ open class POJOPropertiesCollector protected constructor(protected val myConfig:
 
     open val objectIdInfo: ObjectIdInfo
         get() = TODO("Not yet implemented")
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods; removing ignored properties
+     *******************************************************************************************************************
+     */
+
+    protected open fun collectIgnorals(name: String?) {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * An internal accessor for [collectIgnorals]
+     */
+    internal fun internalCollectIgnorals(name: String?) {
+        collectIgnorals(name)
+    }
 
     companion object {
 

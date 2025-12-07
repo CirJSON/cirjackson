@@ -34,7 +34,7 @@ abstract class BeanPropertyDefinition : FullyNamed {
      * Alternate "mutant factory" that will only change simple name, but leave other optional parts (like namespace) as
      * is.
      */
-    abstract fun withSimpleName(newSimpleName: String?): BeanPropertyDefinition
+    abstract fun withSimpleName(newSimpleName: String): BeanPropertyDefinition
 
     /*
      *******************************************************************************************************************

@@ -52,7 +52,7 @@ open class PropertyMetadata protected constructor(protected val myRequired: Bool
                 myContentNulls)
     }
 
-    open fun withValueNulls(valueNulls: Nulls?, contentNulls: Nulls?): PropertyMetadata {
+    open fun withNulls(valueNulls: Nulls?, contentNulls: Nulls?): PropertyMetadata {
         return PropertyMetadata(myRequired, myDescription, myIndex, myDefaultValue, myMergeInfo, valueNulls,
                 contentNulls)
     }
