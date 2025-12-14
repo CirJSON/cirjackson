@@ -90,11 +90,11 @@ open class POJOPropertyBuilder : BeanPropertyDefinition, Comparable<POJOProperty
      *******************************************************************************************************************
      */
 
-    override fun withName(newName: PropertyName): BeanPropertyDefinition {
+    override fun withName(newName: PropertyName): POJOPropertyBuilder {
         return POJOPropertyBuilder(this, newName)
     }
 
-    override fun withSimpleName(newSimpleName: String): BeanPropertyDefinition {
+    override fun withSimpleName(newSimpleName: String): POJOPropertyBuilder {
         val newName = myName.withSimpleName(newSimpleName)
 
         if (newName === myName) {
@@ -392,6 +392,9 @@ open class POJOPropertyBuilder : BeanPropertyDefinition, Comparable<POJOProperty
     protected open val getterUnchecked: AnnotatedMethod?
         get() = myGetters?.value
 
+    internal val internalGetterUnchecked: AnnotatedMethod?
+        get() = getterUnchecked
+
     override val setter: AnnotatedMethod?
         get() {
             var current = mySetters ?: return null
@@ -423,6 +426,9 @@ open class POJOPropertyBuilder : BeanPropertyDefinition, Comparable<POJOProperty
      */
     protected open val setterUnchecked: AnnotatedMethod?
         get() = mySetters?.value
+
+    internal val internalSetterUnchecked: AnnotatedMethod?
+        get() = setterUnchecked
 
     /**
      * Helper method called in cases where we have encountered two setter methods that have same precedence and cannot
@@ -540,6 +546,9 @@ open class POJOPropertyBuilder : BeanPropertyDefinition, Comparable<POJOProperty
      */
     protected open val fieldUnchecked: AnnotatedField?
         get() = myFields?.value
+
+    internal val internalFieldUnchecked: AnnotatedField?
+        get() = fieldUnchecked
 
     override val constructorParameter: AnnotatedParameter?
         get() {

@@ -275,16 +275,16 @@ open class VisibilityChecker {
      * Method for checking whether given creator (other than "scalar constructor", see [isScalarConstructorVisible]) is
      * auto-detectable as Creator, with respect to its visibility (not considering signature, just visibility)
      */
-    open fun isCreatorVisible(method: AnnotatedMethod): Boolean {
-        return myCreatorMinLevel.isVisible(method.annotated)
+    open fun isCreatorVisible(method: AnnotatedMember): Boolean {
+        return myCreatorMinLevel.isVisible(method.member!!)
     }
 
     /**
      * Method for checking whether given single-scalar-argument constructor is auto-detectable as delegating Creator,
      * with respect to its visibility (not considering signature, just visibility)
      */
-    open fun isScalarConstructorVisible(method: AnnotatedMethod): Boolean {
-        return myScalarConstructorMinLevel.isVisible(method.annotated)
+    open fun isScalarConstructorVisible(method: AnnotatedMember): Boolean {
+        return myScalarConstructorMinLevel.isVisible(method.member!!)
     }
 
     /*

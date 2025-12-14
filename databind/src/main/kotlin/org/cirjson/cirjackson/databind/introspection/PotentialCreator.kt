@@ -17,7 +17,7 @@ open class PotentialCreator(private val myCreator: AnnotatedWithParams,
     /**
      * Parameter definitions if (and only if) this represents a Property-based Creator.
      */
-    private var myPropertyDefinitions: List<BeanPropertyDefinition>? = null
+    private var myPropertyDefinitions: List<BeanPropertyDefinition?>? = null
 
     /*
      *******************************************************************************************************************
@@ -25,7 +25,7 @@ open class PotentialCreator(private val myCreator: AnnotatedWithParams,
      *******************************************************************************************************************
      */
 
-    open fun assignPropertyDefinitions(propertyDefinitions: List<BeanPropertyDefinition>) {
+    open fun assignPropertyDefinitions(propertyDefinitions: List<BeanPropertyDefinition?>) {
         myPropertyDefinitions = propertyDefinitions
     }
 
@@ -155,7 +155,7 @@ open class PotentialCreator(private val myCreator: AnnotatedWithParams,
         return myImplicitParameterNames!![index]?.simpleName
     }
 
-    open fun propertyDefinitions(): Array<BeanPropertyDefinition> {
+    open fun propertyDefinitions(): Array<BeanPropertyDefinition?> {
         if (myPropertyDefinitions.isNullOrEmpty()) {
             return emptyArray()
         }

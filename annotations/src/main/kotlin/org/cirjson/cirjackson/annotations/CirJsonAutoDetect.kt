@@ -1,5 +1,7 @@
 package org.cirjson.cirjackson.annotations
 
+import java.lang.reflect.Member
+import java.lang.reflect.Modifier
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KVisibility
@@ -94,6 +96,19 @@ annotation class CirJsonAutoDetect(val fieldVisibility: Visibility = Visibility.
 
                 PROTECTED_AND_PUBLIC, PUBLIC_ONLY -> this == PROTECTED_AND_PUBLIC &&
                         member.visibility == KVisibility.PROTECTED || member.visibility == KVisibility.PUBLIC
+
+                NONE, DEFAULT -> false
+            }
+        }
+
+        fun isVisible(member: Member): Boolean {
+            return when (this) {
+                ANY -> true
+
+                NON_PRIVATE -> !Modifier.isPrivate(member.modifiers)
+
+                PROTECTED_AND_PUBLIC, PUBLIC_ONLY -> this == PROTECTED_AND_PUBLIC &&
+                        Modifier.isProtected(member.modifiers) || Modifier.isPublic(member.modifiers)
 
                 NONE, DEFAULT -> false
             }
