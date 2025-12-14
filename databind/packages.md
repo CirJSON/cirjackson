@@ -34,6 +34,15 @@ Package that contains standard implementations for [org.cirjson.cirjackson.datab
 Package that contains most of configuration-related classes; exception being couple of most-commonly used configuration
 things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
 
+# Package org.cirjson.cirjackson.databind.introspect
+
+Functionality needed for Bean introspection, required for detecting accessors and mutators for Beans, as well as
+locating and handling method annotations.
+
+Beyond collecting annotations, additional "method annotation inheritance"is also supported: whereas regular classes do
+not add annotations from overridden methods in any situation. But code in this package does. Similarly,
+class-annotations are inherited properly from interfaces, in addition to abstract and concrete classes.
+
 # Package org.cirjson.cirjackson.databind.type
 
 Package that contains concrete implementations of [org.cirjson.cirjackson.databind.KotlinType], as well as the factory
