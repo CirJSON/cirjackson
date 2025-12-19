@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind
 
+import org.cirjson.cirjackson.core.FormatFeature
 import org.cirjson.cirjackson.databind.cirjsontype.SubtypeResolver
 import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.introspection.ClassIntrospector
@@ -62,6 +63,10 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
     }
 
     fun isEnabled(feature: DeserializationFeature): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    fun hasFormatFeature(feature: FormatFeature): Boolean {
         TODO("Not yet implemented")
     }
 
