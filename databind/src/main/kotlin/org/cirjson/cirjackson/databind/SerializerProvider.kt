@@ -102,7 +102,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
-    final override val annotationIntrospector: AnnotationIntrospector
+    final override val annotationIntrospector: AnnotationIntrospector?
         get() = TODO("Not yet implemented")
 
     override val typeFactory: TypeFactory

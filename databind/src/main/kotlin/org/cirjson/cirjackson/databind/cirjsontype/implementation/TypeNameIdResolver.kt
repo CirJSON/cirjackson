@@ -42,7 +42,7 @@ open class TypeNameIdResolver protected constructor(baseType: KotlinType,
 
         if (name == null) {
             if (context.isAnnotationProcessingEnabled) {
-                name = context.annotationIntrospector.findTypeName(context.config,
+                name = context.annotationIntrospector!!.findTypeName(context.config,
                         context.introspectClassAnnotations(clazz))
             }
 

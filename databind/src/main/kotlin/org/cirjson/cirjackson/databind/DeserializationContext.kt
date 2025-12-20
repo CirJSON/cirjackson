@@ -26,7 +26,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
     override val config: DeserializationConfig
         get() = TODO("Not yet implemented")
 
-    override val annotationIntrospector: AnnotationIntrospector
+    override val annotationIntrospector: AnnotationIntrospector?
         get() = TODO("Not yet implemented")
 
     override val typeFactory: TypeFactory

@@ -363,7 +363,7 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
     protected open fun hasTypeResolver(context: DatabindContext, baseType: KotlinType): Boolean {
         val annotatedClass = AnnotatedClassResolver.resolveWithoutSuperTypes(context.config, baseType.rawClass)
         val annotationIntrospector = context.annotationIntrospector
-        return annotationIntrospector.findPolymorphicTypeInfo(context.config, annotatedClass) != null
+        return annotationIntrospector!!.findPolymorphicTypeInfo(context.config, annotatedClass) != null
     }
 
     companion object {

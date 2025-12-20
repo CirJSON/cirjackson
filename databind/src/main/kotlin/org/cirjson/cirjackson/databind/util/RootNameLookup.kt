@@ -31,7 +31,7 @@ open class RootNameLookup {
 
         val annotatedClass = context.introspectClassAnnotations(rootType)
         val annotationIntrospector = context.annotationIntrospector
-        name = annotationIntrospector.findRootName(context.config, annotatedClass)?.takeIf { it.hasSimpleName() }
+        name = annotationIntrospector!!.findRootName(context.config, annotatedClass)?.takeIf { it.hasSimpleName() }
                 ?: PropertyName.construct(rootType.simpleName)
         myRootNames[key] = name
         return name
