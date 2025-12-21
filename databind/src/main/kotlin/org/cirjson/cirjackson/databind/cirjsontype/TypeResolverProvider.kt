@@ -52,7 +52,7 @@ open class TypeResolverProvider {
         if (builder.defaultImplementation == null && baseType.isAbstract) {
             val defaultType = config.mapAbstractType(baseType)
 
-            if (defaultType != null && !defaultType.hasRawClass(baseType.rawClass)) {
+            if (!defaultType.hasRawClass(baseType.rawClass)) {
                 builder = builder.withDefaultImplementation(defaultType.rawClass)
             }
         }
@@ -97,7 +97,7 @@ open class TypeResolverProvider {
         if (builder.defaultImplementation == null && baseType.isAbstract) {
             val defaultType = config.mapAbstractType(baseType)
 
-            if (defaultType != null && !defaultType.hasRawClass(baseType.rawClass)) {
+            if (!defaultType.hasRawClass(baseType.rawClass)) {
                 builder = builder.withDefaultImplementation(defaultType.rawClass)
             }
         }
@@ -133,7 +133,7 @@ open class TypeResolverProvider {
         if (builder.defaultImplementation == null && contentType.isAbstract) {
             val defaultType = config.mapAbstractType(contentType)
 
-            if (defaultType != null && !defaultType.hasRawClass(contentType.rawClass)) {
+            if (!defaultType.hasRawClass(contentType.rawClass)) {
                 builder = builder.withDefaultImplementation(defaultType.rawClass)
             }
         }
@@ -154,7 +154,7 @@ open class TypeResolverProvider {
 
         val customResolverObject = annotationIntrospector.findTypeResolverBuilder(config, annotated)
 
-        var builder = if (customResolverObject != null) {
+        val builder = if (customResolverObject != null) {
             if (typeInfo != null && typeInfo.idType == CirJsonTypeInfo.Id.NONE) {
                 return null
             }

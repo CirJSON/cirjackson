@@ -5,17 +5,101 @@ import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
+import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
+import org.cirjson.cirjackson.databind.introspection.Annotated
+import org.cirjson.cirjackson.databind.introspection.ClassIntrospector
 import org.cirjson.cirjackson.databind.type.TypeFactory
+import org.cirjson.cirjackson.databind.util.ArrayBuilders
+import org.cirjson.cirjackson.databind.util.LinkedNode
+import org.cirjson.cirjackson.databind.util.ObjectBuffer
 import org.cirjson.cirjackson.databind.util.TokenBuffer
+import java.text.DateFormat
 import kotlin.reflect.KClass
 
+/**
+ * Context for the process of deserialization a single root-level value. Used to allow passing in configuration settings
+ * and reusable temporary objects (scrap arrays, containers). Constructed by [ObjectMapper] (and [ObjectReader] based on
+ * configuration, used mostly by [ValueDeserializers][ValueDeserializer] to access contextual information.
+ * 
+ * @property myStreamFactory Low-level [TokenStreamFactory] that may be used for constructing embedded parsers.
+ * 
+ * @property myFactory Read-only factory instance; exposed to let owners (`ObjectMapper`, `ObjectReader`) access it.
+ * 
+ * @property myCache Object that handle details of [ValueDeserializer] caching.
+ * 
+ * @property myConfig Generic deserialization processing configuration
+ * 
+ * @property mySchema Schema for underlying parser to use, if any.
+ * 
+ * @property myInjectableValues Object used for resolving references to injectable values.
+ */
 abstract class DeserializationContext protected constructor(protected val myStreamFactory: TokenStreamFactory,
         protected val myFactory: DeserializerFactory, protected val myCache: DeserializerCache,
         protected val myConfig: DeserializationConfig, protected val mySchema: FormatSchema?,
         protected val myInjectableValues: InjectableValues?) : DatabindContext(), ObjectReadContext {
+
+    /*
+     *******************************************************************************************************************
+     * Configuration that may vary by ObjectReader
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Bitmap of [DeserializationFeatures][DeserializationFeature] that are enabled
+     */
+    protected val myFeatureFlags = myConfig.deserializationFeatures
+
+    /**
+     * Currently active view, if any.
+     */
+    protected val myActiveView = config.activeView
+
+    /*
+     *******************************************************************************************************************
+     * Other State
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Currently active parser used for deserialization. May be different from the outermost parser when content is
+     * buffered.
+     */
+    protected var myParser: CirJsonParser? = null
+
+    /**
+     * Capabilities of the input format.
+     */
+    protected var myReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>? = null
+
+    /*
+     *******************************************************************************************************************
+     * Per-operation reusable helper objects (not for blueprints)
+     *******************************************************************************************************************
+     */
+
+    protected var myArrayBuilders: ArrayBuilders? = null
+
+    protected var myObjectBuffer: ObjectBuffer? = null
+
+    protected var myDateFormat: DateFormat? = null
+
+    /**
+     * Lazily-constructed holder for per-call attributes.
+     */
+    protected var myAttributes = myConfig.attributes
+
+    /**
+     * Type of [ValueDeserializer] on which [ValueDeserializer.createContextual] is being called currently.
+     */
+    protected var myCurrentType: LinkedNode<KotlinType>? = null
+
+    /**
+     * Lazily constructed [ClassIntrospector] instance: created from "blueprint"
+     */
+    protected var myClassIntrospector: ClassIntrospector? = null
 
     /*
      *******************************************************************************************************************
@@ -24,7 +108,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override val config: DeserializationConfig
-        get() = TODO("Not yet implemented")
+        get() = myConfig
 
     override val annotationIntrospector: AnnotationIntrospector?
         get() = TODO("Not yet implemented")
@@ -169,9 +253,19 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    fun constructType(clazz: KClass<*>?): KotlinType? {
+    override fun constructType(type: KClass<*>?): KotlinType? {
         TODO("Not yet implemented")
     }
+
+    /*
+     *******************************************************************************************************************
+     * Extended API: handler instantiation
+     *******************************************************************************************************************
+     */
+
+    abstract fun deserializerInstance(annotated: Annotated, deserializerDefinition: Any?): ValueDeserializer<Any>?
+
+    abstract fun keyDeserializerInstance(annotated: Annotated, deserializerDefinition: Any?): KeyDeserializer?
 
     /*
      *******************************************************************************************************************
