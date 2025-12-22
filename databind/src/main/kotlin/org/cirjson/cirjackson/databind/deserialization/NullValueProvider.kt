@@ -17,7 +17,7 @@ interface NullValueProvider {
      * NOTE: if [nullAccessPattern] returns `ALWAYS_NULL` or `CONSTANT`, this method WILL NOT use provided `context` and
      * it may thus be passed as `null`.
      */
-    fun getNullValue(context: DeserializationContext?): Any?
+    fun getNullValue(context: DeserializationContext): Any?
 
     /**
      * Accessor that may be used to determine if and when provider must be called to access `null` replacement value.
@@ -34,7 +34,7 @@ interface NullValueProvider {
      *
      * Default implementation simply calls and returns [getNullValue].
      */
-    fun getAbsentValue(context: DeserializationContext?): Any? {
+    fun getAbsentValue(context: DeserializationContext): Any? {
         return getNullValue(context)
     }
 

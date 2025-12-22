@@ -285,6 +285,11 @@ abstract class DeserializationContext protected constructor(protected val myStre
         TODO("Not yet implemented")
     }
 
+    @Throws(DatabindException::class)
+    open fun handleBadMerge(deserializer: ValueDeserializer<*>) {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Methods for problem reporting, in cases where recovery is not considered possible: input problem
