@@ -145,7 +145,7 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
         myDatatypeFeatures = source.myDatatypeFeatures
     }
 
-    protected constructor(source: MapperConfigBase<CFG, T>, rootName: PropertyName) : super(source) {
+    protected constructor(source: MapperConfigBase<CFG, T>, rootName: PropertyName?) : super(source) {
         myTypeFactory = source.myTypeFactory
         myClassIntrospector = source.myClassIntrospector
         myTypeResolverProvider = source.myTypeResolverProvider
