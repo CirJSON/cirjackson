@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind
 
+import org.cirjson.cirjackson.annotations.CirJsonFormat
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
@@ -7,6 +8,8 @@ import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
 import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
+import org.cirjson.cirjackson.databind.configuration.DatatypeFeature
+import org.cirjson.cirjackson.databind.configuration.DatatypeFeatures
 import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
 import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
 import org.cirjson.cirjackson.databind.introspection.Annotated
@@ -17,6 +20,7 @@ import org.cirjson.cirjackson.databind.util.LinkedNode
 import org.cirjson.cirjackson.databind.util.ObjectBuffer
 import org.cirjson.cirjackson.databind.util.TokenBuffer
 import java.text.DateFormat
+import java.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -110,19 +114,80 @@ abstract class DeserializationContext protected constructor(protected val myStre
     override val config: DeserializationConfig
         get() = myConfig
 
-    override val annotationIntrospector: AnnotationIntrospector?
+    final override val activeView: KClass<*>?
         get() = TODO("Not yet implemented")
 
-    override val typeFactory: TypeFactory
-        get() = TODO("Not yet implemented")
-
-    override fun isEnabled(feature: MapperFeature): Boolean {
+    final override fun canOverrideAccessModifiers(): Boolean {
         TODO("Not yet implemented")
     }
+
+    final override fun isEnabled(feature: MapperFeature): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    final override fun isEnabled(feature: DatatypeFeature) {
+        TODO("Not yet implemented")
+    }
+
+    final override val datatypeFeatures: DatatypeFeatures
+        get() = TODO("Not yet implemented")
+
+    final override fun getDefaultPropertyFormat(
+            baseType: KClass<*>): CirJsonFormat.Value {
+        TODO("Not yet implemented")
+    }
+
+    final override val annotationIntrospector: AnnotationIntrospector?
+        get() = TODO("Not yet implemented")
+
+    final override val typeFactory: TypeFactory
+        get() = TODO("Not yet implemented")
 
     override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
         TODO("Not yet implemented")
     }
+
+    /**
+     * Accessor for default Locale to use: convenience accessor for
+     * ```
+     * config.locale
+     * ```
+     */
+    override val locale: Locale
+        get() = TODO("Not yet implemented")
+
+    /**
+     * Accessor for default TimeZone to use: convenience accessor for
+     * ```
+     * config.timeZone
+     * ```
+     */
+    override val timeZone: TimeZone
+        get() = TODO("Not yet implemented")
+
+    /*
+     *******************************************************************************************************************
+     * Access to per-call state, like generic attributes
+     *******************************************************************************************************************
+     */
+
+    override fun getAttribute(key: Any): Any? {
+        TODO("Not yet implemented")
+    }
+
+    override fun setAttribute(key: Any, value: Any?): DatabindContext {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Accessor to [KotlinType] of currently contextualized [ValueDeserializer], if any. This is sometimes useful for
+     * generic [ValueDeserializers][ValueDeserializer] that do not get passed (or do not retain) type information when
+     * being constructed: happens for example for deserializers constructed from annotations.
+     *
+     * @return Type of [ValueDeserializer] being contextualized, if process is ongoing; `null` if not.
+     */
+    open val contextualType: KotlinType?
+        get() = myCurrentType?.value()
 
     /*
      *******************************************************************************************************************
@@ -172,6 +237,13 @@ abstract class DeserializationContext protected constructor(protected val myStre
         TODO("Not yet implemented")
     }
 
+    /**
+     * Convenience method that may be used by composite or container deserializers, for reading one-off values contained
+     * (for sequences, it is more efficient to actually fetch deserializer once for the whole collection).
+     * 
+     * NOTE: when deserializing values of properties contained in composite types, rather use [readPropertyValue]; this
+     * method does not allow use of contextual annotations.
+     */
     @Throws(CirJacksonException::class)
     override fun <T> readValue(parser: CirJsonParser, clazz: Class<T>): T {
         TODO("Not yet implemented")
@@ -187,14 +259,51 @@ abstract class DeserializationContext protected constructor(protected val myStre
         TODO("Not yet implemented")
     }
 
+    @Throws(CirJacksonException::class)
+    open fun <T> readValue(parser: CirJsonParser, type: KotlinType): T {
+        TODO("Not yet implemented")
+    }
+
     /*
      *******************************************************************************************************************
      * Public API, config feature accessors
      *******************************************************************************************************************
      */
 
+    /**
+     * Convenience method for checking whether specified on/off feature is enabled
+     */
     fun isEnabled(feature: DeserializationFeature): Boolean {
         TODO("Not yet implemented")
+    }
+
+    /**
+     * Bulk accessor for getting the bit mask of all [DeserializationFeatures][DeserializationFeature] that are enabled.
+     */
+    val deserializationFeatures: Int
+        get() = myFeatureFlags
+
+    /**
+     * Bulk access method for checking that all features specified by mask are enabled.
+     */
+    fun hasDeserializationFeatures(featureMask: Int): Boolean {
+        return myFeatureFlags and featureMask == featureMask
+    }
+
+    /**
+     * Bulk access method for checking that at least one of features specified by mask is enabled.
+     */
+    fun hasSomeOfFeatures(featureMask: Int): Boolean {
+        return myFeatureFlags and featureMask != 0
+    }
+
+    /**
+     * Accessor for checking whether input format has specified capability or not.
+     *
+     * @return `true` if input format has specified capability; `false` if not
+     */
+    fun isEnabled(capability: StreamReadCapability): Boolean {
+        return myReadCapabilities!!.isEnabled(capability)
     }
 
     /*
@@ -203,8 +312,20 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    /**
+     * Accessor for the currently active parser. May be different from the outermost parser when content is buffered.
+     *
+     * Use of this accessor is discouraged: if code has direct access to the active parser, that should be used instead.
+     */
     val parser: CirJsonParser?
-        get() = TODO("Not implemented")
+        get() = TODO("Not yet implemented")
+
+    fun findInjectableValue(valueId: Any, forProperty: BeanProperty, beanInstance: Any): Any? {
+        TODO("Not yet implemented")
+    }
+
+    val base64Variant: Base64Variant
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************
