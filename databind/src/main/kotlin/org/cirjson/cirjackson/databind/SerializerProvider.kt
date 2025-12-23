@@ -158,12 +158,12 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      */
 
     @Throws(DatabindException::class)
-    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String): T {
+    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T {
         TODO("Not yet implemented")
     }
 
     @Throws(DatabindException::class)
-    override fun <T> reportBadDefinition(type: KotlinType, message: String): T {
+    override fun <T> reportBadDefinition(type: KotlinType, message: String?): T {
         TODO("Not yet implemented")
     }
 

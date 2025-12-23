@@ -1,19 +1,26 @@
 package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat
+import org.cirjson.cirjackson.annotations.ObjectIdGenerator
+import org.cirjson.cirjackson.annotations.ObjectIdResolver
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.core.util.CirJacksonFeatureSet
+import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
 import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
+import org.cirjson.cirjackson.databind.configuration.CoercionAction
+import org.cirjson.cirjackson.databind.configuration.CoercionInputShape
 import org.cirjson.cirjackson.databind.configuration.DatatypeFeature
 import org.cirjson.cirjackson.databind.configuration.DatatypeFeatures
-import org.cirjson.cirjackson.databind.deserialization.DeserializerCache
-import org.cirjson.cirjackson.databind.deserialization.DeserializerFactory
-import org.cirjson.cirjackson.databind.introspection.Annotated
-import org.cirjson.cirjackson.databind.introspection.ClassIntrospector
+import org.cirjson.cirjackson.databind.deserialization.*
+import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdReader
+import org.cirjson.cirjackson.databind.introspection.*
+import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
+import org.cirjson.cirjackson.databind.node.TreeTraversingParser
+import org.cirjson.cirjackson.databind.type.LogicalType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.ArrayBuilders
 import org.cirjson.cirjackson.databind.util.LinkedNode
@@ -324,7 +331,23 @@ abstract class DeserializationContext protected constructor(protected val myStre
         TODO("Not yet implemented")
     }
 
+    /**
+     * Convenience accessor for the default Base64 encoding used for decoding base64 encoded binary content. Same as
+     * calling:
+     * ```
+     * config.base64Variant
+     * ```
+     */
     val base64Variant: Base64Variant
+        get() = TODO("Not yet implemented")
+
+    /**
+     * Convenience accessor, functionally equivalent to:
+     * ```
+     * config.nodeFactory
+     * ```
+     */
+    val nodeFactory: CirJsonNodeFactory
         get() = TODO("Not yet implemented")
 
     /*
@@ -333,7 +356,20 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    override fun classIntrospector(): ClassIntrospector {
+        TODO("Not yet implemented")
+    }
+
     override fun introspectBeanDescription(type: KotlinType): BeanDescription {
+        TODO("Not yet implemented")
+    }
+
+    open fun introspectBeanDescriptionForCreation(type: KotlinType): BeanDescription {
+        TODO("Not yet implemented")
+    }
+
+    open fun introspectBeanDescriptionForBuilder(type: KotlinType,
+            valueTypeDescription: BeanDescription): BeanDescription {
         TODO("Not yet implemented")
     }
 
@@ -343,7 +379,69 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    override fun findRootName(rootType: KotlinType): PropertyName {
+        TODO("Not yet implemented")
+    }
+
+    override fun findRootName(rawRootType: KClass<*>): PropertyName {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that can be used to see whether there is an explicitly registered deserializer for given type: this is
+     * true for supported JDK types, as well as third-party types for which `Module` provides support but is NOT true
+     * (that is, returns `false`) for POJO types for which `BeanDeserializer` is generated based on discovered
+     * properties.
+     * 
+     * Note that it is up to `Modules` to implement support for this method: some do (like basic `SimpleModule`).
+     *
+     * @param valueType Type-erased type to check
+     *
+     * @return True if this factory has explicit (non-POJO) deserializer for specified type, or has a provider (of type
+     * [Deserializers]) that has.
+     */
     open fun hasExplicitDeserializerFor(valueType: KClass<*>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, CoercionConfig access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * General-purpose accessor for finding what to do when specified coercion from shape that is now always allowed to
+     * be coerced from is requested.
+     *
+     * @param targetType Logical target type of coercion
+     * 
+     * @param targetClass Physical target type of coercion
+     * 
+     * @param inputShape Input shape to coerce from
+     *
+     * @return CoercionAction configured for specific coercion
+     */
+    open fun findCoercionAction(targetType: LogicalType?, targetClass: KClass<*>?,
+            inputShape: CoercionInputShape): CoercionAction {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * More specialized accessor called in case of input being a blank String (one consisting of only white space
+     * characters with length of at least one). Will basically first determine if "blank as empty" is allowed: if not,
+     * returns `actionIfBlankNotAllowed`, otherwise returns action for [CoercionInputShape.EmptyString].
+     *
+     * @param targetType Logical target type of coercion
+     * 
+     * @param targetClass Physical target type of coercion
+     * 
+     * @param actionIfBlankNotAllowed Return value to use in case "blanks as empty" is not allowed
+     *
+     * @return CoercionAction configured for specified coercion from blank string
+     */
+    open fun findCoercionFromBlankString(targetType: LogicalType?, targetClass: KClass<*>?,
+            actionIfBlankNotAllowed: CoercionAction): CoercionAction {
         TODO("Not yet implemented")
     }
 
@@ -354,7 +452,37 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory method used for creating [TokenBuffer] to temporarily contain copy of content read from specified parser;
+     * usually for purpose of reading contents later on (possibly augmented with injected additional content)
+     */
     open fun bufferForInputBuffering(parser: CirJsonParser): TokenBuffer {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Convenience method that is equivalent to:
+     * ```
+     * context.bufferForInputBuffering(context.parser)
+     * ```
+     */
+    fun bufferForInputBuffering(): TokenBuffer {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Convenience method, equivalent to:
+     * ```
+     * val buffer = context.bufferForInputBuffering(parser)
+     * buffer.copyCurrentStructure(parser)
+     * return buffer
+     * ```
+     * 
+     * NOTE: the whole "current value" that parser points to is read and buffered, including Object and Array values (if
+     * parser pointing to start marker).
+     */
+    @Throws(CirJacksonException::class)
+    open fun bufferAsCopyOfValue(parser: CirJsonParser): TokenBuffer {
         TODO("Not yet implemented")
     }
 
@@ -364,9 +492,120 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    fun findContextualValueDeserializer(type: KotlinType, property: BeanProperty?): ValueDeserializer<Any>? {
+    /**
+     * Method for finding a value deserializer, and creating a contextual version if necessary, for value reached via
+     * specified property.
+     */
+    fun findContextualValueDeserializer(type: KotlinType, property: BeanProperty?): ValueDeserializer<Any> {
         TODO("Not yet implemented")
     }
+
+    /**
+     * Variant that will try to locate deserializer for current type, but without performing any contextualization
+     * (unlike [findContextualValueDeserializer]) or checking for need to create a [TypeDeserializer] (unlike
+     * [findRootValueDeserializer]. This method is usually called from within [ValueDeserializer.resolve], and
+     * expectation is that caller then calls either [handlePrimaryContextualization] or
+     * [handleSecondaryContextualization] at a later point, as necessary.
+     */
+    fun findNonContextualValueDeserializer(type: KotlinType): ValueDeserializer<Any> {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for finding a deserializer for root-level value.
+     */
+    fun findRootValueDeserializer(type: KotlinType): ValueDeserializer<Any> {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, (value) type deserializer access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called to find and create a type information deserializer for given base type, if one is needed. If not
+     * needed (no polymorphic handling configured for type), should return `null`.
+     * 
+     * Note that this method is usually only directly called for values of container (Collection, array, Map) types and
+     * root values, but not for bean property values.
+     *
+     * @param baseType Declared base type of the value to deserializer (actual deserializer type will be this type or
+     * its subtype)
+     *
+     * @return Type deserializer to use for given base type, if one is needed; `null` if not.
+     */
+    open fun findTypeDeserializer(baseType: KotlinType): TypeDeserializer? {
+        TODO("Not yet implemented")
+    }
+
+    open fun findTypeDeserializer(baseType: KotlinType, classAnnotations: AnnotatedClass): TypeDeserializer? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called to create a type information deserializer for values of given non-container property, if one is
+     * needed. If not needed (no polymorphic handling configured for property), should return `null`.
+     * 
+     * Note that this method is only called for non-container bean properties, and not for values in container types or
+     * root values (or container properties)
+     *
+     * @param baseType Declared base type of the value to deserializer (actual deserializer type will be this type or
+     * its subtype)
+     *
+     * @return Type deserializer to use for given base type, if one is needed; `null` if not.
+     */
+    open fun findPropertyTypeDeserializer(baseType: KotlinType, classAnnotations: AnnotatedClass): TypeDeserializer? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called to find and create a type information deserializer for values of given container (list, array, map)
+     * property, if one is needed. If not needed (no polymorphic handling configured for property), should return
+     * `null`.
+     * 
+     * Note that this method is only called for container bean properties, and not for values in container types or root
+     * values (or non-container properties)
+     *
+     * @param containerType Type of property; must be a container type
+     * 
+     * @param accessor Field or method that contains container property
+     */
+    open fun findPropertyContentTypeDeserializer(containerType: KotlinType,
+            accessor: AnnotatedMethod): TypeDeserializer? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, key deserializer access
+     *******************************************************************************************************************
+     */
+
+    fun findKeyDeserializer(keyType: KotlinType, property: BeanProperty): KeyDeserializer {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, ObjectId handling
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called to find and return entry corresponding to given Object ID: will add an entry if necessary, and
+     * never returns `null`
+     */
+    abstract fun findObjectId(id: Any, generator: ObjectIdGenerator<*>, resolver: ObjectIdResolver): ReadableObjectId
+
+    /**
+     * Method called to ensure that every object id encounter during processing are resolved.
+     *
+     * @throws UnresolvedForwardReferenceException If some object id isn't resolved
+     */
+    @Throws(UnresolvedForwardReferenceException::class)
+    abstract fun checkUnresolvedObjectId()
 
     /*
      *******************************************************************************************************************
@@ -374,9 +613,54 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    override fun constructType(type: KClass<*>?): KotlinType? {
+    /**
+     * Convenience method, functionally equivalent to:
+     * ```
+     * config.constructType(type)
+     * ```
+     */
+    final override fun constructType(type: KClass<*>?): KotlinType? {
         TODO("Not yet implemented")
     }
+
+    /**
+     * Helper method that is to be used when resolving basic class name into KClass instance, the reason being that it
+     * may be necessary to work around various ClassLoader limitations, as well as to handle primitive type signatures.
+     */
+    @Throws(ClassNotFoundException::class)
+    open fun findClass(className: String): KClass<*> {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, helper object recycling
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be used to get access to a reusable ObjectBuffer, useful for efficiently constructing Object
+     * arrays and Lists. Note that leased buffers should be returned once deserializer is done, to allow for reuse
+     * during same round of deserialization.
+     */
+    fun leaseObjectBuffer(): ObjectBuffer {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method to call to return object buffer previously leased with [leaseObjectBuffer].
+     *
+     * @param buffer Returned object buffer
+     */
+    fun returnObjectBuffer(buffer: ObjectBuffer) {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Accessor for object useful for building arrays of primitive types (such as IntArray).
+     */
+    val arrayBuilders: ArrayBuilders
+        get() = myArrayBuilders ?: ArrayBuilders().also { myArrayBuilders = it }
 
     /*
      *******************************************************************************************************************
@@ -390,10 +674,322 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     /*
      *******************************************************************************************************************
+     * Extended API: resolving contextual deserializers; called by structured deserializers for their value/component
+     * deserializers
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called for primary property deserializers (ones directly created to deserialize values of a POJO
+     * property), to handle details of calling [ValueDeserializer.createContextual] with given property context.
+     *
+     * @param property Property for which the given primary deserializer is used; never `null`.
+     */
+    open fun handlePrimaryContextualization(deserializer: ValueDeserializer<*>?, property: BeanProperty,
+            type: KotlinType): ValueDeserializer<*>? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called for secondary property deserializers (ones NOT directly created to deal with an annotatable POJO
+     * property, but instead created as a component -- such as value deserializers for structured types, or
+     * deserializers for root values) to handle details of resolving [ValueDeserializer.createContextual] with given
+     * property context. Given that these deserializers are not directly related to given property (or, in case of root
+     * value property, to any property), annotations accessible may or may not be relevant.
+     *
+     * @param property Property for which deserializer is used, if any; `null` when deserializing root values
+     */
+    open fun handleSecondaryContextualization(deserializer: ValueDeserializer<*>?, property: BeanProperty?,
+            type: KotlinType): ValueDeserializer<*>? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Parsing methods that may use reusable/-cyclable objects
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Convenience method for parsing a Date from given String, using currently configured date format (accessed using
+     * [DeserializationConfig.dateFormat]).
+     * 
+     * Implementation will handle thread-safety issues related to date formats such that first time this method is
+     * called, date format is cloned, and cloned instance will be retained for use during this deserialization round.
+     */
+    @Throws(IllegalArgumentException::class)
+    open fun parseDate(dateString: String): Date {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Convenience method for constructing Calendar instance set to specified time, to be modified and used by caller.
+     */
+    open fun constructCalendar(date: Date): Calendar {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Extension points for more esoteric data coercion
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to call in case incoming shape is Object Value (and parser thereby points to [CirJsonToken.START_OBJECT]
+     * token), but a Scalar value (potentially coercible from String value) is expected. This would typically be used to
+     * deserializer a Number, Boolean value or some other "simple" unstructured value type.
+     *
+     * @param parser Actual parser to read content from
+     * 
+     * @param deserializer Deserializer that needs extracted String value
+     * 
+     * @param scalarType Immediate type of scalar to extract; usually type deserializer handles but not always (for
+     * example, deserializer for `IntArray` would pass scalar type of `Int`)
+     *
+     * @return String value found; not `null` (exception should be thrown if no suitable value found)
+     *
+     * @throws CirJacksonException If there are problems either reading content (underlying parser problem) or finding
+     * expected scalar value
+     */
+    @Throws(CirJacksonException::class)
+    open fun extractScalarFromObject(parser: CirJsonParser, deserializer: ValueDeserializer<*>,
+            scalarType: KClass<*>): String {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Convenience methods for reading parsed values
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readPropertyValue(parser: CirJsonParser, property: BeanProperty?, type: KClass<T>): T? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readPropertyValue(parser: CirJsonParser, property: BeanProperty?, type: KotlinType): T? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method similar to [ObjectReader.treeToValue] which will read contents of given tree ([CirJsonNode]) and
+     * bind them into specified target type. This is often used in two-phase deserialization in which content is first
+     * read as a tree, then manipulated (adding and/or removing properties of Object values, for example), and finally
+     * converted into actual target type using default deserialization logic for the type.
+     * 
+     * NOTE: deserializer implementations should be careful not to try to recursively deserialize into target type
+     * deserializer has registered itself to handle.
+     *
+     * @param node Tree value to convert, if not `null`: if `null`, will simply return `null`
+     * 
+     * @param targetType Type to deserialize contents of `n` into (if `n` not `null`)
+     *
+     * @return Either `null` (if `n` was `null` or a value of type `type` that was read from non-`null` `n` argument
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readTreeAsValue(node: CirJsonNode?, targetType: KClass<T>): T? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readTreeAsValue(node: CirJsonNode?, targetType: KotlinType): T? {
+        TODO("Not yet implemented")
+    }
+
+    private fun treeAsTokens(node: CirJsonNode): TreeTraversingParser {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Methods for problem handling
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that deserializers should call if they encounter an unrecognized property (and once that is not explicitly
+     * designed as ignorable), to inform possibly configured
+     * [DeserializationProblemHandlers][DeserializationProblemHandler] and let it handle the problem.
+     *
+     * @return `true` if there was a configured problem handler that was able to handle the problem
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleUnknownProperty(parser: CirJsonParser, deserializer: ValueDeserializer<*>?, instanceOrClass: Any,
+            propertyName: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they encounter a String value that cannot be converted to expected key
+     * of a [Map] valued property. Default implementation will try to call
+     * [DeserializationProblemHandler.handleWeirdNumberValue] on configured handlers, if any, to allow for recovery; if
+     * recovery does not succeed, will throw [InvalidFormatException] with given message.
+     *
+     * @param keyClass Expected type for key
+     * 
+     * @param keyValue String value from which to deserialize key
+     * 
+     * @param message Error message caller wants to use if exception is to be thrown
+     *
+     * @return Key value to use
+     *
+     * @throws CirJacksonException To indicate unrecoverable problem, usually based on `message`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleWeirdKey(keyClass: KClass<*>, keyValue: String, message: String?): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they encounter a String value that cannot be converted to target
+     * property type, in cases where some String values could be acceptable (either with different settings, or
+     * different value). Default implementation will try to call [DeserializationProblemHandler.handleWeirdStringValue]
+     * on configured handlers, if any, to allow for recovery; if recovery does not succeed, will throw
+     * [InvalidFormatException] with given message.
+     *
+     * @param targetClass Type of property into which incoming String should be converted
+     * 
+     * @param value String value from which to deserialize property value
+     * 
+     * @param message Error message template caller wants to use if exception is to be thrown
+     *
+     * @return Property value to use
+     *
+     * @throws CirJacksonException To indicate unrecoverable problem, usually based on `message`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleWeirdStringValue(targetClass: KClass<*>, value: String, message: String?): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they encounter a numeric value that cannot be converted to target
+     * property type, in cases where some numeric values could be acceptable (either with different settings, or
+     * different numeric value). Default implementation will try to call
+     * [DeserializationProblemHandler.handleWeirdNumberValue] on configured handlers, if any, to allow for recovery; if
+     * recovery does not succeed, will throw [InvalidFormatException] with given message.
+     *
+     * @param targetClass Type of property into which incoming number should be converted
+     * 
+     * @param value Number value from which to deserialize property value
+     * 
+     * @param message Error message template caller wants to use if exception is to be thrown
+     *
+     * @return Property value to use
+     *
+     * @throws CirJacksonException To indicate unrecoverable problem, usually based on `message`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleWeirdNumberValue(targetClass: KClass<*>, value: Number, message: String?): Any? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun handleWeirdNativeValue(targetType: KotlinType, badValue: Any, parser: CirJsonParser): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they fail to instantiate value due to lack of viable instantiator
+     * (usually creator, that is, constructor or static factory method). Method should be called at point where value
+     * has not been decoded, so that handler has a chance to handle decoding using alternate mechanism, and handle
+     * underlying content (possibly by just skipping it) to keep input state valid
+     *
+     * @param instantiatedClass Type that was to be instantiated
+     * 
+     * @param valueInstantiator (optional) Value instantiator to be used, if any; `null` if type does not use one for
+     * instantiation (custom deserializers don't; standard POJO deserializer does)
+     * 
+     * @param parser Parser that points to the CirJSON value to decode
+     *
+     * @return Object that should be constructed, if any; has to be of type `instantiatedClass`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleMissingInstantiator(instantiatedClass: KClass<*>, valueInstantiator: ValueInstantiator?,
+            parser: CirJsonParser?, message: String?): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they fail to instantiate value due to an exception that was thrown by
+     * constructor (or other mechanism used to create instances). Default implementation will try to call
+     * [DeserializationProblemHandler.handleInstantiationProblem] on configured handlers, if any, to allow for recovery;
+     * if recovery does not succeed, will throw exception constructed with [instantiationException].
+     *
+     * @param instantiatedClass Type that was to be instantiated
+     * 
+     * @param argument (optional) Argument that was passed to constructor or equivalent instantiator; often a [String].
+     * 
+     * @param throwable Exception that caused failure
+     *
+     * @return Object that should be constructed, if any; has to be of type `instantiatedClass`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleInstantiationProblem(instantiatedClass: KClass<*>, argument: Any?, throwable: Throwable): Any? {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun handleUnexpectedToken(instantiatedClass: KClass<*>, parser: CirJsonParser): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if the first token of the value to deserialize is of unexpected type (that
+     * is, type of token that deserializer cannot handle). This could occur, for example, if a Number deserializer
+     * encounter [CirJsonToken.START_ARRAY] instead of [CirJsonToken.VALUE_NUMBER_INT] or
+     * [CirJsonToken.VALUE_NUMBER_FLOAT].
+     *
+     * @param targetType Type that was to be instantiated
+     * 
+     * @param parser Parser that points to the CirJSON value to decode
+     *
+     * @return Object that should be constructed, if any; has to be of type `targetType,rawClass`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleUnexpectedToken(targetType: KotlinType, parser: CirJsonParser): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if the first token of the value to deserialize is of unexpected type (that
+     * is, type of token that deserializer cannot handle). This could occur, for example, if a Number deserializer
+     * encounter [CirJsonToken.START_ARRAY] instead of [CirJsonToken.VALUE_NUMBER_INT] or
+     * [CirJsonToken.VALUE_NUMBER_FLOAT].
+     *
+     * @param targetType Type that was to be instantiated
+     * 
+     * @param token Token encountered that does not match expected
+     * 
+     * @param parser Parser that points to the CirJSON value to decode
+     *
+     * @return Object that should be constructed, if any; has to be of type `targetType,rawClass`
+     */
+    @Throws(CirJacksonException::class)
+    open fun handleUnexpectedToken(targetType: KotlinType, token: CirJsonToken?, parser: CirJsonParser,
+            message: String?): Any? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method that deserializers should call if they encounter a type id (for polymorphic deserialization) that cannot
+     * be resolved to an actual type; usually since there is no mapping defined. Default implementation will try to call
+     * [DeserializationProblemHandler.handleUnknownTypeId] on configured handlers, if any, to allow for recovery; if
+     * recovery does not succeed, will throw exception constructed with [invalidTypeIdException].
+     *
+     * @param baseType Base type from which resolution starts
+     * 
+     * @param id Type id that could not be converted
+     * 
+     * @param extraDescription Additional problem description to add to default exception message, if resolution fails.
+     *
+     * @return [KotlinType] that id resolves to
+     *
+     * @throws CirJacksonException To indicate unrecoverable problem, if resolution cannot be made to work
+     */
     @Throws(CirJacksonException::class)
     open fun handleUnknownTypeId(baseType: KotlinType, id: String, idResolver: TypeIdResolver,
             extraDescription: String): KotlinType? {
@@ -406,8 +1002,18 @@ abstract class DeserializationContext protected constructor(protected val myStre
         TODO("Not yet implemented")
     }
 
+    /**
+     * Method that deserializer may call if it is called to do an update ("merge") but deserializer operates on a
+     * non-mergeable type. Although this should usually be caught earlier, sometimes it may only be caught during
+     * operation and if so this is the method to call. Note that if [MapperFeature.IGNORE_MERGE_FOR_UNMERGEABLE] is
+     * enabled, this method will simply return `null`; otherwise [InvalidDefinitionException] will be thrown.
+     */
     @Throws(DatabindException::class)
     open fun handleBadMerge(deserializer: ValueDeserializer<*>) {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun isCompatible(target: KClass<*>, value: Any?): Boolean {
         TODO("Not yet implemented")
     }
 
@@ -417,18 +1023,108 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    /**
+     * Method for deserializers to call when the token encountered was of type different from what **should** be seen at
+     * that position, usually within a sequence of expected tokens. Note that this method will throw a
+     * [DatabindException] and no recovery is attempted (via [DeserializationProblemHandler], as problem is considered
+     * to be difficult to recover from, in general.
+     */
     @Throws(DatabindException::class)
-    open fun <T> reportWrongTokenException(targetType: KotlinType, expectedToken: CirJsonToken, message: String): T {
+    open fun <T> reportWrongTokenException(deserializer: ValueDeserializer<*>, expectedToken: CirJsonToken,
+            message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for deserializers to call when the token encountered was of type different from what **should** be seen at
+     * that position, usually within a sequence of expected tokens. Note that this method will throw a
+     * [DatabindException] and no recovery is attempted (via [DeserializationProblemHandler], as problem is considered
+     * to be difficult to recover from, in general.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportWrongTokenException(targetType: KotlinType, expectedToken: CirJsonToken, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Method for deserializers to call when the token encountered was of type different from what **should** be seen at
+     * that position, usually within a sequence of expected tokens. Note that this method will throw a
+     * [DatabindException] and no recovery is attempted (via [DeserializationProblemHandler], as problem is considered
+     * to be difficult to recover from, in general.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String?): T {
         TODO("Not yet implemented")
     }
 
     @Throws(DatabindException::class)
-    open fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String): T {
+    open fun <T> reportUnresolvedObjectId(oldReader: ObjectIdReader, bean: Any): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportInputMismatch(source: ValueDeserializer<*>, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportInputMismatch(targetType: KClass<*>, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportInputMismatch(targetType: KotlinType, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportInputMismatch(property: BeanProperty, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportPropertyInputMismatch(targetType: KClass<*>, propertyName: String, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method used to indicate a problem with input in cases where more specific `reportXxx()` method was not
+     * available.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportPropertyInputMismatch(targetType: KotlinType, propertyName: String, message: String?): T {
         TODO("Not yet implemented")
     }
 
     @Throws(DatabindException::class)
-    open fun <T> reportInputMismatch(targetType: KotlinType?, message: String): T {
+    open fun <T> reportPropertyInputMismatch(source: ValueDeserializer<*>, targetType: KClass<*>, inputValue: Any,
+            message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(DatabindException::class)
+    open fun <T> reportTrailingTokens(targetType: KClass<*>, parser: CirJsonParser, trailingToken: CirJsonToken,
+            message: String?): T {
         TODO("Not yet implemented")
     }
 
@@ -438,13 +1134,27 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    /**
+     * Helper method called to indicate problem in POJO (serialization) definitions or settings regarding specific type,
+     * unrelated to actual CirJSON content to map. Default behavior is to construct and throw a [DatabindException].
+     */
     @Throws(DatabindException::class)
-    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String): T {
+    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method called to indicate problem in POJO (serialization) definitions or settings regarding specific
+     * property (of a type), unrelated to actual CirJSON content to map. Default behavior is to construct and throw a
+     * [DatabindException].
+     */
+    @Throws(DatabindException::class)
+    fun <T> reportBadPropertyDefinition(bean: BeanDescription, property: BeanPropertyDefinition, message: String?): T {
         TODO("Not yet implemented")
     }
 
     @Throws(DatabindException::class)
-    override fun <T> reportBadDefinition(type: KotlinType, message: String): T {
+    override fun <T> reportBadDefinition(type: KotlinType, message: String?): T {
         TODO("Not yet implemented")
     }
 
@@ -454,8 +1164,119 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
+    /**
+     * Helper method for constructing [DatabindException] to indicate that the token encountered was of type different
+     * from what **should** be seen at that position, usually within a sequence of expected tokens. Note that most of
+     * the time this method should NOT be directly called; instead, [reportWrongTokenException] should be called and
+     * will call this method as necessary.
+     */
+    open fun wrongTokenException(parser: CirJsonParser, targetType: KotlinType, expectedToken: CirJsonToken?,
+            extra: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    open fun wrongTokenException(parser: CirJsonParser, targetType: KClass<*>, expectedToken: CirJsonToken?,
+            extra: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing exception to indicate that given CirJSON Object field name was not in format to be
+     * able to deserialize specified key type. Note that most of the time this method should NOT be called; instead,
+     * [handleWeirdKey] should be called which will call this method if necessary.
+     */
+    open fun weirdKeyException(keyClass: KClass<*>, keyValue: String, message: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing exception to indicate that input CirJSON String was not suitable for deserializing
+     * into given target type. Note that most of the time this method should NOT be called; instead,
+     * [handleWeirdStringValue] should be called which will call this method if necessary.
+     *
+     * @param value String value from input being deserialized
+     * 
+     * @param instantiatedClass Type that String should be deserialized into
+     * 
+     * @param messageBase Message that describes specific problem
+     */
+    open fun weirdStringException(value: String, instantiatedClass: KClass<*>,
+            messageBase: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing exception to indicate that input CirJSON Number was not suitable for deserializing
+     * into given target type. Note that most of the time this method should NOT be called; instead,
+     * [handleWeirdNumberValue] should be called which will call this method if necessary.
+     */
+    open fun weirdNumberException(value: Number, instantiatedClass: KClass<*>,
+            messageBase: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing exception to indicate that input CirJSON token of type "native value" (see
+     * [CirJsonToken.VALUE_EMBEDDED_OBJECT]) is of incompatible type (and there is no delegating creator or such to use)
+     * and can not be used to construct value of specified type (usually POJO). Note that most of the time this method
+     * should NOT be called; instead, [handleWeirdNativeValue] should be called which will call this method
+     */
+    open fun weirdNativeValueException(value: Any, instantiatedClass: KClass<*>,
+            messageBase: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing instantiation exception for specified type, to indicate problem with physically
+     * constructing instance of specified class (missing constructor, exception from constructor)
+     * 
+     * Note that most of the time this method should NOT be called directly; instead, [handleInstantiationProblem]
+     * should be called which will call this method if necessary.
+     */
+    open fun instantiationException(instantiatedClass: KClass<*>, cause: Throwable?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * Helper method for constructing instantiation exception for specified type, to indicate problem with physically
+     * constructing instance of specified class (missing constructor, exception from constructor)
+     * 
+     * Note that most of the time this method should NOT be called directly; instead, [handleInstantiationProblem]
+     * should be called which will call this method if necessary.
+     */
+    open fun instantiationException(instantiatedClass: KClass<*>, message: String?): DatabindException {
+        TODO("Not yet implemented")
+    }
+
     override fun invalidTypeIdException(baseType: KotlinType, typeId: String,
             extraDescription: String): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    open fun missingTypeIdException(baseType: KotlinType, extraDescription: String): DatabindException {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Other internal methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Helper method to get a non-shared instance of [DateFormat] with default configuration; instance is lazily
+     * constructed, reused within same instance of context (that is, within same life-cycle of `readValue()` from mapper
+     * or reader). Reuse is safe since access will not occur from multiple threads (unless caller somehow manages to
+     * share context objects across threads which is not supported).
+     */
+    protected open val dateFormat: DateFormat
+        get() = TODO("Not yet implemented")
+
+    /**
+     * Helper method for constructing description like "Object value" given
+     * [CirJsonToken] encountered.
+     */
+    protected open fun shapeForToken(token: CirJsonToken?): String {
         TODO("Not yet implemented")
     }
 
