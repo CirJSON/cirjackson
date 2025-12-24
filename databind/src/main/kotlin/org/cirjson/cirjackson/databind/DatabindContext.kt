@@ -63,7 +63,7 @@ abstract class DatabindContext {
     /**
      * Method for checking whether specified datatype feature is enabled or not.
      */
-    abstract fun isEnabled(feature: DatatypeFeature)
+    abstract fun isEnabled(feature: DatatypeFeature): Boolean
 
     abstract val datatypeFeatures: DatatypeFeatures
 
@@ -260,7 +260,7 @@ abstract class DatabindContext {
      * Note that most of the time this method should NOT be called directly: instead, method `handleUnknownTypeId()`
      * should be called which will call this method if necessary.
      */
-    protected abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+    protected abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
             extraDescription: String): DatabindException
 
     abstract val typeFactory: TypeFactory
@@ -289,7 +289,7 @@ abstract class DatabindContext {
         return introspectClassAnnotations(constructType(rawType)!!)
     }
 
-    abstract fun classIntrospector(): ClassIntrospector
+    protected abstract fun classIntrospector(): ClassIntrospector
 
     /*
      *******************************************************************************************************************

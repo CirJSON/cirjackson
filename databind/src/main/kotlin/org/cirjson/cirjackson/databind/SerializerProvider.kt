@@ -167,7 +167,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
         TODO("Not yet implemented")
     }
 
-    override fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+    override fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
             extraDescription: String): DatabindException {
         TODO("Not yet implemented")
     }

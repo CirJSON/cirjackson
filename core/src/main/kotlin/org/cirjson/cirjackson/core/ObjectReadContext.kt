@@ -6,6 +6,7 @@ import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
 import java.io.InputStream
 import java.io.Reader
+import kotlin.reflect.KClass
 
 /**
  * Defines API for accessing configuration and state exposed by higher level databind functionality during read (token
@@ -88,7 +89,7 @@ interface ObjectReadContext {
      */
 
     @Throws(CirJacksonException::class)
-    fun <T : TreeNode> readTree(parser: CirJsonParser): T
+    fun <T : TreeNode> readTree(parser: CirJsonParser): T?
 
     fun treeAsTokens(node: TreeNode): CirJsonParser {
         return node.traverse(this)
@@ -101,13 +102,13 @@ interface ObjectReadContext {
      */
 
     @Throws(CirJacksonException::class)
-    fun <T> readValue(parser: CirJsonParser, clazz: Class<T>): T
+    fun <T : Any> readValue(parser: CirJsonParser, clazz: KClass<T>): T?
 
     @Throws(CirJacksonException::class)
-    fun <T> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T
+    fun <T : Any> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T?
 
     @Throws(CirJacksonException::class)
-    fun <T> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T
+    fun <T : Any> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T?
 
     open class Base : ObjectReadContext {
 
@@ -139,15 +140,15 @@ interface ObjectReadContext {
             return reportUnsupportedOperation()
         }
 
-        override fun <T> readValue(parser: CirJsonParser, clazz: Class<T>): T {
+        override fun <T : Any> readValue(parser: CirJsonParser, clazz: KClass<T>): T {
             return reportUnsupportedOperation()
         }
 
-        override fun <T> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T {
+        override fun <T : Any> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T {
             return reportUnsupportedOperation()
         }
 
-        override fun <T> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T {
+        override fun <T : Any> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T {
             return reportUnsupportedOperation()
         }
 

@@ -17,16 +17,16 @@ import org.cirjson.cirjackson.databind.configuration.DatatypeFeature
 import org.cirjson.cirjackson.databind.configuration.DatatypeFeatures
 import org.cirjson.cirjackson.databind.deserialization.*
 import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdReader
+import org.cirjson.cirjackson.databind.deserialization.implementation.TypeWrappedDeserializer
+import org.cirjson.cirjackson.databind.exception.*
 import org.cirjson.cirjackson.databind.introspection.*
 import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
 import org.cirjson.cirjackson.databind.node.TreeTraversingParser
 import org.cirjson.cirjackson.databind.type.LogicalType
 import org.cirjson.cirjackson.databind.type.TypeFactory
-import org.cirjson.cirjackson.databind.util.ArrayBuilders
-import org.cirjson.cirjackson.databind.util.LinkedNode
-import org.cirjson.cirjackson.databind.util.ObjectBuffer
-import org.cirjson.cirjackson.databind.util.TokenBuffer
+import org.cirjson.cirjackson.databind.util.*
 import java.text.DateFormat
+import java.text.ParseException
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -47,6 +47,7 @@ import kotlin.reflect.KClass
  * 
  * @property myInjectableValues Object used for resolving references to injectable values.
  */
+@Suppress("ThrowableNotThrown")
 abstract class DeserializationContext protected constructor(protected val myStreamFactory: TokenStreamFactory,
         protected val myFactory: DeserializerFactory, protected val myCache: DeserializerCache,
         protected val myConfig: DeserializationConfig, protected val mySchema: FormatSchema?,
@@ -122,36 +123,40 @@ abstract class DeserializationContext protected constructor(protected val myStre
         get() = myConfig
 
     final override val activeView: KClass<*>?
-        get() = TODO("Not yet implemented")
+        get() = myActiveView
 
     final override fun canOverrideAccessModifiers(): Boolean {
-        TODO("Not yet implemented")
+        return myConfig.canOverrideAccessModifiers()
     }
 
     final override fun isEnabled(feature: MapperFeature): Boolean {
-        TODO("Not yet implemented")
+        return myConfig.isEnabled(feature)
     }
 
-    final override fun isEnabled(feature: DatatypeFeature) {
-        TODO("Not yet implemented")
+    final override fun isEnabled(feature: DatatypeFeature): Boolean {
+        return myConfig.isEnabled(feature)
     }
 
     final override val datatypeFeatures: DatatypeFeatures
-        get() = TODO("Not yet implemented")
+        get() = myConfig.datatypeFeatures
 
-    final override fun getDefaultPropertyFormat(
-            baseType: KClass<*>): CirJsonFormat.Value {
-        TODO("Not yet implemented")
+    final override fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value {
+        return myConfig.getDefaultPropertyFormat(baseType)
     }
 
     final override val annotationIntrospector: AnnotationIntrospector?
-        get() = TODO("Not yet implemented")
+        get() = myConfig.annotationIntrospector
 
     final override val typeFactory: TypeFactory
-        get() = TODO("Not yet implemented")
+        get() = myConfig.typeFactory
 
+    @Throws(IllegalArgumentException::class)
     override fun constructSpecializedType(baseType: KotlinType, subclass: KClass<*>): KotlinType {
-        TODO("Not yet implemented")
+        if (baseType.hasRawClass(subclass)) {
+            return baseType
+        }
+
+        return config.typeFactory.constructSpecializedType(baseType, subclass, false)
     }
 
     /**
@@ -161,7 +166,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     override val locale: Locale
-        get() = TODO("Not yet implemented")
+        get() = myConfig.locale
 
     /**
      * Accessor for default TimeZone to use: convenience accessor for
@@ -170,7 +175,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     override val timeZone: TimeZone
-        get() = TODO("Not yet implemented")
+        get() = myConfig.timeZone
 
     /*
      *******************************************************************************************************************
@@ -179,11 +184,12 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override fun getAttribute(key: Any): Any? {
-        TODO("Not yet implemented")
+        return myAttributes.getAttribute(key)
     }
 
-    override fun setAttribute(key: Any, value: Any?): DatabindContext {
-        TODO("Not yet implemented")
+    override fun setAttribute(key: Any, value: Any?): DeserializationContext {
+        myAttributes = myAttributes.withPerCallAttribute(key, value)
+        return this
     }
 
     /**
@@ -203,20 +209,20 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override val tokenStreamFactory: TokenStreamFactory
-        get() = TODO("Not yet implemented")
+        get() = myStreamFactory
 
     override val schema: FormatSchema?
-        get() = TODO("Not yet implemented")
+        get() = mySchema
 
     override val streamReadConstraints: StreamReadConstraints
-        get() = TODO("Not yet implemented")
+        get() = myStreamFactory.streamReadConstraints
 
     override fun getStreamReadFeatures(defaults: Int): Int {
-        TODO("Not yet implemented")
+        return myConfig.streamReadFeatures
     }
 
     override fun getFormatReadFeatures(defaults: Int): Int {
-        TODO("Not yet implemented")
+        return myConfig.formatReadFeatures
     }
 
     /*
@@ -226,11 +232,11 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override fun createArrayNode(): ArrayTreeNode {
-        TODO("Not yet implemented")
+        return nodeFactory.arrayNode()
     }
 
     override fun createObjectNode(): ObjectTreeNode {
-        TODO("Not yet implemented")
+        return nodeFactory.objectNode()
     }
 
     /*
@@ -240,8 +246,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     @Throws(CirJacksonException::class)
-    override fun <T : TreeNode> readTree(parser: CirJsonParser): T {
-        TODO("Not yet implemented")
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : TreeNode> readTree(parser: CirJsonParser): T? {
+        val token = parser.currentToken() ?: parser.nextToken() ?: return null
+
+        if (token == CirJsonToken.VALUE_NULL) {
+            return nodeFactory.nullNode() as T
+        }
+
+        val deserializer = findRootValueDeserializer(ObjectReader.CIRJSON_NODE_TYPE)
+        return deserializer.deserialize(parser, this) as T
     }
 
     /**
@@ -252,23 +266,30 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * method does not allow use of contextual annotations.
      */
     @Throws(CirJacksonException::class)
-    override fun <T> readValue(parser: CirJsonParser, clazz: Class<T>): T {
-        TODO("Not yet implemented")
+    override fun <T : Any> readValue(parser: CirJsonParser, clazz: KClass<T>): T? {
+        return readValue(parser, typeFactory.constructType(clazz.java))
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T {
-        TODO("Not yet implemented")
+    override fun <T : Any> readValue(parser: CirJsonParser, typeReference: TypeReference<T>): T? {
+        return readValue(parser, typeFactory.constructType(typeReference))
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T {
-        TODO("Not yet implemented")
+    override fun <T : Any> readValue(parser: CirJsonParser, resolvedType: ResolvedType): T? {
+        if (resolvedType !is KotlinType) {
+            throw UnsupportedOperationException(
+                    "Only support `JavaType` implementation of `ResolvedType`, not: ${resolvedType::class.qualifiedName}")
+        }
+
+        return readValue(parser, resolvedType)
     }
 
     @Throws(CirJacksonException::class)
-    open fun <T> readValue(parser: CirJsonParser, type: KotlinType): T {
-        TODO("Not yet implemented")
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(parser: CirJsonParser, type: KotlinType): T? {
+        val deserializer = findRootValueDeserializer(type)
+        return deserializer.deserialize(parser, this) as T?
     }
 
     /*
@@ -281,7 +302,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * Convenience method for checking whether specified on/off feature is enabled
      */
     fun isEnabled(feature: DeserializationFeature): Boolean {
-        TODO("Not yet implemented")
+        return myFeatureFlags and feature.mask != 0
     }
 
     /**
@@ -325,10 +346,13 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * Use of this accessor is discouraged: if code has direct access to the active parser, that should be used instead.
      */
     val parser: CirJsonParser?
-        get() = TODO("Not yet implemented")
+        get() = myParser
 
     fun findInjectableValue(valueId: Any, forProperty: BeanProperty, beanInstance: Any): Any? {
-        TODO("Not yet implemented")
+        myInjectableValues ?: return reportBadDefinition(valueId::class,
+                "No 'injectableValues' configured, cannot inject value with id [$valueId]")
+
+        return myInjectableValues.findInjectableValue(valueId, this, forProperty, beanInstance)
     }
 
     /**
@@ -339,7 +363,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     val base64Variant: Base64Variant
-        get() = TODO("Not yet implemented")
+        get() = myConfig.base64Variant
 
     /**
      * Convenience accessor, functionally equivalent to:
@@ -348,7 +372,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     val nodeFactory: CirJsonNodeFactory
-        get() = TODO("Not yet implemented")
+        get() = myConfig.nodeFactory
 
     /*
      *******************************************************************************************************************
@@ -357,20 +381,20 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override fun classIntrospector(): ClassIntrospector {
-        TODO("Not yet implemented")
+        return myClassIntrospector ?: myConfig.classIntrospectorInstance().also { myClassIntrospector = it }
     }
 
     override fun introspectBeanDescription(type: KotlinType): BeanDescription {
-        TODO("Not yet implemented")
+        return classIntrospector().introspectForDeserialization(type)
     }
 
     open fun introspectBeanDescriptionForCreation(type: KotlinType): BeanDescription {
-        TODO("Not yet implemented")
+        return classIntrospector().introspectForCreation(type)
     }
 
-    open fun introspectBeanDescriptionForBuilder(type: KotlinType,
+    open fun introspectBeanDescriptionForBuilder(builderType: KotlinType,
             valueTypeDescription: BeanDescription): BeanDescription {
-        TODO("Not yet implemented")
+        return classIntrospector().introspectForDeserializationWithBuilder(builderType, valueTypeDescription)
     }
 
     /*
@@ -380,11 +404,11 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     override fun findRootName(rootType: KotlinType): PropertyName {
-        TODO("Not yet implemented")
+        return myConfig.findRootName(this, rootType)
     }
 
     override fun findRootName(rawRootType: KClass<*>): PropertyName {
-        TODO("Not yet implemented")
+        return myConfig.findRootName(this, rawRootType)
     }
 
     /**
@@ -401,7 +425,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * [Deserializers]) that has.
      */
     open fun hasExplicitDeserializerFor(valueType: KClass<*>): Boolean {
-        TODO("Not yet implemented")
+        return myFactory.hasExplicitDeserializerFor(this, valueType)
     }
 
     /*
@@ -424,7 +448,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun findCoercionAction(targetType: LogicalType?, targetClass: KClass<*>?,
             inputShape: CoercionInputShape): CoercionAction {
-        TODO("Not yet implemented")
+        return myConfig.findCoercionAction(targetType, targetClass, inputShape)
     }
 
     /**
@@ -442,7 +466,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun findCoercionFromBlankString(targetType: LogicalType?, targetClass: KClass<*>?,
             actionIfBlankNotAllowed: CoercionAction): CoercionAction {
-        TODO("Not yet implemented")
+        return myConfig.findCoercionFromBlankString(targetType, targetClass, actionIfBlankNotAllowed)
     }
 
     /*
@@ -457,7 +481,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * usually for purpose of reading contents later on (possibly augmented with injected additional content)
      */
     open fun bufferForInputBuffering(parser: CirJsonParser): TokenBuffer {
-        TODO("Not yet implemented")
+        return TokenBuffer.forBuffering(parser, this)
     }
 
     /**
@@ -467,7 +491,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     fun bufferForInputBuffering(): TokenBuffer {
-        TODO("Not yet implemented")
+        return bufferForInputBuffering(parser!!)
     }
 
     /**
@@ -483,7 +507,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun bufferAsCopyOfValue(parser: CirJsonParser): TokenBuffer {
-        TODO("Not yet implemented")
+        val buffer = bufferForInputBuffering(parser)
+        buffer.copyCurrentStructure(parser)
+        return buffer
     }
 
     /*
@@ -496,8 +522,10 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * Method for finding a value deserializer, and creating a contextual version if necessary, for value reached via
      * specified property.
      */
+    @Suppress("UNCHECKED_CAST")
     fun findContextualValueDeserializer(type: KotlinType, property: BeanProperty?): ValueDeserializer<Any> {
-        TODO("Not yet implemented")
+        val deserializer = myCache.findValueDeserializer(this, myFactory, type)
+        return handleSecondaryContextualization(deserializer, property, type) as ValueDeserializer<Any>
     }
 
     /**
@@ -508,14 +536,20 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * [handleSecondaryContextualization] at a later point, as necessary.
      */
     fun findNonContextualValueDeserializer(type: KotlinType): ValueDeserializer<Any> {
-        TODO("Not yet implemented")
+        return myCache.findValueDeserializer(this, myFactory, type)
     }
 
     /**
      * Method for finding a deserializer for root-level value.
      */
+    @Suppress("UNCHECKED_CAST")
     fun findRootValueDeserializer(type: KotlinType): ValueDeserializer<Any> {
-        TODO("Not yet implemented")
+        var deserializer = myCache.findValueDeserializer(this, myFactory, type)
+        deserializer = handleSecondaryContextualization(deserializer, null, type) as ValueDeserializer<Any>
+
+        val typeDeserializer = findTypeDeserializer(type) ?: return deserializer
+
+        return TypeWrappedDeserializer(typeDeserializer.forProperty(null), deserializer)
     }
 
     /*
@@ -537,11 +571,19 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * @return Type deserializer to use for given base type, if one is needed; `null` if not.
      */
     open fun findTypeDeserializer(baseType: KotlinType): TypeDeserializer? {
-        TODO("Not yet implemented")
+        return findTypeDeserializer(baseType, introspectClassAnnotations(baseType))
     }
 
     open fun findTypeDeserializer(baseType: KotlinType, classAnnotations: AnnotatedClass): TypeDeserializer? {
-        TODO("Not yet implemented")
+        val exception = try {
+            return myConfig.typeResolverProvider.findTypeDeserializer(this, baseType, classAnnotations)
+        } catch (e: IllegalArgumentException) {
+            e
+        } catch (e: IllegalStateException) {
+            e
+        }
+
+        throw InvalidDefinitionException.from(parser, exception.exceptionMessage()!!, baseType).withCause(exception)
     }
 
     /**
@@ -556,8 +598,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *
      * @return Type deserializer to use for given base type, if one is needed; `null` if not.
      */
-    open fun findPropertyTypeDeserializer(baseType: KotlinType, classAnnotations: AnnotatedClass): TypeDeserializer? {
-        TODO("Not yet implemented")
+    open fun findPropertyTypeDeserializer(baseType: KotlinType, accessor: AnnotatedMember): TypeDeserializer? {
+        val exception = try {
+            return myConfig.typeResolverProvider.findPropertyTypeDeserializer(this, accessor, baseType)
+        } catch (e: IllegalArgumentException) {
+            e
+        } catch (e: IllegalStateException) {
+            e
+        }
+
+        throw InvalidDefinitionException.from(parser, exception.exceptionMessage()!!, baseType).withCause(exception)
     }
 
     /**
@@ -574,7 +624,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun findPropertyContentTypeDeserializer(containerType: KotlinType,
             accessor: AnnotatedMethod): TypeDeserializer? {
-        TODO("Not yet implemented")
+        val exception = try {
+            return myConfig.typeResolverProvider.findPropertyContentTypeDeserializer(this, accessor, containerType)
+        } catch (e: IllegalArgumentException) {
+            e
+        } catch (e: IllegalStateException) {
+            e
+        }
+
+        throw InvalidDefinitionException.from(parser, exception.exceptionMessage()!!, containerType)
+                .withCause(exception)
     }
 
     /*
@@ -584,7 +643,13 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
 
     fun findKeyDeserializer(keyType: KotlinType, property: BeanProperty): KeyDeserializer {
-        TODO("Not yet implemented")
+        val keyDeserializer = try {
+            myCache.findKeyDeserializer(this, myFactory, keyType)
+        } catch (e: IllegalArgumentException) {
+            return reportBadDefinition(keyType, e.exceptionMessage())
+        }
+
+        return (keyDeserializer as? ContextualKeyDeserializer)?.createContextual(this, property) ?: keyDeserializer
     }
 
     /*
@@ -620,7 +685,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * ```
      */
     final override fun constructType(type: KClass<*>?): KotlinType? {
-        TODO("Not yet implemented")
+        return type?.let { myConfig.constructType(type) }
     }
 
     /**
@@ -629,7 +694,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(ClassNotFoundException::class)
     open fun findClass(className: String): KClass<*> {
-        TODO("Not yet implemented")
+        return typeFactory.findClass(className)
     }
 
     /*
@@ -644,7 +709,15 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * during same round of deserialization.
      */
     fun leaseObjectBuffer(): ObjectBuffer {
-        TODO("Not yet implemented")
+        var buffer = myObjectBuffer
+
+        if (buffer == null) {
+            buffer = ObjectBuffer()
+        } else {
+            myObjectBuffer = null
+        }
+
+        return buffer
     }
 
     /**
@@ -653,7 +726,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * @param buffer Returned object buffer
      */
     fun returnObjectBuffer(buffer: ObjectBuffer) {
-        TODO("Not yet implemented")
+        if (myObjectBuffer == null || buffer.initialCapacity() >= myObjectBuffer!!.initialCapacity()) {
+            myObjectBuffer = buffer
+        }
     }
 
     /**
@@ -687,7 +762,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun handlePrimaryContextualization(deserializer: ValueDeserializer<*>?, property: BeanProperty,
             type: KotlinType): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        var realDeserializer = deserializer ?: return null
+        myCurrentType = LinkedNode(type, myCurrentType)
+
+        try {
+            realDeserializer = realDeserializer.createContextual(this, property)
+        } finally {
+            myCurrentType = myCurrentType!!.next()
+        }
+
+        return realDeserializer
     }
 
     /**
@@ -701,7 +785,16 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun handleSecondaryContextualization(deserializer: ValueDeserializer<*>?, property: BeanProperty?,
             type: KotlinType): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        var realDeserializer = deserializer ?: return null
+        myCurrentType = LinkedNode(type, myCurrentType)
+
+        try {
+            realDeserializer = realDeserializer.createContextual(this, property)
+        } finally {
+            myCurrentType = myCurrentType!!.next()
+        }
+
+        return realDeserializer
     }
 
     /*
@@ -719,14 +812,21 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(IllegalArgumentException::class)
     open fun parseDate(dateString: String): Date {
-        TODO("Not yet implemented")
+        try {
+            val dateFormat = dateFormat
+            return dateFormat.parse(dateString)
+        } catch (e: ParseException) {
+            throw IllegalArgumentException("Failed to parse Date value '$dateString': ${e.exceptionMessage()}")
+        }
     }
 
     /**
      * Convenience method for constructing Calendar instance set to specified time, to be modified and used by caller.
      */
     open fun constructCalendar(date: Date): Calendar {
-        TODO("Not yet implemented")
+        val calendar = Calendar.getInstance(timeZone)
+        calendar.time = date
+        return calendar
     }
 
     /*
@@ -755,7 +855,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
     @Throws(CirJacksonException::class)
     open fun extractScalarFromObject(parser: CirJsonParser, deserializer: ValueDeserializer<*>,
             scalarType: KClass<*>): String {
-        TODO("Not yet implemented")
+        return handleUnexpectedToken(constructType(scalarType)!!, parser)!! as String
     }
 
     /*
@@ -766,12 +866,14 @@ abstract class DeserializationContext protected constructor(protected val myStre
 
     @Throws(CirJacksonException::class)
     open fun <T : Any> readPropertyValue(parser: CirJsonParser, property: BeanProperty?, type: KClass<T>): T? {
-        TODO("Not yet implemented")
+        return readPropertyValue(parser, property, typeFactory.constructType(type.java))
     }
 
     @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
     open fun <T : Any> readPropertyValue(parser: CirJsonParser, property: BeanProperty?, type: KotlinType): T? {
-        TODO("Not yet implemented")
+        val deserializer = findContextualValueDeserializer(type, property)
+        return deserializer.deserialize(parser, this) as T?
     }
 
     /**
@@ -791,16 +893,24 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun <T : Any> readTreeAsValue(node: CirJsonNode?, targetType: KClass<T>): T? {
-        TODO("Not yet implemented")
+        node ?: return null
+        treeAsTokens(node).use {
+            return readValue(it, targetType)
+        }
     }
 
     @Throws(CirJacksonException::class)
     open fun <T : Any> readTreeAsValue(node: CirJsonNode?, targetType: KotlinType): T? {
-        TODO("Not yet implemented")
+        node ?: return null
+        treeAsTokens(node).use {
+            return readValue(it, targetType)
+        }
     }
 
     private fun treeAsTokens(node: CirJsonNode): TreeTraversingParser {
-        TODO("Not yet implemented")
+        val parser = TreeTraversingParser(node, this)
+        parser.nextToken()
+        return parser
     }
 
     /*
@@ -819,7 +929,23 @@ abstract class DeserializationContext protected constructor(protected val myStre
     @Throws(CirJacksonException::class)
     open fun handleUnknownProperty(parser: CirJsonParser, deserializer: ValueDeserializer<*>?, instanceOrClass: Any,
             propertyName: String): Boolean {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            if (handler.value().handleUnknownProperty(this, parser, deserializer, instanceOrClass, propertyName)) {
+                return true
+            }
+
+            handler = handler.next()
+        }
+
+        if (!isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)) {
+            parser.skipChildren()
+            return true
+        }
+
+        val propertyIds = deserializer?.knownPropertyNames
+        throw UnrecognizedPropertyException.from(myParser!!, instanceOrClass, propertyName, propertyIds)
     }
 
     /**
@@ -840,7 +966,25 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun handleWeirdKey(keyClass: KClass<*>, keyValue: String, message: String?): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val key = handler.value().handleWeirdKey(this, keyClass, keyValue, message)
+
+            if (key === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (key == null || keyClass.isInstance(key)) {
+                return key
+            }
+
+            throw weirdStringException(keyValue, keyClass,
+                    "DeserializationProblemHandler.handleWeirdKey() for type ${keyClass.classDescription} returned value of type ${key.classDescription}")
+        }
+
+        throw weirdKeyException(keyClass, keyValue, message)
     }
 
     /**
@@ -862,7 +1006,25 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun handleWeirdStringValue(targetClass: KClass<*>, value: String, message: String?): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val instance = handler.value().handleWeirdStringValue(this, targetClass, value, message)
+
+            if (instance === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (isCompatible(targetClass, instance)) {
+                return instance
+            }
+
+            throw weirdStringException(value, targetClass,
+                    "DeserializationProblemHandler.handleWeirdStringValue() for type ${targetClass.classDescription} returned value of type ${instance.classDescription}")
+        }
+
+        throw weirdStringException(value, targetClass, message)
     }
 
     /**
@@ -884,12 +1046,49 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun handleWeirdNumberValue(targetClass: KClass<*>, value: Number, message: String?): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val instance = handler.value().handleWeirdNumberValue(this, targetClass, value, message)
+
+            if (instance === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (isCompatible(targetClass, instance)) {
+                return instance
+            }
+
+            throw weirdNumberException(value, targetClass,
+                    "DeserializationProblemHandler.handleWeirdNumberValue() for type ${targetClass.classDescription} returned value of type ${instance.classDescription}")
+        }
+
+        throw weirdNumberException(value, targetClass, message)
     }
 
     @Throws(CirJacksonException::class)
     open fun handleWeirdNativeValue(targetType: KotlinType, badValue: Any, parser: CirJsonParser): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+        val raw = targetType.rawClass
+
+        while (handler != null) {
+            val goodValue = handler.value().handleWeirdNativeValue(this, targetType, badValue, parser)
+
+            if (goodValue === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (goodValue == null || raw.isInstance(goodValue)) {
+                return goodValue
+            }
+
+            throw DatabindException.from(parser,
+                    "DeserializationProblemHandler.handleWeirdNativeValue() for type ${targetType.classDescription} returned value of type ${goodValue.classDescription}")
+        }
+
+        throw weirdNativeValueException(badValue, raw)
     }
 
     /**
@@ -910,7 +1109,36 @@ abstract class DeserializationContext protected constructor(protected val myStre
     @Throws(CirJacksonException::class)
     open fun handleMissingInstantiator(instantiatedClass: KClass<*>, valueInstantiator: ValueInstantiator?,
             parser: CirJsonParser?, message: String?): Any? {
-        TODO("Not yet implemented")
+        var realParser = parser ?: this.parser
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val instance = handler.value()
+                    .handleMissingInstantiator(this, instantiatedClass, valueInstantiator, realParser, message)
+
+            if (instance === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (isCompatible(instantiatedClass, instance)) {
+                return instance
+            }
+
+            return reportBadDefinition(constructType(instantiatedClass)!!,
+                    "DeserializationProblemHandler.handleMissingInstantiator() for type ${instantiatedClass.classDescription} returned value of type ${instance.classDescription}")
+        }
+
+        valueInstantiator ?: return reportBadDefinition(instantiatedClass,
+                "Cannot construct instance of ${instantiatedClass.name}: $message")
+
+        if (!valueInstantiator.canInstantiate()) {
+            return reportBadDefinition(instantiatedClass,
+                    "Cannot construct instance of ${instantiatedClass.name} (no Creators, like default constructor, exist): $message")
+        }
+
+        return reportInputMismatch(instantiatedClass,
+                "Cannot construct instance of ${instantiatedClass.name} (although at least one Creator exists): $message")
     }
 
     /**
@@ -929,12 +1157,36 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun handleInstantiationProblem(instantiatedClass: KClass<*>, argument: Any?, throwable: Throwable): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val instance = handler.value().handleInstantiationProblem(this, instantiatedClass, argument, throwable)
+
+            if (instance === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (isCompatible(instantiatedClass, instance)) {
+                return instance
+            }
+
+            return reportBadDefinition(constructType(instantiatedClass)!!,
+                    "DeserializationProblemHandler.handleInstantiationProblem() for type ${instantiatedClass.classDescription} returned value of type ${instance.className}")
+        }
+
+        throwable.throwIfCirJacksonException()
+
+        if (!isEnabled(DeserializationFeature.WRAP_EXCEPTIONS)) {
+            throwable.throwIfRuntimeException()
+        }
+
+        throw instantiationException(instantiatedClass, throwable)
     }
 
     @Throws(CirJacksonException::class)
     open fun handleUnexpectedToken(instantiatedClass: KClass<*>, parser: CirJsonParser): Any? {
-        TODO("Not yet implemented")
+        return handleUnexpectedToken(constructType(instantiatedClass)!!, parser.currentToken(), parser, null)
     }
 
     /**
@@ -951,7 +1203,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(CirJacksonException::class)
     open fun handleUnexpectedToken(targetType: KotlinType, parser: CirJsonParser): Any? {
-        TODO("Not yet implemented")
+        return handleUnexpectedToken(targetType, parser.currentToken(), parser, null)
     }
 
     /**
@@ -971,7 +1223,43 @@ abstract class DeserializationContext protected constructor(protected val myStre
     @Throws(CirJacksonException::class)
     open fun handleUnexpectedToken(targetType: KotlinType, token: CirJsonToken?, parser: CirJsonParser,
             message: String?): Any? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val instance = handler.value().handleUnexpectedToken(this, targetType, token, parser, message)
+
+            if (instance === DeserializationProblemHandler.NOT_HANDLED) {
+                handler = handler.next()
+                continue
+            }
+
+            if (isCompatible(targetType.rawClass, instance)) {
+                return instance
+            }
+
+            return reportBadDefinition(targetType,
+                    "DeserializationProblemHandler.handleUnexpectedToken() for type ${targetType.typeDescription} returned value of type ${instance.className}")
+        }
+
+        val realMessage = if (message != null) {
+            message
+        } else {
+            val targetDescription = targetType.typeDescription
+
+            if (token == null) {
+                "Unexpected end-of-input when trying read value of type $targetDescription"
+            } else {
+                "Cannot deserialize value of type $targetDescription from ${
+                    shapeForToken(token)
+                } (token `CirJsonToken.$token`)"
+            }
+        }
+
+        if (token?.isScalarValue ?: false) {
+            parser.text
+        }
+
+        return reportInputMismatch(targetType, realMessage)
     }
 
     /**
@@ -993,13 +1281,61 @@ abstract class DeserializationContext protected constructor(protected val myStre
     @Throws(CirJacksonException::class)
     open fun handleUnknownTypeId(baseType: KotlinType, id: String, idResolver: TypeIdResolver,
             extraDescription: String): KotlinType? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val type = handler.value().handleUnknownTypeId(this, baseType, id, idResolver, extraDescription)
+
+            if (type == null) {
+                handler = handler.next()
+                continue
+            }
+
+            if (type.hasRawClass(Unit::class)) {
+                return null
+            }
+
+            if (type.isTypeOrSubTypeOf(baseType.rawClass)) {
+                return type
+            }
+
+            throw invalidTypeIdException(baseType, id,
+                    "problem handler tried to resolve into non-subtype: ${type.typeDescription}")
+        }
+
+        if (!isEnabled(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE)) {
+            return null
+        }
+
+        throw invalidTypeIdException(baseType, id, extraDescription)
     }
 
     @Throws(CirJacksonException::class)
     open fun handleMissingTypeId(baseType: KotlinType, idResolver: TypeIdResolver,
             extraDescription: String): KotlinType? {
-        TODO("Not yet implemented")
+        var handler = config.problemHandlers
+
+        while (handler != null) {
+            val type = handler.value().handleMissingTypeId(this, baseType, idResolver, extraDescription)
+
+            if (type == null) {
+                handler = handler.next()
+                continue
+            }
+
+            if (type.hasRawClass(Unit::class)) {
+                return null
+            }
+
+            if (type.isTypeOrSubTypeOf(baseType.rawClass)) {
+                return type
+            }
+
+            throw invalidTypeIdException(baseType, null,
+                    "problem handler tried to resolve into non-subtype: ${type.typeDescription}")
+        }
+
+        throw missingTypeIdException(baseType, extraDescription)
     }
 
     /**
@@ -1010,11 +1346,21 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun handleBadMerge(deserializer: ValueDeserializer<*>) {
-        TODO("Not yet implemented")
+        if (isEnabled(MapperFeature.IGNORE_MERGE_FOR_UNMERGEABLE)) {
+            return
+        }
+
+        val type = constructType(deserializer.handledType())
+        val message = "Invalid configuration: values of type ${type.typeDescription} cannot be merged"
+        throw InvalidDefinitionException.from(parser, message, type)
     }
 
     protected open fun isCompatible(target: KClass<*>, value: Any?): Boolean {
-        TODO("Not yet implemented")
+        if (value == null || target.isInstance(value)) {
+            return true
+        }
+
+        return target.isPrimitive && target.wrapperType().isInstance(value)
     }
 
     /*
@@ -1030,9 +1376,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * to be difficult to recover from, in general.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportWrongTokenException(deserializer: ValueDeserializer<*>, expectedToken: CirJsonToken,
+    open fun <T> reportWrongTokenException(deserializer: ValueDeserializer<*>, expectedToken: CirJsonToken?,
             message: String?): T {
-        TODO("Not yet implemented")
+        throw wrongTokenException(parser!!, deserializer.handledType()!!, expectedToken, message)
     }
 
     /**
@@ -1043,7 +1389,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun <T> reportWrongTokenException(targetType: KotlinType, expectedToken: CirJsonToken, message: String?): T {
-        TODO("Not yet implemented")
+        throw wrongTokenException(parser!!, targetType, expectedToken, message)
     }
 
     /**
@@ -1054,12 +1400,13 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun <T> reportWrongTokenException(targetType: KClass<*>, expectedToken: CirJsonToken, message: String?): T {
-        TODO("Not yet implemented")
+        throw wrongTokenException(parser!!, targetType, expectedToken, message)
     }
 
     @Throws(DatabindException::class)
     open fun <T> reportUnresolvedObjectId(oldReader: ObjectIdReader, bean: Any): T {
-        TODO("Not yet implemented")
+        return reportInputMismatch(oldReader.idProperty!!,
+                "No Object Id found for an instance of ${bean.className}, to assign to property '${oldReader.propertyName}'")
     }
 
     /**
@@ -1068,7 +1415,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun <T> reportInputMismatch(source: ValueDeserializer<*>, message: String?): T {
-        TODO("Not yet implemented")
+        throw MismatchedInputException.from(parser, source.handledType(), message)
     }
 
     /**
@@ -1077,7 +1424,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun <T> reportInputMismatch(targetType: KClass<*>, message: String?): T {
-        TODO("Not yet implemented")
+        throw MismatchedInputException.from(parser, targetType, message)
     }
 
     /**
@@ -1086,7 +1433,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     open fun <T> reportInputMismatch(targetType: KotlinType, message: String?): T {
-        TODO("Not yet implemented")
+        throw MismatchedInputException.from(parser, targetType, message)
     }
 
     /**
@@ -1094,8 +1441,12 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * available.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportInputMismatch(property: BeanProperty, message: String?): T {
-        TODO("Not yet implemented")
+    open fun <T> reportInputMismatch(property: BeanProperty?, message: String?): T {
+        val type = property?.type
+        val e = MismatchedInputException.from(parser, type, message)
+        val member = property?.member ?: throw e
+        e.prependPath(member.declaringClass, property.name)
+        throw e
     }
 
     /**
@@ -1103,8 +1454,11 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * available.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportPropertyInputMismatch(targetType: KClass<*>, propertyName: String, message: String?): T {
-        TODO("Not yet implemented")
+    open fun <T> reportPropertyInputMismatch(targetType: KClass<*>, propertyName: String?, message: String?): T {
+        val e = MismatchedInputException.from(parser, targetType, message)
+        propertyName ?: throw e
+        e.prependPath(targetType, propertyName)
+        throw e
     }
 
     /**
@@ -1112,20 +1466,24 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * available.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportPropertyInputMismatch(targetType: KotlinType, propertyName: String, message: String?): T {
-        TODO("Not yet implemented")
+    open fun <T> reportPropertyInputMismatch(targetType: KotlinType, propertyName: String?, message: String?): T {
+        return reportPropertyInputMismatch(targetType.rawClass, propertyName, message)
     }
 
+    /**
+     * Helper method used to indicate a problem with input in cases where specific input coercion was not allowed.
+     */
     @Throws(DatabindException::class)
     open fun <T> reportPropertyInputMismatch(source: ValueDeserializer<*>, targetType: KClass<*>, inputValue: Any,
             message: String?): T {
-        TODO("Not yet implemented")
+        throw InvalidFormatException.from(parser, message, inputValue, targetType)
     }
 
     @Throws(DatabindException::class)
     open fun <T> reportTrailingTokens(targetType: KClass<*>, parser: CirJsonParser, trailingToken: CirJsonToken,
             message: String?): T {
-        TODO("Not yet implemented")
+        throw MismatchedInputException.from(parser, targetType,
+                "Trailing token (of type $trailingToken) found after value (bound as ${targetType.name}): not allowed as per `DeserializationFeature.FAIL_ON_TRAILING_TOKENS`")
     }
 
     /*
@@ -1140,7 +1498,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T {
-        TODO("Not yet implemented")
+        val beanDescription = bean.beanClass.name
+        val realMessage = "Invalid type definition for type $beanDescription: $message"
+        throw InvalidDefinitionException.from(myParser, realMessage, bean, null)
     }
 
     /**
@@ -1150,12 +1510,14 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     @Throws(DatabindException::class)
     fun <T> reportBadPropertyDefinition(bean: BeanDescription, property: BeanPropertyDefinition, message: String?): T {
-        TODO("Not yet implemented")
+        val realMessage =
+                "Invalid type definition for property ${property.name} (of type ${bean.beanClass.name}): $message"
+        throw InvalidDefinitionException.from(parser, realMessage, bean, property)
     }
 
     @Throws(DatabindException::class)
     override fun <T> reportBadDefinition(type: KotlinType, message: String?): T {
-        TODO("Not yet implemented")
+        throw InvalidDefinitionException.from(myParser, message, type)
     }
 
     /*
@@ -1170,14 +1532,18 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * the time this method should NOT be directly called; instead, [reportWrongTokenException] should be called and
      * will call this method as necessary.
      */
-    open fun wrongTokenException(parser: CirJsonParser, targetType: KotlinType, expectedToken: CirJsonToken?,
+    open fun wrongTokenException(parser: CirJsonParser?, targetType: KotlinType, expectedToken: CirJsonToken?,
             extra: String?): DatabindException {
-        TODO("Not yet implemented")
+        val message =
+                "Unexpected token (`CirJJsonToken.${parser?.currentToken()}`), expected `CirJJsonToken.$expectedToken`"
+        return MismatchedInputException.from(parser, targetType, colonConcat(message, extra))
     }
 
-    open fun wrongTokenException(parser: CirJsonParser, targetType: KClass<*>, expectedToken: CirJsonToken?,
+    open fun wrongTokenException(parser: CirJsonParser?, targetType: KClass<*>, expectedToken: CirJsonToken?,
             extra: String?): DatabindException {
-        TODO("Not yet implemented")
+        val message =
+                "Unexpected token (`CirJJsonToken.${parser?.currentToken()}`), expected `CirJJsonToken.$expectedToken`"
+        return MismatchedInputException.from(parser, targetType, colonConcat(message, extra))
     }
 
     /**
@@ -1186,7 +1552,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * [handleWeirdKey] should be called which will call this method if necessary.
      */
     open fun weirdKeyException(keyClass: KClass<*>, keyValue: String, message: String?): DatabindException {
-        TODO("Not yet implemented")
+        return InvalidFormatException.from(myParser,
+                "Cannot deserialize Map key of type ${keyClass.name} from String ${quotedString(keyValue)}: $message",
+                keyValue, keyClass)
     }
 
     /**
@@ -1202,7 +1570,10 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun weirdStringException(value: String, instantiatedClass: KClass<*>,
             messageBase: String?): DatabindException {
-        TODO("Not yet implemented")
+        val message = "Cannot deserialize value of type ${instantiatedClass.name} from String ${
+            quotedString(value)
+        }: $messageBase"
+        return InvalidFormatException.from(myParser, message, value, instantiatedClass)
     }
 
     /**
@@ -1212,7 +1583,8 @@ abstract class DeserializationContext protected constructor(protected val myStre
      */
     open fun weirdNumberException(value: Number, instantiatedClass: KClass<*>,
             messageBase: String?): DatabindException {
-        TODO("Not yet implemented")
+        val message = "Cannot deserialize value of type ${instantiatedClass.name} from number $value: $messageBase"
+        return InvalidFormatException.from(myParser, message, value, instantiatedClass)
     }
 
     /**
@@ -1221,9 +1593,10 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * and can not be used to construct value of specified type (usually POJO). Note that most of the time this method
      * should NOT be called; instead, [handleWeirdNativeValue] should be called which will call this method
      */
-    open fun weirdNativeValueException(value: Any, instantiatedClass: KClass<*>,
-            messageBase: String?): DatabindException {
-        TODO("Not yet implemented")
+    open fun weirdNativeValueException(value: Any, instantiatedClass: KClass<*>): DatabindException {
+        return InvalidFormatException.from(myParser,
+                "Cannot deserialize value of type ${instantiatedClass.name} from native value (`CirJsonToken.VALUE_EMBEDDED_OBJECT`) of type ${value.className}: incompatible types",
+                value, instantiatedClass)
     }
 
     /**
@@ -1234,7 +1607,14 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * should be called which will call this method if necessary.
      */
     open fun instantiationException(instantiatedClass: KClass<*>, cause: Throwable?): DatabindException {
-        TODO("Not yet implemented")
+        val exceptionMessage = if (cause == null) {
+            "N/A"
+        } else {
+            cause.exceptionMessage() ?: cause::class.name
+        }
+
+        val message = "Cannot construct instance of ${instantiatedClass.name}, problem: $exceptionMessage"
+        return ValueInstantiationException.from(myParser, message, constructType(instantiatedClass)!!, cause)
     }
 
     /**
@@ -1245,16 +1625,19 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * should be called which will call this method if necessary.
      */
     open fun instantiationException(instantiatedClass: KClass<*>, message: String?): DatabindException {
-        TODO("Not yet implemented")
+        return ValueInstantiationException.from(myParser,
+                "Cannot construct instance of ${instantiatedClass.name}: $message", constructType(instantiatedClass)!!)
     }
 
-    override fun invalidTypeIdException(baseType: KotlinType, typeId: String,
+    override fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
             extraDescription: String): DatabindException {
-        TODO("Not yet implemented")
+        val message = "Could not resolve type id '$typeId' as a subtype of ${baseType.typeDescription}"
+        return InvalidTypeIdException.from(myParser, colonConcat(message, extraDescription), baseType, typeId)
     }
 
     open fun missingTypeIdException(baseType: KotlinType, extraDescription: String): DatabindException {
-        TODO("Not yet implemented")
+        val message = "Could not resolve subtype of $baseType"
+        return InvalidTypeIdException.from(myParser, colonConcat(message, extraDescription), baseType, null)
     }
 
     /*
@@ -1270,14 +1653,14 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * share context objects across threads which is not supported).
      */
     protected open val dateFormat: DateFormat
-        get() = TODO("Not yet implemented")
+        get() = myDateFormat ?: myConfig.dateFormat.also { myDateFormat = it.clone() as DateFormat }
 
     /**
      * Helper method for constructing description like "Object value" given
      * [CirJsonToken] encountered.
      */
     protected open fun shapeForToken(token: CirJsonToken?): String {
-        TODO("Not yet implemented")
+        return CirJsonToken.valueDescFor(token)
     }
 
 }

@@ -33,26 +33,27 @@ open class InvalidDefinitionException : DatabindException {
     var property: BeanPropertyDefinition?
         protected set
 
-    protected constructor(parser: CirJsonParser?, message: String, type: KotlinType) : super(parser, message) {
+    protected constructor(parser: CirJsonParser?, message: String?, type: KotlinType?) : super(parser, message) {
         this.type = type
         beanDescription = null
         property = null
     }
 
-    protected constructor(parser: CirJsonParser?, message: String, beanDescription: BeanDescription?,
+    protected constructor(parser: CirJsonParser?, message: String?, beanDescription: BeanDescription?,
             property: BeanPropertyDefinition?) : super(parser, message) {
         type = beanDescription?.type
         this.beanDescription = beanDescription
         this.property = property
     }
 
-    protected constructor(generator: CirJsonGenerator?, message: String, type: KotlinType) : super(generator, message) {
+    protected constructor(generator: CirJsonGenerator?, message: String?, type: KotlinType?) : super(generator,
+            message) {
         this.type = type
         beanDescription = null
         property = null
     }
 
-    protected constructor(generator: CirJsonGenerator?, message: String, beanDescription: BeanDescription?,
+    protected constructor(generator: CirJsonGenerator?, message: String?, beanDescription: BeanDescription?,
             property: BeanPropertyDefinition?) : super(generator, message) {
         type = beanDescription?.type
         this.beanDescription = beanDescription
@@ -61,20 +62,20 @@ open class InvalidDefinitionException : DatabindException {
 
     companion object {
 
-        fun from(parser: CirJsonParser?, message: String, type: KotlinType): InvalidDefinitionException {
+        fun from(parser: CirJsonParser?, message: String?, type: KotlinType?): InvalidDefinitionException {
             return InvalidDefinitionException(parser, message, type)
         }
 
-        fun from(parser: CirJsonParser?, message: String, beanDescription: BeanDescription?,
+        fun from(parser: CirJsonParser?, message: String?, beanDescription: BeanDescription?,
                 property: BeanPropertyDefinition?): InvalidDefinitionException {
             return InvalidDefinitionException(parser, message, beanDescription, property)
         }
 
-        fun from(generator: CirJsonGenerator?, message: String, type: KotlinType): InvalidDefinitionException {
+        fun from(generator: CirJsonGenerator?, message: String?, type: KotlinType?): InvalidDefinitionException {
             return InvalidDefinitionException(generator, message, type)
         }
 
-        fun from(generator: CirJsonGenerator?, message: String, beanDescription: BeanDescription?,
+        fun from(generator: CirJsonGenerator?, message: String?, beanDescription: BeanDescription?,
                 property: BeanPropertyDefinition?): InvalidDefinitionException {
             return InvalidDefinitionException(generator, message, beanDescription, property)
         }

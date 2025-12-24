@@ -20,23 +20,24 @@ open class ValueInstantiationException : DatabindException {
      */
     val type: KotlinType
 
-    protected constructor(processor: Closeable?, message: String, type: KotlinType, cause: Throwable) : super(processor,
+    protected constructor(processor: Closeable?, message: String?, type: KotlinType, cause: Throwable?) : super(
+            processor,
             message, cause) {
         this.type = type
     }
 
-    protected constructor(processor: Closeable?, message: String, type: KotlinType) : super(processor, message) {
+    protected constructor(processor: Closeable?, message: String?, type: KotlinType) : super(processor, message) {
         this.type = type
     }
 
     companion object {
 
-        fun from(processor: Closeable?, message: String, type: KotlinType,
-                cause: Throwable): ValueInstantiationException {
+        fun from(processor: Closeable?, message: String?, type: KotlinType,
+                cause: Throwable?): ValueInstantiationException {
             return ValueInstantiationException(processor, message, type, cause)
         }
 
-        fun from(processor: Closeable?, message: String, type: KotlinType): ValueInstantiationException {
+        fun from(processor: Closeable?, message: String?, type: KotlinType): ValueInstantiationException {
             return ValueInstantiationException(processor, message, type)
         }
 

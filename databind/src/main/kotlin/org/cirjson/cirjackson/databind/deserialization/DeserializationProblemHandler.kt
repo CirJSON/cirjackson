@@ -165,7 +165,7 @@ abstract class DeserializationProblemHandler {
      * value to use (possibly `null`
      */
     @Throws(CirJacksonException::class)
-    open fun handleUnexpectedToken(context: DeserializationContext, targetType: KotlinType, token: CirJsonToken,
+    open fun handleUnexpectedToken(context: DeserializationContext, targetType: KotlinType, token: CirJsonToken?,
             parser: CirJsonParser, failureMessage: String?): Any? {
         return NOT_HANDLED
     }
@@ -251,7 +251,7 @@ abstract class DeserializationProblemHandler {
      */
     @Throws(CirJacksonException::class)
     open fun handleUnknownTypeId(context: DeserializationContext, baseType: KotlinType, subtypeId: String,
-            idResolver: TypeIdResolver, failureMessage: String?): Any? {
+            idResolver: TypeIdResolver, failureMessage: String?): KotlinType? {
         return null
     }
 
@@ -279,7 +279,7 @@ abstract class DeserializationProblemHandler {
      */
     @Throws(CirJacksonException::class)
     open fun handleMissingTypeId(context: DeserializationContext, baseType: KotlinType, idResolver: TypeIdResolver,
-            failureMessage: String?): Any? {
+            failureMessage: String?): KotlinType? {
         return null
     }
 

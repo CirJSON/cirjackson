@@ -21,7 +21,7 @@ open class CirJsonNodeFactory : CirJsonNodeCreator {
         TODO("Not yet implemented")
     }
 
-    override fun nullNode(): ValueNode {
+    override fun nullNode(): NullNode {
         TODO("Not yet implemented")
     }
 

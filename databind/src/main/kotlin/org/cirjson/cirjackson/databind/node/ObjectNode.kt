@@ -3,13 +3,14 @@ package org.cirjson.cirjackson.databind.node
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.CirJsonToken
 import org.cirjson.cirjackson.core.TreeNode
+import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 
 open class ObjectNode(nodeFactory: CirJsonNodeFactory,
         private val myChildren: MutableMap<String, CirJsonNode> = LinkedHashMap()) :
-        ContainerNode<ObjectNode>(nodeFactory) {
+        ContainerNode<ObjectNode>(nodeFactory), ObjectTreeNode {
 
     /*
      *******************************************************************************************************************

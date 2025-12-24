@@ -695,6 +695,10 @@ fun Class<*>.wrapperType(): Class<*> {
     }
 }
 
+fun KClass<*>.wrapperType(): KClass<*> {
+    return java.wrapperType().kotlin
+}
+
 /**
  * Method that can be used to find primitive type for given class if (but only if) it is either wrapper type or
  * primitive type; returns `null` if type is neither.

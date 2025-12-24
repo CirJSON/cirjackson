@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.deserialization
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.configuration.DeserializerFactoryConfig
 import org.cirjson.cirjackson.databind.type.*
+import kotlin.reflect.KClass
 
 abstract class BasicDeserializerFactory protected constructor(
         protected val myFactoryConfig: DeserializerFactoryConfig) : DeserializerFactory() {
@@ -100,6 +101,16 @@ abstract class BasicDeserializerFactory protected constructor(
      */
 
     override fun createKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * DeserializerFactory implementation: find explicitly supported types
+     *******************************************************************************************************************
+     */
+
+    override fun hasExplicitDeserializerFor(context: DatabindContext, valueType: KClass<*>): Boolean {
         TODO("Not yet implemented")
     }
 

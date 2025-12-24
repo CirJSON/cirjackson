@@ -27,14 +27,14 @@ open class MismatchedInputException : DatabindException {
 
     protected constructor(parser: CirJsonParser?, message: String) : this(parser, message, null as KotlinType?)
 
-    protected constructor(parser: CirJsonParser?, message: String, location: CirJsonLocation) : super(parser, message,
+    protected constructor(parser: CirJsonParser?, message: String?, location: CirJsonLocation) : super(parser, message,
             location)
 
-    protected constructor(parser: CirJsonParser?, message: String, targetType: KClass<*>) : super(parser, message) {
+    protected constructor(parser: CirJsonParser?, message: String?, targetType: KClass<*>?) : super(parser, message) {
         this.targetType = targetType
     }
 
-    protected constructor(parser: CirJsonParser?, message: String, targetType: KotlinType?) : super(parser, message) {
+    protected constructor(parser: CirJsonParser?, message: String?, targetType: KotlinType?) : super(parser, message) {
         this.targetType = targetType?.rawClass
     }
 
@@ -45,11 +45,11 @@ open class MismatchedInputException : DatabindException {
 
     companion object {
 
-        fun from(parser: CirJsonParser?, targetType: KotlinType?, message: String): MismatchedInputException {
+        fun from(parser: CirJsonParser?, targetType: KotlinType?, message: String?): MismatchedInputException {
             return MismatchedInputException(parser, message, targetType)
         }
 
-        fun from(parser: CirJsonParser?, targetType: KClass<*>, message: String): MismatchedInputException {
+        fun from(parser: CirJsonParser?, targetType: KClass<*>?, message: String?): MismatchedInputException {
             return MismatchedInputException(parser, message, targetType)
         }
 

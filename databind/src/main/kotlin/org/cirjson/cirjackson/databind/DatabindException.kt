@@ -18,37 +18,37 @@ import java.io.Closeable
  */
 open class DatabindException : CirJacksonException {
 
-    protected constructor(processor: Closeable?, message: String) : super(processor, message)
+    protected constructor(processor: Closeable?, message: String?) : super(processor, message)
 
-    protected constructor(processor: Closeable?, message: String, cause: Throwable) : super(processor, message, cause)
+    protected constructor(processor: Closeable?, message: String?, cause: Throwable?) : super(processor, message, cause)
 
-    protected constructor(processor: Closeable?, message: String, location: CirJsonLocation?) : super(processor,
+    protected constructor(processor: Closeable?, message: String?, location: CirJsonLocation?) : super(processor,
             message, location)
 
-    protected constructor(message: String, location: CirJsonLocation?, cause: Throwable) : super(message, location,
+    protected constructor(message: String, location: CirJsonLocation?, cause: Throwable?) : super(message, location,
             cause)
 
     protected constructor(message: String) : super(message)
 
     companion object {
 
-        fun from(parser: CirJsonParser?, message: String): DatabindException {
+        fun from(parser: CirJsonParser?, message: String?): DatabindException {
             return DatabindException(parser, message)
         }
 
-        fun from(parser: CirJsonParser?, message: String, cause: Throwable): DatabindException {
+        fun from(parser: CirJsonParser?, message: String?, cause: Throwable?): DatabindException {
             return DatabindException(parser, message, cause)
         }
 
-        fun from(generator: CirJsonGenerator?, message: String): DatabindException {
+        fun from(generator: CirJsonGenerator?, message: String?): DatabindException {
             return DatabindException(generator, message)
         }
 
-        fun from(generator: CirJsonGenerator, message: String, cause: Throwable): DatabindException {
+        fun from(generator: CirJsonGenerator, message: String?, cause: Throwable?): DatabindException {
             return DatabindException(generator, message, cause)
         }
 
-        fun from(context: DeserializationContext?, message: String): DatabindException {
+        fun from(context: DeserializationContext?, message: String?): DatabindException {
             return DatabindException(parser(context), message)
         }
 
@@ -56,11 +56,11 @@ open class DatabindException : CirJacksonException {
             return context?.parser
         }
 
-        fun from(provider: SerializerProvider?, message: String): DatabindException {
+        fun from(provider: SerializerProvider?, message: String?): DatabindException {
             return DatabindException(generator(provider), message)
         }
 
-        fun from(provider: SerializerProvider?, message: String, cause: Throwable): DatabindException {
+        fun from(provider: SerializerProvider?, message: String?, cause: Throwable?): DatabindException {
             return DatabindException(generator(provider), message, cause)
         }
 

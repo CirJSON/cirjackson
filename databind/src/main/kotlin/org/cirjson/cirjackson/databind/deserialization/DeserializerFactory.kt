@@ -44,6 +44,8 @@ abstract class DeserializerFactory {
 
     abstract fun createKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer?
 
+    abstract fun hasExplicitDeserializerFor(context: DatabindContext, valueType: KClass<*>): Boolean
+
     /*
      *******************************************************************************************************************
      * Mutant factories for registering additional configuration
