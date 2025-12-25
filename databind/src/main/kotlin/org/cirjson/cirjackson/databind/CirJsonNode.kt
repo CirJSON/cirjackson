@@ -93,9 +93,6 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
         TODO("Not yet implemented")
     }
 
-    final override val isNull: Boolean
-        get() = TODO("Not yet implemented")
-
     /*
      *******************************************************************************************************************
      * Public API, type introspection
@@ -108,6 +105,9 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      * @return the node type as a [CirJsonNodeType] enum value
      */
     abstract val nodeType: CirJsonNodeType
+
+    final override val isNull: Boolean
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************
