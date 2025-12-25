@@ -15,10 +15,9 @@ import org.cirjson.cirjackson.databind.node.CirJsonNodeType
  * 
  * Actual concrete subclasses can be found from package [org.cirjson.cirjackson.databind.node].
  * 
- * Note that it is possible to "read" from nodes, using method [TreeNode.traverse], which will result in a
- * [CirJsonParser] being constructed. This can be used for (relatively) efficient conversations between different
- * representations; and it is what core databind uses for methods like [ObjectMapper.treeToValue] and
- * [ObjectMapper.treeAsTokens]
+ * Note that it is possible to "read" from nodes, using method [traverse], which will result in a [CirJsonParser] being
+ * constructed. This can be used for (relatively) efficient conversations between different representations; and it is
+ * what core databind uses for methods like [ObjectMapper.treeToValue] and [ObjectMapper.treeAsTokens]
  */
 abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base(), TreeNode, Iterable<CirJsonNode> {
 
@@ -82,16 +81,93 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
     override val isObject: Boolean
         get() = false
 
+    /**
+     * Method for accessing value of the specified element of an array node. For other nodes, `null` is always returned.
+     * 
+     * For array nodes, index specifies exact location within array and allows for efficient iteration over child
+     * elements (underlying storage is guaranteed to be efficiently indexable, i.e. has random-access to elements). If
+     * index is less than 0, or equal-or-greater than `node.size`, `null` is returned; no exception is thrown for any
+     * index.
+     * 
+     * NOTE: if the element value has been explicitly set as `null` (which is different from removal!), a
+     * [org.cirjson.cirjackson.databind.node.NullNode] will be returned, not `null`.
+     *
+     * @return Node that represent value of the specified element, if this node is an array and has specified element.
+     * `null` otherwise.
+     */
+    abstract override fun get(index: Int): CirJsonNode?
+
+    /**
+     * Method for accessing value of the specified field of an object node. If this node is not an object (or it does
+     * not have a value for specified field name), or if there is no field with such name, `null` is returned.
+     * 
+     * NOTE: if the property value has been explicitly set as `null` (which is different from removal!), a
+     * [org.cirjson.cirjackson.databind.node.NullNode] will be returned, not `null`.
+     *
+     * @return Node that represent value of the specified field, if this node is an object and has value for the
+     * specified field. `null` otherwise.
+     */
+    override fun get(propertyName: String): CirJsonNode? {
+        TODO("Not yet implemented")
+    }
+
+    /**
+     * This method is similar to [get], except that instead of returning `null` if no such value exists (due to this
+     * node not being an object, or object not having value for the specified field), a "missing node" (node that
+     * returns `true` for [isMissingNode]) will be returned. This allows for convenient and safe chained access via path
+     * calls.
+     */
+    abstract override fun path(propertyName: String): CirJsonNode
+
+    /**
+     * This method is similar to [get], except that instead of returning `null` if no such element exists (due to index
+     * being out of range, or this node not being an array), a "missing node" (node that returns `true` for
+     * [isMissingNode]) will be returned. This allows for convenient and safe chained access via path calls.
+     */
+    abstract override fun path(index: Int): CirJsonNode
+
     override val propertyNames: Iterator<String>
         get() = TODO("Not yet implemented")
 
-    final override fun at(pointer: CirJsonPointer): TreeNode {
+    /**
+     * Method for locating node specified by given CirJSON pointer instances. Method will never return `null`; if no
+     * matching node exists, will return a node for which [isMissingNode] returns `true`.
+     *
+     * @return Node that matches given CirJSON Pointer: if no match exists, will return a node for which [isMissingNode]
+     * returns `true`.
+     */
+    final override fun at(pointer: CirJsonPointer): CirJsonNode {
         TODO("Not yet implemented")
     }
 
-    final override fun at(pointerExpression: String): TreeNode {
+    /**
+     * Convenience method that is functionally equivalent to:
+     * ```
+     * return at(CirJsonPointer.valueOf(pointerExpression))
+     * ```
+     * 
+     * Note that if the same expression is used often, it is preferable to construct [CirJsonPointer] instance once and
+     * reuse it: this method will not perform any caching of compiled expressions.
+     *
+     * @param pointerExpression Expression to compile as a [CirJsonPointer] instance
+     *
+     * @return Node that matches given CirJSON Pointer: if no match exists, will return a node for which [isMissingNode]
+     * returns `true`.
+     */
+    final override fun at(pointerExpression: String): CirJsonNode {
         TODO("Not yet implemented")
     }
+
+    /**
+     * Helper method used by other methods for traversing the next step of given path expression, and returning matching
+     * value node if any. If there is no match, `null` is returned.
+     *
+     * @param pointer Path expression to use
+     *
+     * @return Either matching [CirJsonNode] for the first step of path or `null` if no match (including case that this
+     * node is not a container)
+     */
+    protected abstract fun internalAt(pointer: CirJsonPointer): CirJsonNode?
 
     /*
      *******************************************************************************************************************
@@ -106,6 +182,9 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      */
     abstract val nodeType: CirJsonNodeType
 
+    /**
+     * Method that can be used to check if this node was created from CirJSON literal `null` value.
+     */
     final override val isNull: Boolean
         get() = TODO("Not yet implemented")
 
@@ -115,6 +194,10 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      *******************************************************************************************************************
      */
 
+    /**
+     * Same as calling [elements]; implemented so that convenience "for-each" loop can be used for looping over elements
+     * of CirJSON Array constructs.
+     */
     final override fun iterator(): Iterator<CirJsonNode> {
         TODO("Not yet implemented")
     }
