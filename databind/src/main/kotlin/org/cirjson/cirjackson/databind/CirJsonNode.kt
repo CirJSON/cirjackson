@@ -2,7 +2,10 @@ package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.core.CirJsonPointer
 import org.cirjson.cirjackson.core.TreeNode
+import org.cirjson.cirjackson.databind.exception.CirJsonNodeException
 import org.cirjson.cirjackson.databind.node.CirJsonNodeType
+import org.cirjson.cirjackson.databind.node.MissingNode
+import org.cirjson.cirjackson.databind.util.emptyIterator
 
 /**
  * Base class for all CirJSON nodes, which form the basis of CirJSON Tree Model that CirJackson implements. One way to
@@ -108,7 +111,7 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      * specified field. `null` otherwise.
      */
     override fun get(propertyName: String): CirJsonNode? {
-        TODO("Not yet implemented")
+        return null
     }
 
     /**
@@ -127,7 +130,7 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
     abstract override fun path(index: Int): CirJsonNode
 
     override val propertyNames: Iterator<String>
-        get() = TODO("Not yet implemented")
+        get() = emptyIterator()
 
     /**
      * Method for locating node specified by given CirJSON pointer instances. Method will never return `null`; if no
@@ -137,7 +140,12 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      * returns `true`.
      */
     final override fun at(pointer: CirJsonPointer): CirJsonNode {
-        TODO("Not yet implemented")
+        if (pointer.isMatching) {
+            return this
+        }
+
+        val node = internalAt(pointer) ?: return MissingNode
+        return node.at(pointer.tail!!)
     }
 
     /**
@@ -155,7 +163,7 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      * returns `true`.
      */
     final override fun at(pointerExpression: String): CirJsonNode {
-        TODO("Not yet implemented")
+        return at(CirJsonPointer.compile(pointerExpression))
     }
 
     /**
@@ -183,10 +191,102 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
     abstract val nodeType: CirJsonNodeType
 
     /**
-     * Method that can be used to check if this node was created from CirJSON literal `null` value.
+     * Accessor that can be used to check if the node is a wrapper for a POJO ("Plain Old Java Object" aka "bean").
+     * Returns `true` only for instances of `POJONode`.
+     *
+     * @return `true` if this node wraps a POJO
+     */
+    val isPojo: Boolean
+        get() = nodeType == CirJsonNodeType.POJO
+
+    /**
+     * @return `true` if this node represents a numeric CirJSON value
+     */
+    val isNumber: Boolean
+        get() = nodeType == CirJsonNodeType.NUMBER
+
+    /**
+     *
+     * @return `true` if this node represents an integral (integer) numeric CirJSON value
+     */
+    open val isIntegralNumber: Boolean
+        get() = false
+
+    /**
+     * @return `true` if this node represents a non-integral numeric CirJSON value
+     */
+    open val isFloatingPointNumber: Boolean
+        get() = false
+
+    /**
+     * Accessor that can be used to check whether contained value is a number represented as `Short`. Note, however,
+     * that even if this accessor returns `false`, it is possible that conversion would be possible from other numeric
+     * types -- to check if this is possible, use [canConvertToInt] instead.
+     *
+     * @return `true` if the value contained by this node is stored as `Short`
+     */
+    open val isShort: Boolean
+        get() = false
+
+    /**
+     * Accessor that can be used to check whether contained value is a number represented as `Int`. Note, however, that
+     * even if this accessor returns `false`, it is possible that conversion would be possible from other numeric types
+     * -- to check if this is possible, use [canConvertToInt] instead.
+     *
+     * @return `true` if the value contained by this node is stored as `Int`
+     */
+    open val isInt: Boolean
+        get() = false
+
+    /**
+     * Accessor that can be used to check whether contained value is a number represented as `Long`. Note, however, that
+     * even if this accessor returns `false`, it is possible that conversion would be possible from other numeric types
+     * -- to check if this is possible, use [canConvertToLong] instead.
+     *
+     * @return `true` if the value contained by this node is stored as `Long`
+     */
+    open val isLong: Boolean
+        get() = false
+
+    open val isFloat: Boolean
+        get() = false
+
+    open val isDouble: Boolean
+        get() = false
+
+    open val isBigDecimal: Boolean
+        get() = false
+
+    open val isBigInteger: Boolean
+        get() = false
+
+    /**
+     * Accessor that checks whether this node represents basic CirJSON String value.
+     */
+    val isTextual: Boolean
+        get() = nodeType == CirJsonNodeType.STRING
+
+    /**
+     * Accessor that can be used to check if this node was created from CirJSON boolean value (literals "true" and
+     * "false").
+     */
+    val isBoolean: Boolean
+        get() = nodeType == CirJsonNodeType.BOOLEAN
+
+    /**
+     * Accessor that can be used to check if this node was created from CirJSON literal `null` value.
      */
     final override val isNull: Boolean
-        get() = TODO("Not yet implemented")
+        get() = nodeType == CirJsonNodeType.NULL
+
+    /**
+     * Accessor that can be used to check if this node represents binary data (Base64 encoded). Although this will be
+     * externally written as CirJSON String value, [isTextual] will return `false` if this method returns `true`.
+     *
+     * @return `true` if this node represents base64 encoded binary data
+     */
+    val isBinary: Boolean
+        get() = nodeType == CirJsonNodeType.BINARY
 
     /*
      *******************************************************************************************************************
@@ -200,6 +300,24 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
      */
     final override fun iterator(): Iterator<CirJsonNode> {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper methods,  for subclasses
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Helper method that throws [DatabindException] as a result of violating "required-constraint" for this node (for
+     * [required] or related methods).
+     */
+    protected open fun <T> reportRequiredViolation(message: String) {
+        throw CirJsonNodeException.from(this, message)
+    }
+
+    protected open fun <T> reportUnsupportedOperation(message: String) {
+        throw CirJsonNodeException.from(this, message)
     }
 
     /**
