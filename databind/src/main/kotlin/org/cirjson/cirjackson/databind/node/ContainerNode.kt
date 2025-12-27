@@ -5,9 +5,28 @@ import org.cirjson.cirjackson.databind.util.RawValue
 import java.math.BigDecimal
 import java.math.BigInteger
 
+/**
+ * This intermediate base class is used for all container nodes, specifically, array and object nodes.
+ */
 abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNodeCreator {
 
-    protected constructor(nodeFactory: CirJsonNodeFactory?) : super()
+    /**
+     * We will keep a reference to the Object (usually TreeMapper) that can construct instances of nodes to add to this
+     * container node.
+     */
+    protected val myNodeFactory: CirJsonNodeFactory?
+
+    protected constructor(nodeFactory: CirJsonNodeFactory?) : super() {
+        myNodeFactory = nodeFactory
+    }
+
+    protected constructor() : super() {
+        myNodeFactory = null
+    }
+
+    override fun asText(): String {
+        return ""
+    }
 
     /*
      *******************************************************************************************************************
