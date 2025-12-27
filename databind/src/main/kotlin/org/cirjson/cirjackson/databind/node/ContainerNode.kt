@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.node
 
+import org.cirjson.cirjackson.core.CirJsonPointer
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.util.RawValue
 import java.math.BigDecimal
@@ -30,84 +31,132 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
 
     /*
      *******************************************************************************************************************
-     * CirJsonNodeCreator implementation
+     * Methods reset as abstract to force real implementation
+     *******************************************************************************************************************
+     */
+
+    abstract override val size: Int
+
+    abstract override fun get(index: Int): CirJsonNode?
+
+    abstract override fun get(propertyName: String): CirJsonNode?
+
+    abstract override fun withObject(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
+            overwriteMode: OverwriteMode, preferIndex: Boolean): ObjectNode?
+
+    /*
+     *******************************************************************************************************************
+     * CirJsonNodeCreator implementation, Enumerated/singleton types
      *******************************************************************************************************************
      */
 
     override fun booleanNode(value: Boolean): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.booleanNode(value)
     }
 
     override fun missingNode(): CirJsonNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.missingNode()
     }
 
     override fun nullNode(): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.nullNode()
     }
 
+    /*
+     *******************************************************************************************************************
+     * CirJsonNodeCreator implementation, just dispatch to real creator
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method that constructs and returns an empty [ArrayNode]. Construction is done using registered
+     * [CirJsonNodeFactory].
+     */
     override fun arrayNode(): ArrayNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.arrayNode()
     }
 
+    /**
+     * Factory method that constructs and returns an [ArrayNode] with an initial capacity. Construction is done using
+     * registered [CirJsonNodeFactory]
+     * 
+     * @param capacity the initial capacity of the ArrayNode
+     */
     override fun arrayNode(capacity: Int): ArrayNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.arrayNode(capacity)
     }
 
+    /**
+     * Factory method that constructs and returns an empty [ObjectNode]. Construction is done using registered
+     * [CirJsonNodeFactory].
+     */
     override fun objectNode(): ObjectNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.objectNode()
     }
 
     override fun numberNode(value: Byte?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: Short?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: Int?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: Long?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: BigInteger?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: Float?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: Double?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun numberNode(value: BigDecimal?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.numberNode(value)
     }
 
     override fun textNode(text: String?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.textNode(text)
     }
 
     override fun binaryNode(data: ByteArray?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.binaryNode(data)
     }
 
     override fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.binaryNode(data, offset, length)
     }
 
     override fun pojoNode(pojo: Any?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.pojoNode(pojo)
     }
 
     override fun rawValueNode(value: RawValue?): ValueNode {
-        TODO("Not yet implemented")
+        return myNodeFactory!!.rawValueNode(value)
     }
+
+    /*
+     *******************************************************************************************************************
+     * Construction
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for removing all children container has (if any)
+     *
+     * @return Container node itself (to allow method call chaining)
+     */
+    abstract fun removeAll(): T
 
 }
