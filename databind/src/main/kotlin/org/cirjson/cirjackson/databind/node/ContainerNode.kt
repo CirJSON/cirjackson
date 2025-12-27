@@ -50,15 +50,15 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
      *******************************************************************************************************************
      */
 
-    override fun booleanNode(value: Boolean): ValueNode {
+    final override fun booleanNode(value: Boolean): ValueNode {
         return myNodeFactory!!.booleanNode(value)
     }
 
-    override fun missingNode(): CirJsonNode {
+    final override fun missingNode(): CirJsonNode {
         return myNodeFactory!!.missingNode()
     }
 
-    override fun nullNode(): ValueNode {
+    final override fun nullNode(): ValueNode {
         return myNodeFactory!!.nullNode()
     }
 
@@ -72,7 +72,7 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
      * Factory method that constructs and returns an empty [ArrayNode]. Construction is done using registered
      * [CirJsonNodeFactory].
      */
-    override fun arrayNode(): ArrayNode {
+    final override fun arrayNode(): ArrayNode {
         return myNodeFactory!!.arrayNode()
     }
 
@@ -82,7 +82,7 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
      * 
      * @param capacity the initial capacity of the ArrayNode
      */
-    override fun arrayNode(capacity: Int): ArrayNode {
+    final override fun arrayNode(capacity: Int): ArrayNode {
         return myNodeFactory!!.arrayNode(capacity)
     }
 
@@ -90,59 +90,59 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
      * Factory method that constructs and returns an empty [ObjectNode]. Construction is done using registered
      * [CirJsonNodeFactory].
      */
-    override fun objectNode(): ObjectNode {
+    final override fun objectNode(): ObjectNode {
         return myNodeFactory!!.objectNode()
     }
 
-    override fun numberNode(value: Byte?): ValueNode {
+    final override fun numberNode(value: Byte?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: Short?): ValueNode {
+    final override fun numberNode(value: Short?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: Int?): ValueNode {
+    final override fun numberNode(value: Int?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: Long?): ValueNode {
+    final override fun numberNode(value: Long?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: BigInteger?): ValueNode {
+    final override fun numberNode(value: BigInteger?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: Float?): ValueNode {
+    final override fun numberNode(value: Float?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: Double?): ValueNode {
+    final override fun numberNode(value: Double?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun numberNode(value: BigDecimal?): ValueNode {
+    final override fun numberNode(value: BigDecimal?): ValueNode {
         return myNodeFactory!!.numberNode(value)
     }
 
-    override fun textNode(text: String?): ValueNode {
+    final override fun textNode(text: String?): ValueNode {
         return myNodeFactory!!.textNode(text)
     }
 
-    override fun binaryNode(data: ByteArray?): ValueNode {
+    final override fun binaryNode(data: ByteArray?): ValueNode {
         return myNodeFactory!!.binaryNode(data)
     }
 
-    override fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode {
+    final override fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode {
         return myNodeFactory!!.binaryNode(data, offset, length)
     }
 
-    override fun pojoNode(pojo: Any?): ValueNode {
+    final override fun pojoNode(pojo: Any?): ValueNode {
         return myNodeFactory!!.pojoNode(pojo)
     }
 
-    override fun rawValueNode(value: RawValue?): ValueNode {
+    final override fun rawValueNode(value: RawValue?): ValueNode {
         return myNodeFactory!!.rawValueNode(value)
     }
 
