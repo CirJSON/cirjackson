@@ -5,8 +5,9 @@ import org.cirjson.cirjackson.databind.util.RawValue
 import java.math.BigDecimal
 import java.math.BigInteger
 
-abstract class ContainerNode<T : ContainerNode<T>> protected constructor(
-        protected val myNodeFactory: CirJsonNodeFactory) : BaseCirJsonNode(), CirJsonNodeCreator {
+abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNodeCreator {
+
+    protected constructor(nodeFactory: CirJsonNodeFactory?) : super()
 
     /*
      *******************************************************************************************************************
