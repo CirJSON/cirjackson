@@ -74,15 +74,15 @@ abstract class ContainerNode<T : ContainerNode<T>> protected constructor(
         TODO("Not yet implemented")
     }
 
-    override fun binaryNode(data: ByteArray): ValueNode {
+    override fun binaryNode(data: ByteArray?): ValueNode {
         TODO("Not yet implemented")
     }
 
-    override fun binaryNode(data: ByteArray, offset: Int, length: Int): ValueNode {
+    override fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode {
         TODO("Not yet implemented")
     }
 
-    override fun pojoNode(pojo: Any): ValueNode {
+    override fun pojoNode(pojo: Any?): ValueNode {
         TODO("Not yet implemented")
     }
 

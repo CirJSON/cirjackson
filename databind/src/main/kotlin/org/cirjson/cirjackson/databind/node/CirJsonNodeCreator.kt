@@ -59,11 +59,11 @@ interface CirJsonNodeCreator {
      *******************************************************************************************************************
      */
 
-    fun binaryNode(data: ByteArray): ValueNode
+    fun binaryNode(data: ByteArray?): ValueNode
 
-    fun binaryNode(data: ByteArray, offset: Int, length: Int): ValueNode
+    fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode
 
-    fun pojoNode(pojo: Any): ValueNode
+    fun pojoNode(pojo: Any?): ValueNode
 
     /**
      * Factory method to use for adding "raw values"; pre-encoded values that are included exactly as-is when the node

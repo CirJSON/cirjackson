@@ -614,6 +614,27 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
     /**
      * Method is functionally equivalent to
      * ```
+     * path(propertyName).required()
+     * ```
+     * and can be used to check that this node is an `ObjectNode` (that is, represents CirJSON Object value) and has
+     * value for specified property with key `propertyName` (but note that value may be explicit CirJSON `null` value).
+     * If this node is Object Node and has value for specified property, matching value is returned; otherwise
+     * [IllegalArgumentException] is thrown.
+     *
+     * @param propertyName Name of property to access
+     *
+     * @return Value of the specified property of this Object node
+     *
+     * @throws IllegalArgumentException if this node is not an Object node or if it does not have value for specified
+     * property
+     */
+    open fun required(propertyName: String): CirJsonNode {
+        return reportRequiredViolation("Node of type `${this::class.qualifiedName}` has no fields")
+    }
+
+    /**
+     * Method is functionally equivalent to
+     * ```
      * path(index).required()
      * ```
      * and can be used to check that this node is an `ArrayNode` (that is, represents CirJSON Array value) and has value

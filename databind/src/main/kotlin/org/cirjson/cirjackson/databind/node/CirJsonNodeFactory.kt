@@ -73,11 +73,11 @@ open class CirJsonNodeFactory : CirJsonNodeCreator {
         TODO("Not yet implemented")
     }
 
-    override fun binaryNode(data: ByteArray): ValueNode {
+    override fun binaryNode(data: ByteArray?): ValueNode {
         TODO("Not yet implemented")
     }
 
-    override fun binaryNode(data: ByteArray, offset: Int, length: Int): ValueNode {
+    override fun binaryNode(data: ByteArray?, offset: Int, length: Int): ValueNode {
         TODO("Not yet implemented")
     }
 
@@ -99,7 +99,7 @@ open class CirJsonNodeFactory : CirJsonNodeCreator {
         TODO("Not yet implemented")
     }
 
-    override fun pojoNode(pojo: Any): ValueNode {
+    override fun pojoNode(pojo: Any?): ValueNode {
         TODO("Not yet implemented")
     }
 
