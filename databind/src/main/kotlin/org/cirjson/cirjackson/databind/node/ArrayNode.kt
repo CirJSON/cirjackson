@@ -2,7 +2,6 @@ package org.cirjson.cirjackson.databind.node
 
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.CirJsonToken
-import org.cirjson.cirjackson.core.TreeNode
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.SerializerProvider
@@ -21,19 +20,19 @@ open class ArrayNode(nodeFactory: CirJsonNodeFactory, private val myChildren: Mu
         TODO("Not yet implemented")
     }
 
-    override fun get(index: Int): TreeNode? {
+    override fun get(index: Int): CirJsonNode? {
         TODO("Not yet implemented")
     }
 
-    override fun get(propertyName: String): TreeNode? {
+    override fun get(propertyName: String): CirJsonNode? {
         TODO("Not yet implemented")
     }
 
-    override fun path(propertyName: String): TreeNode {
+    override fun path(propertyName: String): CirJsonNode {
         TODO("Not yet implemented")
     }
 
-    override fun path(index: Int): TreeNode {
+    override fun path(index: Int): CirJsonNode {
         TODO("Not yet implemented")
     }
 
