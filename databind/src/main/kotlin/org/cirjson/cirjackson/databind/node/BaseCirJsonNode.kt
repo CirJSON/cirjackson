@@ -103,6 +103,11 @@ abstract class BaseCirJsonNode protected constructor() : CirJsonNode() {
         return null
     }
 
+    internal fun internalWithObject(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
+            overwriteMode: OverwriteMode, preferIndex: Boolean): ObjectNode? {
+        return withObject(originalPointer, currentPointer, overwriteMode, preferIndex)
+    }
+
     protected open fun withXxxVerifyReplace(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
             overwriteMode: OverwriteMode, preferIndex: Boolean, toReplace: CirJsonNode) {
         if (withXxxMayReplace(toReplace, overwriteMode)) {
@@ -139,6 +144,11 @@ abstract class BaseCirJsonNode protected constructor() : CirJsonNode() {
     protected open fun withArray(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
             overwriteMode: OverwriteMode, preferIndex: Boolean): ArrayNode? {
         return null
+    }
+
+    internal fun internalWithArray(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
+            overwriteMode: OverwriteMode, preferIndex: Boolean): ArrayNode? {
+        return withArray(originalPointer, currentPointer, overwriteMode, preferIndex)
     }
 
     /*

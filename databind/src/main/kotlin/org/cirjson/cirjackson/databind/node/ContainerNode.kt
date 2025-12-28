@@ -37,9 +37,9 @@ abstract class ContainerNode<T : ContainerNode<T>> : BaseCirJsonNode, CirJsonNod
 
     abstract override val size: Int
 
-    abstract override fun get(index: Int): CirJsonNode?
+    abstract override operator fun get(index: Int): CirJsonNode?
 
-    abstract override fun get(propertyName: String): CirJsonNode?
+    abstract override operator fun get(propertyName: String): CirJsonNode?
 
     abstract override fun withObject(originalPointer: CirJsonPointer, currentPointer: CirJsonPointer,
             overwriteMode: OverwriteMode, preferIndex: Boolean): ObjectNode?

@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.databind.node
 
 import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.CirJsonPointer
 import org.cirjson.cirjackson.core.CirJsonToken
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.databind.CirJsonNode
@@ -14,6 +15,20 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
 
     /*
      *******************************************************************************************************************
+     * Support for withArray()/withObject()
+     *******************************************************************************************************************
+     */
+
+    internal fun internalWithObjectAddTailProperty(tail: CirJsonPointer, preferIndex: Boolean): ObjectNode? {
+        TODO("Not yet implemented")
+    }
+
+    internal fun internalWithArrayAddTailProperty(tail: CirJsonPointer, preferIndex: Boolean): ArrayNode? {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Implementation of core CirJsonNode API
      *******************************************************************************************************************
      */
@@ -22,11 +37,11 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
         TODO("Not yet implemented")
     }
 
-    override fun get(index: Int): CirJsonNode? {
+    override operator fun get(index: Int): CirJsonNode? {
         TODO("Not yet implemented")
     }
 
-    override fun get(propertyName: String): CirJsonNode? {
+    override operator fun get(propertyName: String): CirJsonNode? {
         TODO("Not yet implemented")
     }
 
