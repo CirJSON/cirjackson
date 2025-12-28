@@ -7,8 +7,10 @@ import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 
-open class ArrayNode(nodeFactory: CirJsonNodeFactory, private val myChildren: MutableList<CirJsonNode> = ArrayList()) :
-        ContainerNode<ArrayNode>(nodeFactory), ArrayTreeNode {
+open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
+
+    constructor(nodeFactory: CirJsonNodeFactory, children: MutableList<CirJsonNode>) : super(nodeFactory) {
+    }
 
     /*
      *******************************************************************************************************************

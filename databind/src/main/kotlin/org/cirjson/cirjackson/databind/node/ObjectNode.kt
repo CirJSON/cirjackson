@@ -7,9 +7,10 @@ import org.cirjson.cirjackson.databind.CirJsonNode
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 
-open class ObjectNode(nodeFactory: CirJsonNodeFactory,
-        private val myChildren: MutableMap<String, CirJsonNode> = LinkedHashMap()) :
-        ContainerNode<ObjectNode>(nodeFactory), ObjectTreeNode {
+open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
+
+    constructor(nodeFactory: CirJsonNodeFactory, children: MutableMap<String, CirJsonNode>) : super(nodeFactory) {
+    }
 
     /*
      *******************************************************************************************************************
