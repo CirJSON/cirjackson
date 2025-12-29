@@ -890,11 +890,11 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
         return findParents(fieldName, null) ?: emptyList()
     }
 
-    abstract fun findValues(fieldName: String, foundSoFar: List<CirJsonNode>?): List<CirJsonNode>?
+    abstract fun findValues(fieldName: String, foundSoFar: MutableList<CirJsonNode>?): MutableList<CirJsonNode>?
 
-    abstract fun findValuesAsText(fieldName: String, foundSoFar: List<String>?): List<String>?
+    abstract fun findValuesAsText(fieldName: String, foundSoFar: MutableList<String>?): MutableList<String>?
 
-    abstract fun findParents(fieldName: String, foundSoFar: List<CirJsonNode>?): List<CirJsonNode>?
+    abstract fun findParents(fieldName: String, foundSoFar: MutableList<CirJsonNode>?): MutableList<CirJsonNode>?
 
     /*
      *******************************************************************************************************************

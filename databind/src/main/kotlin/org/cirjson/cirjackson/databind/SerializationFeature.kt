@@ -250,6 +250,20 @@ enum class SerializationFeature(override val isEnabledByDefault: Boolean) : Conf
     WRITE_ENUM_KEYS_USING_INDEX(false),
 
     /**
+     * Feature that determines whether Container properties (POJO properties with declared value of Collection or array;
+     * i.e. things that produce CirJSON arrays) that are empty (have no elements) will be serialized as empty CirJSON
+     * arrays (`true`), or suppressed from output (`false`).
+     *
+     * Note that this does not change behavior of [Maps][Map], or "Collection-like" types.
+     *
+     * NOTE: unlike other [SerializationFeatures][SerializationFeature], this feature **cannot** be dynamically changed
+     * on per-call basis, because its effect is considered during construction of serializers and property handlers.
+     *
+     * Feature is enabled by default.
+     */
+    WRITE_EMPTY_CIRJSON_ARRAYS(true),
+
+    /**
      * Feature added for interoperability, to work with oddities of the so-called "BadgerFish" convention. Feature
      * determines handling of the single element [Collections][Collection] and arrays: if enabled,
      * [Collections][Collection] and arrays that contain exactly one element will be serialized as if that element

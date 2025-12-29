@@ -25,7 +25,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
 
     /*
      *******************************************************************************************************************
-     * Life-cycle
+     * Lifecycle
      *******************************************************************************************************************
      */
 
@@ -123,6 +123,16 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      */
 
     override fun introspectBeanDescription(type: KotlinType): BeanDescription {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Access to other on/off features
+     *******************************************************************************************************************
+     */
+
+    fun isEnabled(feature: SerializationFeature): Boolean {
         TODO("Not yet implemented")
     }
 

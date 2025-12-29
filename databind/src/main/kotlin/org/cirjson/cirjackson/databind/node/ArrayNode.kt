@@ -304,7 +304,7 @@ open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
         return null
     }
 
-    override fun findValues(fieldName: String, foundSoFar: List<CirJsonNode>?): List<CirJsonNode>? {
+    override fun findValues(fieldName: String, foundSoFar: MutableList<CirJsonNode>?): MutableList<CirJsonNode>? {
         var realFoundSoFar = foundSoFar
 
         for (node in myChildren) {
@@ -314,7 +314,7 @@ open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
         return realFoundSoFar
     }
 
-    override fun findValuesAsText(fieldName: String, foundSoFar: List<String>?): List<String>? {
+    override fun findValuesAsText(fieldName: String, foundSoFar: MutableList<String>?): MutableList<String>? {
         var realFoundSoFar = foundSoFar
 
         for (node in myChildren) {
@@ -333,7 +333,7 @@ open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
         return null
     }
 
-    override fun findParents(fieldName: String, foundSoFar: List<CirJsonNode>?): List<CirJsonNode>? {
+    override fun findParents(fieldName: String, foundSoFar: MutableList<CirJsonNode>?): MutableList<CirJsonNode>? {
         var realFoundSoFar = foundSoFar
 
         for (node in myChildren) {
