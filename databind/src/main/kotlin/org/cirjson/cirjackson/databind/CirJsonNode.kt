@@ -383,6 +383,17 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
     }
 
     /**
+     * Returns 8-bit byte value for this node, **if and only if** this node is numeric ([isNumber] returns `true`).
+     * For other types returns `0`. For floating-point numbers, value is truncated using default coercion, similar to
+     * how cast from double to byte operates.
+     *
+     * @return Byte value this node contains, if any; `0` for non-number nodes.
+     */
+    open fun byteValue(): Byte {
+        return 0
+    }
+
+    /**
      * Returns 16-bit short value for this node, **if and only if** this node is numeric ([isNumber] returns `true`).
      * For other types returns `0`. For floating-point numbers, value is truncated using default coercion, similar to
      * how cast from double to short operates.
