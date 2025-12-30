@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.node
 
+import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.CirJsonPointer
 import org.cirjson.cirjackson.databind.CirJsonNode
@@ -21,6 +22,7 @@ abstract class ValueNode protected constructor() : BaseCirJsonNode() {
         return this as T
     }
 
+    @Throws(CirJacksonException::class)
     override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
             typeSerializer: TypeSerializer) {
         val typeIdDefinition =
