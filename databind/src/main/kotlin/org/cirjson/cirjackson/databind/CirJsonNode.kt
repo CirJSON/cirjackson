@@ -224,6 +224,16 @@ abstract class CirJsonNode protected constructor() : CirJacksonSerializable.Base
         get() = false
 
     /**
+     * Accessor that can be used to check whether contained value is a number represented as `Byte`. Note, however,
+     * that even if this accessor returns `false`, it is possible that conversion would be possible from other numeric
+     * types -- to check if this is possible, use [canConvertToInt] instead.
+     *
+     * @return `true` if the value contained by this node is stored as `Byte`
+     */
+    open val isByte: Boolean
+        get() = false
+
+    /**
      * Accessor that can be used to check whether contained value is a number represented as `Short`. Note, however,
      * that even if this accessor returns `false`, it is possible that conversion would be possible from other numeric
      * types -- to check if this is possible, use [canConvertToInt] instead.
