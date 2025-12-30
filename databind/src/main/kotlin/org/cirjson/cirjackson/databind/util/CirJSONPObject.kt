@@ -32,7 +32,7 @@ open class CirJSONPObject(val function: String, val value: Any?, val serializati
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         serialize(generator, context)
     }

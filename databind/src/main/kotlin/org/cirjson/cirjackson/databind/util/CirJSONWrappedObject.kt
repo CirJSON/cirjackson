@@ -37,7 +37,7 @@ open class CirJSONWrappedObject(val prefix: String?, val suffix: String?, val va
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         serialize(generator, context)
     }

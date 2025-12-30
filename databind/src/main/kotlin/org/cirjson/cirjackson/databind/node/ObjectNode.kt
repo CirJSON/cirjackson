@@ -392,7 +392,7 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         val trimEmptyArray = !context.isEnabled(SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS)
         val skipNulls = !context.isEnabled(CirJsonNodeFeature.WRITE_NULL_PROPERTIES)
@@ -415,7 +415,8 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
     }
 
     /**
-     * Helper method shared and called by [serialize] in cases where actual filtering is needed based on configuration.
+     * Helper method shared and called by [serialize] and [serializeWithType] in cases where actual filtering is needed
+     * based on configuration.
      */
     @Throws(CirJacksonException::class)
     protected open fun serializeFilteredContents(generator: CirJsonGenerator, context: SerializerProvider,

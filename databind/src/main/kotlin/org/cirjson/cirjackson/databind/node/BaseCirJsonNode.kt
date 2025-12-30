@@ -168,7 +168,7 @@ abstract class BaseCirJsonNode protected constructor() : CirJsonNode() {
      * types.
      */
     @Throws(CirJacksonException::class)
-    abstract override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    abstract override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer)
 
     /*

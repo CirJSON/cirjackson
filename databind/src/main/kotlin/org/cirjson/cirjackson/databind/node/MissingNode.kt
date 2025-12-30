@@ -47,7 +47,7 @@ object MissingNode : BaseCirJsonNode() {
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         generator.writeNull()
     }

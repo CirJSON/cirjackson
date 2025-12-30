@@ -55,10 +55,10 @@ open class RawValue : CirJacksonSerializable {
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         if (myValue is CirJacksonSerializable) {
-            (myValue as CirJacksonSerializable).serialize(generator, context, typeSerializer)
+            (myValue as CirJacksonSerializable).serializeWithType(generator, context, typeSerializer)
         } else {
             serializeImplementation(generator)
         }

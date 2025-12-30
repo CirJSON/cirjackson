@@ -112,7 +112,7 @@ abstract class TypeBase : KotlinType, CirJacksonSerializable {
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         val typeIdDef = WritableTypeID(this, CirJsonToken.VALUE_STRING)
         typeSerializer.writeTypePrefix(generator, context, typeIdDef)

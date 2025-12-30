@@ -34,7 +34,7 @@ interface CirJacksonSerializable {
      * information.
      */
     @Throws(CirJacksonException::class)
-    fun serialize(generator: CirJsonGenerator, context: SerializerProvider, typeSerializer: TypeSerializer)
+    fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider, typeSerializer: TypeSerializer)
 
     /**
      * Base class with minimal implementation, as well as a couple of extension methods that core Jackson databinding

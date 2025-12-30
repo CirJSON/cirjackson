@@ -277,7 +277,7 @@ open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
         generator.writeEndArray()
     }
 
-    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
+    override fun serializeWithType(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         val typeIdDefinition = typeSerializer.writeTypePrefix(generator, context,
                 typeSerializer.typeId(this, CirJsonToken.START_ARRAY))
