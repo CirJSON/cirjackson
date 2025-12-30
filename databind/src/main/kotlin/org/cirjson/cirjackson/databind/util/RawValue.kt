@@ -46,19 +46,19 @@ open class RawValue : CirJacksonSerializable {
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         if (myValue is CirJacksonSerializable) {
-            (myValue as CirJacksonSerializable).serialize(generator, serializers)
+            (myValue as CirJacksonSerializable).serialize(generator, context)
         } else {
             serializeImplementation(generator)
         }
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         if (myValue is CirJacksonSerializable) {
-            (myValue as CirJacksonSerializable).serialize(generator, serializers, typeSerializer)
+            (myValue as CirJacksonSerializable).serialize(generator, context, typeSerializer)
         } else {
             serializeImplementation(generator)
         }

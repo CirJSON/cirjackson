@@ -20,7 +20,7 @@ interface CirJacksonSerializable {
      * Serialization method called when no additional type information is to be included in serialization.
      */
     @Throws(CirJacksonException::class)
-    fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider)
+    fun serialize(generator: CirJsonGenerator, context: SerializerProvider)
 
     /**
      * Serialization method called when additional type information is expected to be included in serialization, for
@@ -28,13 +28,13 @@ interface CirJacksonSerializable {
      *
      * Usually implementation consists of a call to [TypeSerializer.writeTypePrefix] followed by serialization of
      * contents, followed by a call to [TypeSerializer.writeTypeSuffix]). Details of the type id argument to pass depend
-     * on shape of JSON Object used (Array, Object or scalar like String/Number/Boolean).
+     * on shape of CirJSON Object used (Array, Object or scalar like String/Number/Boolean).
      *
      * Note that some types (most notably, "natural" types: String, Int, Double and Boolean) never include type
      * information.
      */
     @Throws(CirJacksonException::class)
-    fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider, typeSerializer: TypeSerializer)
+    fun serialize(generator: CirJsonGenerator, context: SerializerProvider, typeSerializer: TypeSerializer)
 
     /**
      * Base class with minimal implementation, as well as a couple of extension methods that core Jackson databinding

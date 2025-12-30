@@ -161,14 +161,14 @@ abstract class BaseCirJsonNode protected constructor() : CirJsonNode() {
      * Method called to serialize node instances using given generator.
      */
     @Throws(CirJacksonException::class)
-    abstract override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider)
+    abstract override fun serialize(generator: CirJsonGenerator, context: SerializerProvider)
 
     /**
      * Type information is needed, even if JsonNode instances are "plain" CirJSON, since they may be mixed with other
      * types.
      */
     @Throws(CirJacksonException::class)
-    abstract override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    abstract override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer)
 
     /*

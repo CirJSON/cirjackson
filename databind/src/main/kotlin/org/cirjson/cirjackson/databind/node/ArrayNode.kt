@@ -265,28 +265,28 @@ open class ArrayNode : ContainerNode<ArrayNode>, ArrayTreeNode {
      *******************************************************************************************************************
      */
 
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         val size = myChildren.size
 
         generator.writeStartArray(this, size)
 
         for (i in 0..<size) {
-            myChildren[i].serialize(generator, serializers)
+            myChildren[i].serialize(generator, context)
         }
 
         generator.writeEndArray()
     }
 
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
-        val typeIdDefinition = typeSerializer.writeTypePrefix(generator, serializers,
+        val typeIdDefinition = typeSerializer.writeTypePrefix(generator, context,
                 typeSerializer.typeId(this, CirJsonToken.START_ARRAY))
 
         for (node in myChildren) {
-            node.serialize(generator, serializers)
+            node.serialize(generator, context)
         }
 
-        typeSerializer.writeTypeSuffix(generator, serializers, typeIdDefinition)
+        typeSerializer.writeTypeSuffix(generator, context, typeIdDefinition)
     }
 
     /*

@@ -12,7 +12,7 @@ open class NullNode protected constructor() : ValueNode() {
     }
 
     @Throws(CirJacksonException::class)
-    final override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    final override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         TODO("Not yet implemented")
     }
 

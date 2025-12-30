@@ -364,54 +364,54 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         if (myChildren.isEmpty()) {
             generator.writeStartObject(this, 0)
             generator.writeEndObject()
             return
         }
 
-        val trimEmptyArray = !serializers.isEnabled(SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS)
-        val skipNulls = !serializers.isEnabled(CirJsonNodeFeature.WRITE_NULL_PROPERTIES)
+        val trimEmptyArray = !context.isEnabled(SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS)
+        val skipNulls = !context.isEnabled(CirJsonNodeFeature.WRITE_NULL_PROPERTIES)
 
         if (trimEmptyArray || skipNulls) {
             generator.writeStartObject(this, myChildren.size)
-            serializeFilteredContents(generator, serializers, trimEmptyArray, skipNulls)
+            serializeFilteredContents(generator, context, trimEmptyArray, skipNulls)
             generator.writeEndObject()
             return
         }
 
         generator.writeStartObject(this, myChildren.size)
 
-        for (entry in contentsToSerialize(serializers)) {
+        for (entry in contentsToSerialize(context)) {
             generator.writeName(entry.key)
-            entry.value.serialize(generator, serializers)
+            entry.value.serialize(generator, context)
         }
 
         generator.writeEndObject()
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
-        val trimEmptyArray = !serializers.isEnabled(SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS)
-        val skipNulls = !serializers.isEnabled(CirJsonNodeFeature.WRITE_NULL_PROPERTIES)
+        val trimEmptyArray = !context.isEnabled(SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS)
+        val skipNulls = !context.isEnabled(CirJsonNodeFeature.WRITE_NULL_PROPERTIES)
 
-        val typeIdDefinition = typeSerializer.writeTypePrefix(generator, serializers,
+        val typeIdDefinition = typeSerializer.writeTypePrefix(generator, context,
                 typeSerializer.typeId(this, CirJsonToken.START_OBJECT))
 
         if (trimEmptyArray || skipNulls) {
-            serializeFilteredContents(generator, serializers, trimEmptyArray, skipNulls)
-            typeSerializer.writeTypeSuffix(generator, serializers, typeIdDefinition)
+            serializeFilteredContents(generator, context, trimEmptyArray, skipNulls)
+            typeSerializer.writeTypeSuffix(generator, context, typeIdDefinition)
             return
         }
 
-        for (entry in contentsToSerialize(serializers)) {
+        for (entry in contentsToSerialize(context)) {
             generator.writeName(entry.key)
-            entry.value.serialize(generator, serializers)
+            entry.value.serialize(generator, context)
         }
 
-        typeSerializer.writeTypeSuffix(generator, serializers, typeIdDefinition)
+        typeSerializer.writeTypeSuffix(generator, context, typeIdDefinition)
     }
 
     /**

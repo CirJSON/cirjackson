@@ -23,12 +23,12 @@ abstract class ValueNode protected constructor() : BaseCirJsonNode() {
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
         val typeIdDefinition =
-                typeSerializer.writeTypePrefix(generator, serializers, typeSerializer.typeId(this, asToken()))
-        serialize(generator, serializers)
-        typeSerializer.writeTypeSuffix(generator, serializers, typeIdDefinition)
+                typeSerializer.writeTypePrefix(generator, context, typeSerializer.typeId(this, asToken()))
+        serialize(generator, context)
+        typeSerializer.writeTypeSuffix(generator, context, typeIdDefinition)
     }
 
     /*

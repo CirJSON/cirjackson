@@ -32,18 +32,18 @@ open class CirJSONPObject(val function: String, val value: Any?, val serializati
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
-        serialize(generator, serializers)
+        serialize(generator, context)
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         generator.writeRaw(function)
         generator.writeRaw('(')
 
         if (value == null) {
-            serializers.defaultSerializeNullValue(generator)
+            context.defaultSerializeNullValue(generator)
             generator.writeRaw(')')
             return
         }
@@ -56,9 +56,9 @@ open class CirJSONPObject(val function: String, val value: Any?, val serializati
 
         try {
             if (serializationType != null) {
-                serializers.findTypedValueSerializer(serializationType, true).serialize(value, generator, serializers)
+                context.findTypedValueSerializer(serializationType, true).serialize(value, generator, context)
             } else {
-                serializers.findTypedValueSerializer(value::class, true).serialize(value, generator, serializers)
+                context.findTypedValueSerializer(value::class, true).serialize(value, generator, context)
             }
         } finally {
             if (override) {

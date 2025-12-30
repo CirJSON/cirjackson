@@ -37,23 +37,23 @@ open class CirJSONWrappedObject(val prefix: String?, val suffix: String?, val va
      */
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider,
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider,
             typeSerializer: TypeSerializer) {
-        serialize(generator, serializers)
+        serialize(generator, context)
     }
 
     @Throws(CirJacksonException::class)
-    override fun serialize(generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
         if (prefix != null) {
             generator.writeRaw(prefix)
         }
 
         if (value == null) {
-            serializers.defaultSerializeNullValue(generator)
+            context.defaultSerializeNullValue(generator)
         } else if (serializationType != null) {
-            serializers.findTypedValueSerializer(serializationType, true).serialize(value, generator, serializers)
+            context.findTypedValueSerializer(serializationType, true).serialize(value, generator, context)
         } else {
-            serializers.findTypedValueSerializer(value::class, true).serialize(value, generator, serializers)
+            context.findTypedValueSerializer(value::class, true).serialize(value, generator, context)
         }
 
         if (suffix != null) {
