@@ -132,4 +132,18 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         TODO("Not yet implemented")
     }
 
+    /*
+     *******************************************************************************************************************
+     * Public API: constructing ObjectWriters for more advanced configuration
+     *******************************************************************************************************************
+     */
+
+    open fun writer(): ObjectWriter {
+        TODO("Not yet implemented")
+    }
+
+    open fun writerWithDefaultPrettyPrinter(): ObjectWriter {
+        TODO("Not yet implemented")
+    }
+
 }
