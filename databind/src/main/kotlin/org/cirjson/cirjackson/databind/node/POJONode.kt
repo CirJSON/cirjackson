@@ -74,12 +74,10 @@ open class POJONode(protected val myValue: Any?) : ValueNode() {
 
     @Throws(CirJacksonException::class)
     override fun serialize(generator: CirJsonGenerator, context: SerializerProvider) {
-        if (myValue == null) {
-            context.defaultSerializeNullValue(generator)
-        } else if (myValue is CirJacksonSerializable) {
-            myValue.serialize(generator, context)
-        } else {
-            context.writeValue(generator, myValue)
+        when (myValue) {
+            null -> context.defaultSerializeNullValue(generator)
+            is CirJacksonSerializable -> myValue.serialize(generator, context)
+            else -> context.writeValue(generator, myValue)
         }
     }
 
