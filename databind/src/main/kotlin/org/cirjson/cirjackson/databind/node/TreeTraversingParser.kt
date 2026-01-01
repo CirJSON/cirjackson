@@ -6,8 +6,7 @@ import org.cirjson.cirjackson.databind.CirJsonNode
 import java.math.BigDecimal
 import java.math.BigInteger
 
-open class TreeTraversingParser(protected var mySource: CirJsonNode?, readContext: ObjectReadContext) :
-        ParserMinimalBase(readContext) {
+open class TreeTraversingParser(source: CirJsonNode, readContext: ObjectReadContext) : ParserMinimalBase(readContext) {
 
     /*
      *******************************************************************************************************************
