@@ -515,17 +515,17 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      */
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(valueType: Class<T>): T {
-        return objectReadContext.readValue(this, valueType)
+    override fun <T : Any> readValueAs(valueType: Class<T>): T? {
+        return objectReadContext.readValue(this, valueType.kotlin)
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(valueTypeReference: TypeReference<T>): T {
+    override fun <T : Any> readValueAs(valueTypeReference: TypeReference<T>): T? {
         return objectReadContext.readValue(this, valueTypeReference)
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(type: ResolvedType): T {
+    override fun <T : Any> readValueAs(type: ResolvedType): T? {
         return objectReadContext.readValue(this, type)
     }
 
@@ -649,17 +649,17 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      * @throws InputCoercionException Exception that describes problem with number range validity
      */
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowInt() {
-        reportOverflowInt(text!!)
+    protected fun <T> reportOverflowInt(): T {
+        return reportOverflowInt(text!!)
     }
 
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowInt(numDesc: String) {
-        reportOverflowInt(numDesc, currentToken()!!)
+    protected fun <T> reportOverflowInt(numDesc: String): T {
+        return reportOverflowInt(numDesc, currentToken()!!)
     }
 
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowInt(numDesc: String, inputType: CirJsonToken) {
+    protected fun <T> reportOverflowInt(numDesc: String, inputType: CirJsonToken): T {
         throw constructInputCoercion("Numeric value (${
             longIntegerDesc(numDesc)
         }) out of range of `Int` (${Int.MIN_VALUE} - ${Int.MAX_VALUE})", inputType, Int::class.java)
@@ -672,17 +672,17 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      * @throws InputCoercionException Exception that describes problem with number range validity
      */
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowLong() {
-        reportOverflowLong(text!!)
+    protected fun <T> reportOverflowLong(): T {
+        return reportOverflowLong(text!!)
     }
 
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowLong(numDesc: String) {
-        reportOverflowLong(numDesc, currentToken()!!)
+    protected fun <T> reportOverflowLong(numDesc: String): T {
+        return reportOverflowLong(numDesc, currentToken()!!)
     }
 
     @Throws(InputCoercionException::class)
-    protected fun reportOverflowLong(numDesc: String, inputType: CirJsonToken) {
+    protected fun <T> reportOverflowLong(numDesc: String, inputType: CirJsonToken): T {
         throw constructInputCoercion("Numeric value (${
             longIntegerDesc(numDesc)
         }) out of range of `Long` (${Long.MIN_VALUE} - ${Long.MAX_VALUE})", inputType, Long::class.java)

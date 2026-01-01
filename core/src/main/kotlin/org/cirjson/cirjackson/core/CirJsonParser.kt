@@ -1,6 +1,5 @@
 package org.cirjson.cirjackson.core
 
-import org.cirjson.cirjackson.core.CirJsonParser.NumberTypeFP.UNKNOWN
 import org.cirjson.cirjackson.core.async.NonBlockingInputFeeder
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
@@ -1232,7 +1231,7 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws CirJacksonException if there is either an underlying I/O problem or decoding issue at format layer
      */
     @Throws(CirJacksonException::class)
-    abstract fun <T> readValueAs(valueType: Class<T>): T
+    abstract fun <T : Any> readValueAs(valueType: Class<T>): T?
 
     /**
      * Method to deserialize stream content into a Java type, reference to which is passed as argument. Type is passed
@@ -1255,10 +1254,10 @@ abstract class CirJsonParser : Closeable, Versioned {
      * @throws CirJacksonException if there is either an underlying I/O problem or decoding issue at format layer
      */
     @Throws(CirJacksonException::class)
-    abstract fun <T> readValueAs(valueTypeReference: TypeReference<T>): T
+    abstract fun <T : Any> readValueAs(valueTypeReference: TypeReference<T>): T?
 
     @Throws(CirJacksonException::class)
-    abstract fun <T> readValueAs(type: ResolvedType): T
+    abstract fun <T : Any> readValueAs(type: ResolvedType): T?
 
     /**
      * Method to deserialize stream content into equivalent "tree model", represented by root [TreeNode] of resulting

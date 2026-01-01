@@ -368,17 +368,17 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
      */
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(valueType: Class<T>): T {
+    override fun <T : Any> readValueAs(valueType: Class<T>): T? {
         return delegate.readValueAs(valueType)
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(valueTypeReference: TypeReference<T>): T {
+    override fun <T : Any> readValueAs(valueTypeReference: TypeReference<T>): T? {
         return delegate.readValueAs(valueTypeReference)
     }
 
     @Throws(CirJacksonException::class)
-    override fun <T> readValueAs(type: ResolvedType): T {
+    override fun <T : Any> readValueAs(type: ResolvedType): T? {
         return delegate.readValueAs(type)
     }
 

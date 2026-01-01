@@ -553,7 +553,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val result = myNumberLong.toInt()
 
                 if (result.toLong() != myNumberLong) {
-                    reportOverflowInt(text!!, currentToken()!!)
+                    return reportOverflowInt(text!!, currentToken()!!)
                 }
 
                 result
@@ -563,7 +563,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val bigInteger = bigInteger
 
                 if (bigInteger !in BIG_INT_MIN_INT..BIG_INT_MAX_INT) {
-                    reportOverflowInt()
+                    return reportOverflowInt()
                 }
 
                 bigInteger.toInt()
@@ -573,7 +573,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val double = numberDouble
 
                 if (double !in DOUBLE_MIN_INT..DOUBLE_MAX_INT) {
-                    reportOverflowInt()
+                    return reportOverflowInt()
                 }
 
                 double.toInt()
@@ -583,7 +583,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val bigDecimal = bigDecimal
 
                 if (bigDecimal !in BIG_DECIMAL_MIN_INT..BIG_DECIMAL_MAX_INT) {
-                    reportOverflowInt()
+                    return reportOverflowInt()
                 }
 
                 bigDecimal.toInt()
@@ -606,7 +606,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val bigInteger = bigInteger
 
                 if (bigInteger !in BIG_INT_MIN_LONG..BIG_INT_MAX_LONG) {
-                    reportOverflowLong()
+                    return reportOverflowLong()
                 }
 
                 bigInteger.toLong()
@@ -616,7 +616,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val double = numberDouble
 
                 if (double !in DOUBLE_MIN_LONG..DOUBLE_MAX_LONG) {
-                    reportOverflowLong()
+                    return reportOverflowLong()
                 }
 
                 double.toLong()
@@ -626,7 +626,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
                 val bigDecimal = bigDecimal
 
                 if (bigDecimal !in BIG_DECIMAL_MIN_LONG..BIG_DECIMAL_MAX_LONG) {
-                    reportOverflowLong()
+                    return reportOverflowLong()
                 }
 
                 bigDecimal.toLong()

@@ -279,9 +279,9 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
     @Throws(CirJacksonException::class)
     protected fun reportTooLongIntegral(numericType: Int, rawNumber: String) {
         if (numericType == NUMBER_INT) {
-            reportOverflowInt(rawNumber)
+            return reportOverflowInt(rawNumber)
         } else {
-            reportOverflowLong(rawNumber)
+            return reportOverflowLong(rawNumber)
         }
     }
 

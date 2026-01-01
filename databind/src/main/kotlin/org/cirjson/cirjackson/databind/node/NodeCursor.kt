@@ -193,4 +193,12 @@ abstract class NodeCursor(contextType: Int, protected val myParent: NodeCursor?)
 
     }
 
+    companion object {
+
+        fun createRoot(node: CirJsonNode): NodeCursor {
+            return RootCursor(node, null)
+        }
+
+    }
+
 }

@@ -1712,25 +1712,25 @@ open class TokenBuffer : CirJsonGenerator {
                 val result = number.toInt()
 
                 if (number != result.toLong()) {
-                    reportOverflowInt()
+                    return reportOverflowInt()
                 }
 
                 return result
             }
 
             if (number is BigInteger) {
-                if (BIG_INT_MIN_INT > number || BIG_INT_MAX_INT < number) {
-                    reportOverflowInt()
+                if (number !in BIG_INT_MIN_INT..BIG_INT_MAX_INT) {
+                    return reportOverflowInt()
                 }
             } else if (number is BigDecimal) {
-                if (BIG_DECIMAL_MIN_INT > number || BIG_DECIMAL_MAX_INT < number) {
-                    reportOverflowInt()
+                if (number !in BIG_DECIMAL_MIN_INT..BIG_DECIMAL_MAX_INT) {
+                    return reportOverflowInt()
                 }
             } else if (number is Double || number is Float) {
                 val double = number.toDouble()
 
                 if (double !in DOUBLE_MIN_INT..DOUBLE_MAX_INT) {
-                    reportOverflowInt()
+                    return reportOverflowInt()
                 }
 
                 return double.toInt()
@@ -1744,18 +1744,18 @@ open class TokenBuffer : CirJsonGenerator {
         @Throws(InputCoercionException::class)
         fun convertNumberToLong(number: Number): Long {
             if (number is BigInteger) {
-                if (BIG_INT_MIN_LONG > number || BIG_INT_MAX_LONG < number) {
-                    reportOverflowLong()
+                if (number !in BIG_INT_MIN_LONG..BIG_INT_MAX_LONG) {
+                    return reportOverflowLong()
                 }
             } else if (number is BigDecimal) {
-                if (BIG_DECIMAL_MIN_LONG > number || BIG_DECIMAL_MAX_LONG < number) {
-                    reportOverflowLong()
+                if (number !in BIG_DECIMAL_MIN_LONG..BIG_DECIMAL_MAX_LONG) {
+                    return reportOverflowLong()
                 }
             } else if (number is Double || number is Float) {
                 val double = number.toDouble()
 
                 if (double !in DOUBLE_MIN_LONG..DOUBLE_MAX_LONG) {
-                    reportOverflowLong()
+                    return reportOverflowLong()
                 }
 
                 return double.toLong()
