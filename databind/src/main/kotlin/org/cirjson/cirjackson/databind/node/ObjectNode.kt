@@ -467,7 +467,7 @@ open class ObjectNode : ContainerNode<ObjectNode>, ObjectTreeNode {
      *
      * @return This node after adding/replacing property value (to allow chaining)
      */
-    open fun set(propertyName: String, value: CirJsonNode?): ObjectNode {
+    open operator fun set(propertyName: String, value: CirJsonNode?): ObjectNode {
         myChildren[propertyName] = value ?: nullNode()
         return this
     }
