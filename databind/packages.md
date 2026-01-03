@@ -43,6 +43,12 @@ Beyond collecting annotations, additional "method annotation inheritance"is also
 not add annotations from overridden methods in any situation. But code in this package does. Similarly,
 class-annotations are inherited properly from interfaces, in addition to abstract and concrete classes.
 
+# Package org.cirjson.cirjackson.databind.node
+
+Contains concrete [org.cirjson.cirjackson.databind.CirJsonNode] implementations CirJackson uses for the Tree model.
+These classes are public, since concrete type will be needed for most operations that modify node trees. For read-only
+access, concrete types are usually not needed.
+
 # Package org.cirjson.cirjackson.databind.type
 
 Package that contains concrete implementations of [org.cirjson.cirjackson.databind.KotlinType], as well as the factory

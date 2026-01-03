@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.databind.configuration.ConfigOverrides
 import org.cirjson.cirjackson.databind.configuration.MapperBuilder
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.reflect.KClass
 
 open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : TreeCodec, Versioned {
 
@@ -134,6 +135,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     /*
      *******************************************************************************************************************
+     * Public API: serialization (mapping from types to external format)
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    open fun writeValueAsBytes(value: Any?): ByteArray {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
      * Public API: constructing ObjectWriters for more advanced configuration
      *******************************************************************************************************************
      */
@@ -143,6 +155,16 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     }
 
     open fun writerWithDefaultPrettyPrinter(): ObjectWriter {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: constructing ObjectReaders for more advanced configuration
+     *******************************************************************************************************************
+     */
+
+    open fun readerFor(type: KClass<*>): ObjectReader {
         TODO("Not yet implemented")
     }
 

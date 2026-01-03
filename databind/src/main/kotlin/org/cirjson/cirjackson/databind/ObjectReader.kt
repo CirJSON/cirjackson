@@ -59,6 +59,17 @@ open class ObjectReader : Versioned, TreeCodec {
         TODO("Not yet implemented")
     }
 
+    /*
+     *******************************************************************************************************************
+     * Construction
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readValue(content: ByteArray): T {
+        TODO("Not yet implemented")
+    }
+
     companion object {
 
         val CIRJSON_NODE_TYPE: KotlinType = SimpleType.constructUnsafe(CirJsonNode::class)
