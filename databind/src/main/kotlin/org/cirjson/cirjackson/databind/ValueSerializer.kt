@@ -5,7 +5,7 @@ import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitable
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitorWrapper
 
-abstract class ValueSerializer<T> : CirJsonFormatVisitable {
+abstract class ValueSerializer<T : Any> : CirJsonFormatVisitable {
 
     /*
      *******************************************************************************************************************
