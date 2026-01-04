@@ -55,8 +55,8 @@ class SymbolsViaParserTest : TestBase() {
 
         for (i in 1..50) {
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            symbols.add(parser.currentName!!)
-            assertEquals("lengthMatters${1000 + i}", parser.currentName!!)
+            symbols.add(parser.currentName()!!)
+            assertEquals("lengthMatters${1000 + i}", parser.currentName()!!)
             assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
         }
 
@@ -87,7 +87,7 @@ class SymbolsViaParserTest : TestBase() {
             assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals(field, parser.currentName!!)
+            assertEquals(field, parser.currentName()!!)
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
             assertNull(parser.nextToken())

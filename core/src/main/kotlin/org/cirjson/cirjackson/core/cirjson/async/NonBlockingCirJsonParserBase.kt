@@ -155,7 +155,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         return when (token.id) {
             CirJsonTokenId.ID_NOT_AVAILABLE -> null
 
-            CirJsonTokenId.ID_PROPERTY_NAME -> streamReadContext!!.currentName
+            CirJsonTokenId.ID_PROPERTY_NAME -> myStreamReadContext.currentName
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
                 myTextBuffer.contentsAsString()
@@ -176,7 +176,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
                 CirJsonToken.VALUE_STRING -> myTextBuffer.contentsToWriter(writer)
 
                 CirJsonToken.PROPERTY_NAME -> {
-                    val name = streamReadContext!!.currentName
+                    val name = myStreamReadContext.currentName
                     writer.write(name!!)
                     return name.length
                 }
@@ -202,7 +202,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     override val valueAsString: String?
         get() = when (myCurrentToken) {
             CirJsonToken.VALUE_STRING -> myTextBuffer.contentsAsString()
-            CirJsonToken.PROPERTY_NAME -> currentName
+            CirJsonToken.PROPERTY_NAME -> currentName()
             else -> super.getValueAsString(null)
         }
 
@@ -210,7 +210,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     override fun getValueAsString(defaultValue: String?): String? {
         return when (myCurrentToken) {
             CirJsonToken.VALUE_STRING -> myTextBuffer.contentsAsString()
-            CirJsonToken.PROPERTY_NAME -> currentName
+            CirJsonToken.PROPERTY_NAME -> currentName()
             else -> super.getValueAsString(null)
         }
     }
@@ -234,7 +234,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
         get() = when (myCurrentToken?.id) {
             null -> 0
 
-            CirJsonTokenId.ID_PROPERTY_NAME -> streamReadContext!!.currentName!!.length
+            CirJsonTokenId.ID_PROPERTY_NAME -> myStreamReadContext.currentName!!.length
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
                 myTextBuffer.size
@@ -320,12 +320,12 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
     @Throws(CirJacksonException::class)
     protected fun closeArrayScope(): CirJsonToken {
-        if (!streamReadContext!!.isInArray) {
+        if (!myStreamReadContext.isInArray) {
             reportMismatchedEndMarker(']', '}')
         }
 
-        val context = streamReadContext!!.parent!!
-        streamReadContext = context
+        val context = myStreamReadContext.parent!!
+        myStreamReadContext = context
 
         val state = if (context.isInObject) {
             MAJOR_OBJECT_PROPERTY_NEXT
@@ -342,12 +342,12 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
 
     @Throws(CirJacksonException::class)
     protected fun closeObjectScope(): CirJsonToken {
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             reportMismatchedEndMarker('}', ']')
         }
 
-        val context = streamReadContext!!.parent!!
-        streamReadContext = context
+        val context = myStreamReadContext.parent!!
+        myStreamReadContext = context
 
         val state = if (context.isInObject) {
             MAJOR_OBJECT_PROPERTY_NEXT
@@ -416,7 +416,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     @Throws(CirJacksonException::class)
     protected fun addName(quads: IntArray, quadsLength: Int, lastQuadBytes: Int): String {
         val byteLength = (quadsLength shl 2) - 4 + lastQuadBytes
-        streamReadConstraints.validateNameLength(byteLength)
+        streamReadConstraints().validateNameLength(byteLength)
 
         val lastQuad = if (lastQuadBytes < 4) {
             val value = quads[quadsLength - 1]
@@ -539,7 +539,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun eofAsNextToken(): CirJsonToken? {
         myMajorState = MAJOR_CLOSED
 
-        if (!streamReadContext!!.isInRoot) {
+        if (!myStreamReadContext.isInRoot) {
             handleEOF()
         }
 
@@ -551,7 +551,7 @@ abstract class NonBlockingCirJsonParserBase(objectReadContext: ObjectReadContext
     protected fun fieldComplete(name: String): CirJsonToken {
         val isFirstName = myMajorState == MAJOR_OBJECT_PROPERTY_FIRST
         myMajorState = MAJOR_OBJECT_VALUE
-        streamReadContext!!.currentName = name
+        myStreamReadContext.currentName = name
         return if (isFirstName) {
             if (name != idName) {
                 return reportInvalidToken(name, "Expected property name '$idName', received '$name'")

@@ -126,7 +126,7 @@ open class AsDeductionTypeDeserializer : AsPropertyTypeDeserializer {
         val ignoreCase = context.isEnabled(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
 
         while (token == CirJsonToken.PROPERTY_NAME) {
-            var name = parser.currentName!!
+            var name = parser.currentName()!!
 
             if (ignoreCase) {
                 name = name.lowercase()

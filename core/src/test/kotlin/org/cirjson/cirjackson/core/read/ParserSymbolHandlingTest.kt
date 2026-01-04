@@ -26,7 +26,7 @@ class ParserSymbolHandlingTest : TestBase() {
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        var currentName = parser.currentName!!
+        var currentName = parser.currentName()!!
 
         if ("\u0000abc" != currentName) {
             fail("Expected \\u0000abc (4 bytes), actual '$currentName' (${currentName.length})")
@@ -36,7 +36,7 @@ class ParserSymbolHandlingTest : TestBase() {
         assertEquals(1, parser.intValue)
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        currentName = parser.currentName!!
+        currentName = parser.currentName()!!
 
         if ("abc" != currentName) {
             fail("Expected abc (3 bytes), actual '$currentName' (${currentName.length})")
@@ -66,22 +66,22 @@ class ParserSymbolHandlingTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertNullStrings(NAME_1, parser.currentName!!)
+        assertNullStrings(NAME_1, parser.currentName()!!)
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(1, parser.intValue)
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertNullStrings(NAME_2, parser.currentName!!)
+        assertNullStrings(NAME_2, parser.currentName()!!)
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(2, parser.intValue)
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertNullStrings(NAME_3, parser.currentName!!)
+        assertNullStrings(NAME_3, parser.currentName()!!)
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(3, parser.intValue)
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertNullStrings(NAME_4, parser.currentName!!)
+        assertNullStrings(NAME_4, parser.currentName()!!)
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(4, parser.intValue)
 

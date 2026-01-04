@@ -93,14 +93,12 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override val isExpectedStartObjectToken: Boolean
         get() = myCurrentToken == CirJsonToken.START_OBJECT
 
-    override val streamReadContext: TokenStreamContext?
-        get() = filterContext()
+    override fun streamReadContext(): TokenStreamContext? = filterContext()
 
-    override val currentName: String?
-        get() {
-            val context = filterContext()
-            return context.parent?.currentName ?: context.currentName
-        }
+    override fun currentName(): String? {
+        val context = filterContext()
+        return context.parent?.currentName ?: context.currentName
+    }
 
     /*
      *******************************************************************************************************************
@@ -295,7 +293,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
             }
 
             CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME, CirJsonTokenId.ID_PROPERTY_NAME -> {
-                val name = delegate.currentName!!
+                val name = delegate.currentName()!!
                 filter = myHeadContext.setPropertyName(name)
 
                 if (filter === TokenFilter.INCLUDE_ALL) {
@@ -497,7 +495,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
                 }
 
                 CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME, CirJsonTokenId.ID_PROPERTY_NAME -> {
-                    val name = delegate.currentName!!
+                    val name = delegate.currentName()!!
                     filter = myHeadContext.setPropertyName(name)
 
                     if (filter === TokenFilter.INCLUDE_ALL) {
@@ -661,7 +659,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
                 }
 
                 CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME, CirJsonTokenId.ID_PROPERTY_NAME -> {
-                    val name = delegate.currentName!!
+                    val name = delegate.currentName()!!
                     filter = myHeadContext.setPropertyName(name)
 
                     if (filter === TokenFilter.INCLUDE_ALL) {
@@ -799,7 +797,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override val text: String?
         get() = if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else {
             delegate.text
         }
@@ -816,7 +814,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override val textCharacters: CharArray?
         get() = if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName!!.toCharArray()
+            currentName()!!.toCharArray()
         } else {
             delegate.textCharacters
         }
@@ -825,7 +823,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override val textLength: Int
         get() = if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName!!.length
+            currentName()!!.length
         } else {
             delegate.textLength
         }
@@ -843,7 +841,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override val valueAsString: String?
         get() = if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else {
             delegate.valueAsString
         }
@@ -852,7 +850,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override fun getValueAsString(defaultValue: String?): String? {
         return if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME ||
                 myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else {
             delegate.getValueAsString(defaultValue)
         }
@@ -868,7 +866,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override fun nextName(): String? {
         val token = nextToken()
         return if (token == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || token == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else {
             null
         }
@@ -878,7 +876,7 @@ open class FilteringParserDelegate(parser: CirJsonParser, filter: TokenFilter,
     override fun nextName(string: SerializableString): Boolean {
         val token = nextToken()
         return (token == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || token == CirJsonToken.PROPERTY_NAME) &&
-                string.value == currentName
+                string.value == currentName()
     }
 
     @Throws(CirJacksonException::class)

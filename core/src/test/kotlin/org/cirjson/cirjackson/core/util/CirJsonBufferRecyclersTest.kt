@@ -50,15 +50,15 @@ class CirJsonBufferRecyclersTest : TestBase() {
 
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
-        assertEquals("__cirJsonId__", parser.currentName)
+        assertEquals("__cirJsonId__", parser.currentName())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("root", parser.text)
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(123, parser.intValue)
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("foobar", parser.text)
 

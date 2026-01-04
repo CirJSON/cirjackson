@@ -28,7 +28,7 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertTrue(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals(name.value, parser.currentName)
+        assertEquals(name.value, parser.currentName())
         assertEquals(name.value, parser.text)
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
@@ -36,12 +36,12 @@ class NextXxxAccessTest : TestBase() {
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("name2", parser.currentName)
+        assertEquals("name2", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("x", parser.currentName)
+        assertEquals("x", parser.currentName())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
@@ -62,7 +62,7 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertFalse(parser.nextName(SerializedString("Nam")))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals(name.value, parser.currentName)
+        assertEquals(name.value, parser.currentName())
         assertEquals(name.value, parser.text)
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
@@ -70,12 +70,12 @@ class NextXxxAccessTest : TestBase() {
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("name2", parser.currentName)
+        assertEquals("name2", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("x", parser.currentName)
+        assertEquals("x", parser.currentName())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
@@ -108,7 +108,7 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertTrue(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals(name.value, parser.currentName)
+        assertEquals(name.value, parser.currentName())
         assertEquals(name.value, parser.text)
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
@@ -116,12 +116,12 @@ class NextXxxAccessTest : TestBase() {
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("name2", parser.currentName)
+        assertEquals("name2", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("x", parser.currentName)
+        assertEquals("x", parser.currentName())
 
         assertFalse(parser.nextName(name))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
@@ -153,7 +153,7 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals("name", parser.nextName())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("name", parser.currentName)
+        assertEquals("name", parser.currentName())
         assertEquals("name", parser.text)
         assertNull(parser.nextName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
@@ -161,12 +161,12 @@ class NextXxxAccessTest : TestBase() {
 
         assertEquals("name2", parser.nextName())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("name2", parser.currentName)
+        assertEquals("name2", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
 
         assertEquals("x", parser.nextName())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("x", parser.currentName)
+        assertEquals("x", parser.currentName())
         assertNull(parser.nextName())
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
 
@@ -398,11 +398,11 @@ class NextXxxAccessTest : TestBase() {
         assertEquals("root", parser.nextTextValue())
         assertNull(parser.nextTextValue())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
 
         assertEquals("123", parser.nextTextValue())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertNull(parser.nextTextValue())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
 
@@ -446,13 +446,13 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals(0, parser.nextIntValue(0))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
 
         assertEquals(0, parser.nextIntValue(0))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals("123", parser.text)
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertEquals(5, parser.nextIntValue(0))
 
         assertEquals("c", parser.nextName())
@@ -496,13 +496,13 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals(0L, parser.nextLongValue(0L))
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
 
         assertEquals(0L, parser.nextLongValue(0L))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals("123", parser.text)
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertEquals(-59L, parser.nextLongValue(0L))
 
         assertEquals("c", parser.nextName())
@@ -546,13 +546,13 @@ class NextXxxAccessTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertNull(parser.nextBooleanValue())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.currentToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
 
         assertNull(parser.nextBooleanValue())
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals("xyz", parser.text)
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertEquals(true, parser.nextBooleanValue())
 
         assertEquals("c", parser.nextName())

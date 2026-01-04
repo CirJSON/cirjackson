@@ -119,7 +119,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
 
                 CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                    val name = streamReadContext!!.currentName!!
+                    val name = myStreamReadContext.currentName!!
                     writer.write(name)
                     name.length
                 }
@@ -152,7 +152,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                currentName
+                currentName()
             }
 
             else -> {
@@ -173,7 +173,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
 
             CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                currentName
+                currentName()
             }
 
             else -> {
@@ -229,7 +229,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         return when (token.id) {
             CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
-                streamReadContext!!.currentName
+                myStreamReadContext.currentName
             }
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
@@ -273,7 +273,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             null -> 0
 
             CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
-                streamReadContext!!.currentName!!.length
+                myStreamReadContext.currentName!!.length
             }
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
@@ -543,10 +543,10 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             return myCurrentToken
         }
 
-        if (streamReadContext!!.isExpectingComma) {
+        if (myStreamReadContext.isExpectingComma) {
             if (i != CODE_COMMA) {
                 return reportUnexpectedChar(i.toChar(),
-                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+                        "was expecting comma to separate ${myStreamReadContext.typeDescription} entries")
             }
 
             i = skipWhitespace()
@@ -560,12 +560,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
         }
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             return nextTokenNotInObject(i)
         }
 
         val name = parseName(i)
-        streamReadContext!!.currentName = name
+        myStreamReadContext.currentName = name
         myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
             if (name != idName) {
                 return reportInvalidToken(i, "Expected property name '$idName', received '$name'")
@@ -646,12 +646,12 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         return when (i) {
             '['.code -> {
-                streamReadContext = streamReadContext!!.createChildArrayContext(tokenLineNumber, myTokenInputColumn)
+                myStreamReadContext = myStreamReadContext.createChildArrayContext(tokenLineNumber, myTokenInputColumn)
                 CirJsonToken.START_ARRAY.also { myCurrentToken = it }
             }
 
             '{'.code -> {
-                streamReadContext = streamReadContext!!.createChildObjectContext(tokenLineNumber, myTokenInputColumn)
+                myStreamReadContext = myStreamReadContext.createChildObjectContext(tokenLineNumber, myTokenInputColumn)
                 CirJsonToken.START_OBJECT.also { myCurrentToken = it }
             }
 
@@ -750,10 +750,10 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             return null
         }
 
-        if (streamReadContext!!.isExpectingComma) {
+        if (myStreamReadContext.isExpectingComma) {
             if (i != CODE_COMMA) {
                 return reportUnexpectedChar(i.toChar(),
-                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+                        "was expecting comma to separate ${myStreamReadContext.typeDescription} entries")
             }
 
             i = skipWhitespace()
@@ -766,13 +766,13 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             }
         }
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             nextTokenNotInObject(i)
             return null
         }
 
         val name = parseName(i)
-        streamReadContext!!.currentName = name
+        myStreamReadContext.currentName = name
         myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
             if (name != idName) {
                 return reportInvalidToken(i, "Expected property name '$idName', received '$name'")
@@ -1036,7 +1036,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
         myTextBuffer.currentSegmentSize = outputPointer
         myNextByte = c
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace()
         }
 
@@ -1102,7 +1102,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
         myTextBuffer.currentSegmentSize = outputPointer
         myNextByte = c
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace()
         }
 
@@ -1219,7 +1219,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         myNextByte = c
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace()
         }
 
@@ -2136,7 +2136,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
 
         when (ch) {
             ']', ',', '}' -> {
-                if (ch == ']' && !streamReadContext!!.isInArray) {
+                if (ch == ']' && !myStreamReadContext.isInArray) {
                     return if (ch.isJavaIdentifierStart()) {
                         reportInvalidToken(code, ch.toString(), validCirJsonTokenList())
                     } else {
@@ -2144,8 +2144,8 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                     }
                 }
 
-                if (ch != '}' && !streamReadContext!!.isInRoot) {
-                    if (streamReadContext!!.isInArray && streamReadContext!!.currentIndex == 0) {
+                if (ch != '}' && !myStreamReadContext.isInRoot) {
+                    if (myStreamReadContext.isInArray && myStreamReadContext.currentIndex == 0) {
                         return reportUnexpectedChar(ch, "expected VALUE_STRING")
                     }
 
@@ -2413,7 +2413,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
         if (i < 0) {
             try {
                 i = myInputData.readUnsignedByte()
-            } catch (e: EOFException) {
+            } catch (_: EOFException) {
                 return eofAsNextChar()
             }
         } else {
@@ -2443,7 +2443,7 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
                 }
 
                 i = myInputData.readUnsignedByte()
-            } catch (e: EOFException) {
+            } catch (_: EOFException) {
                 return eofAsNextChar()
             }
         }
@@ -3047,11 +3047,11 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
     @Throws(StreamReadException::class)
     private fun closeScope(i: Int) {
         if (i == CODE_R_BRACKET) {
-            if (!streamReadContext!!.isInArray) {
+            if (!myStreamReadContext.isInArray) {
                 reportMismatchedEndMarker(i.toChar(), '}')
             }
 
-            streamReadContext = streamReadContext!!.clearAndGetParent()
+            myStreamReadContext = myStreamReadContext.clearAndGetParent()!!
             myCurrentToken = CirJsonToken.END_ARRAY
         }
 
@@ -3059,11 +3059,11 @@ open class UTF8DataInputCirJsonParser(objectReadContext: ObjectReadContext, ioCo
             return
         }
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             reportMismatchedEndMarker(i.toChar(), ']')
         }
 
-        streamReadContext = streamReadContext!!.clearAndGetParent()
+        myStreamReadContext = myStreamReadContext.clearAndGetParent()!!
         myCurrentToken = CirJsonToken.END_OBJECT
     }
 

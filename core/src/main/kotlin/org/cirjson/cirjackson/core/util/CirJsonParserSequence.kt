@@ -107,7 +107,7 @@ open class CirJsonParserSequence(protected val myIsCheckingForExistingToken: Boo
         val next = nextToken()
 
         return if (next == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || next == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else {
             null
         }
@@ -117,7 +117,7 @@ open class CirJsonParserSequence(protected val myIsCheckingForExistingToken: Boo
         val next = nextToken()
 
         return (next == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || next == CirJsonToken.PROPERTY_NAME) &&
-                string.value == currentName
+                string.value == currentName()
     }
 
     override fun nextNameMatch(matcher: PropertyNameMatcher): Int {

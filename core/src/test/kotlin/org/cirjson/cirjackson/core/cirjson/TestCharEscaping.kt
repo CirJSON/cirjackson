@@ -91,7 +91,7 @@ class TestCharEscaping : TestBase() {
             assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals(expected, parser.currentName)
+            assertEquals(expected, parser.currentName())
             assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
             assertEquals(123456789, parser.intValue)
             assertToken(CirJsonToken.END_OBJECT, parser.nextToken())

@@ -30,7 +30,7 @@ class TestSymbolsWithMediaItem : TestBase() {
                 continue
             }
 
-            val name = parser.currentName!!
+            val name = parser.currentName()!!
             val quads = calcQuads(name.toByteArray(Charsets.UTF_8))
 
             if (symbols.findName(quads, quads.size) != null) {
@@ -62,7 +62,7 @@ class TestSymbolsWithMediaItem : TestBase() {
                 continue
             }
 
-            val name = parser.currentName!!
+            val name = parser.currentName()!!
             val ch = name.toCharArray()
             symbols.findSymbol(ch, 0, ch.size, symbols.calculateHash(name))
         }

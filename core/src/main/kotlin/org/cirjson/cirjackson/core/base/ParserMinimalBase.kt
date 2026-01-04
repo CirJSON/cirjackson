@@ -28,9 +28,9 @@ import java.math.BigInteger
  * @property myIOContext I/O context for this reader. It handles buffer allocation for the reader, including possible
  * reuse/recycling.
  */
-abstract class ParserMinimalBase private constructor(override val objectReadContext: ObjectReadContext,
-        protected val myIOContext: IOContext?, override val streamReadFeatures: Int,
-        override val streamReadConstraints: StreamReadConstraints) : CirJsonParser() {
+abstract class ParserMinimalBase private constructor(protected val myObjectReadContext: ObjectReadContext,
+        protected val myIOContext: IOContext?, protected val myStreamReadFeatures: Int,
+        protected val myStreamReadConstraints: StreamReadConstraints) : CirJsonParser() {
 
     override var isClosed: Boolean = false
         protected set
@@ -74,7 +74,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      */
 
     override fun isEnabled(feature: StreamReadFeature): Boolean {
-        return feature.isEnabledIn(streamReadFeatures)
+        return feature.isEnabledIn(streamReadFeatures())
     }
 
     /*
@@ -83,12 +83,15 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      *******************************************************************************************************************
      */
 
-    override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
-        get() = DEFAULT_READ_CAPABILITIES
+    override fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability> = DEFAULT_READ_CAPABILITIES
+
+    override fun streamReadFeatures(): Int = myStreamReadFeatures
+
+    override fun streamReadConstraints(): StreamReadConstraints = myStreamReadConstraints
 
     /*
      *******************************************************************************************************************
-     * CirJsonParser impl: open / close / release
+     * CirJsonParser implementation: open / close / release
      *******************************************************************************************************************
      */
 
@@ -124,6 +127,14 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
      */
     protected abstract fun releaseBuffers()
 
+    /*
+     *******************************************************************************************************************
+     * CirJsonParser implementation: basic state access
+     *******************************************************************************************************************
+     */
+
+    override fun objectReadContext(): ObjectReadContext = myObjectReadContext
+
     /**
      * Method subclasses need to implement to check whether end-of-content is allowed at the current decoding position:
      * formats often want to verify the all start/end token pairs match, for example.
@@ -135,7 +146,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     /*
      *******************************************************************************************************************
-     * CirJsonParser impl: basic stream iteration
+     * CirJsonParser implementation: basic stream iteration
      *******************************************************************************************************************
      */
 
@@ -212,18 +223,18 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     /*
      *******************************************************************************************************************
-     * CirJsonParser impl: stream iteration, property names
+     * CirJsonParser implementation: stream iteration, property names
      *******************************************************************************************************************
      */
 
     @Throws(CirJacksonException::class)
     override fun nextName(): String? {
-        return if (nextToken() == CirJsonToken.PROPERTY_NAME) currentName else null
+        return if (nextToken() == CirJsonToken.PROPERTY_NAME) currentName() else null
     }
 
     @Throws(CirJacksonException::class)
     override fun nextName(string: SerializableString): Boolean {
-        return nextToken() == CirJsonToken.PROPERTY_NAME && string.value == currentName
+        return nextToken() == CirJsonToken.PROPERTY_NAME && string.value == currentName()
     }
 
     @Throws(CirJacksonException::class)
@@ -242,7 +253,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
     @Throws(CirJacksonException::class)
     override fun currentNameMatch(matcher: PropertyNameMatcher): Int {
         return if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            matcher.matchName(currentName!!)
+            matcher.matchName(currentName()!!)
         } else if (myCurrentToken == CirJsonToken.END_OBJECT) {
             PropertyNameMatcher.MATCH_END_OBJECT
         } else {
@@ -499,7 +510,7 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
         } else if (myCurrentToken == CirJsonToken.CIRJSON_ID_PROPERTY_NAME) {
             idName
         } else if (myCurrentToken == CirJsonToken.PROPERTY_NAME) {
-            currentName
+            currentName()
         } else if (myCurrentToken == null || myCurrentToken == CirJsonToken.VALUE_NULL
                 || !myCurrentToken!!.isScalarValue) {
             defaultValue
@@ -516,22 +527,22 @@ abstract class ParserMinimalBase private constructor(override val objectReadCont
 
     @Throws(CirJacksonException::class)
     override fun <T : Any> readValueAs(valueType: Class<T>): T? {
-        return objectReadContext.readValue(this, valueType.kotlin)
+        return myObjectReadContext.readValue(this, valueType.kotlin)
     }
 
     @Throws(CirJacksonException::class)
     override fun <T : Any> readValueAs(valueTypeReference: TypeReference<T>): T? {
-        return objectReadContext.readValue(this, valueTypeReference)
+        return myObjectReadContext.readValue(this, valueTypeReference)
     }
 
     @Throws(CirJacksonException::class)
     override fun <T : Any> readValueAs(type: ResolvedType): T? {
-        return objectReadContext.readValue(this, type)
+        return myObjectReadContext.readValue(this, type)
     }
 
     @Throws(CirJacksonException::class)
     override fun <T : TreeNode> readValueAsTree(): T? {
-        return objectReadContext.readTree(this)
+        return myObjectReadContext.readTree(this)
     }
 
     /*

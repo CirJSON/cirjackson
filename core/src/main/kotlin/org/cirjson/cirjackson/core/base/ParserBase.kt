@@ -165,12 +165,12 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      */
 
     override fun currentValue(): Any? {
-        val context = streamReadContext
+        val context = streamReadContext()
         return context?.currentValue()
     }
 
     override fun assignCurrentValue(value: Any?) {
-        val context = streamReadContext
+        val context = streamReadContext()
         context?.assignCurrentValue(value)
     }
 
@@ -214,7 +214,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
      * is no open non-root context.
      */
     override fun handleEOF() {
-        val context = streamReadContext ?: return
+        val context = streamReadContext() ?: return
 
         if (context.isInRoot) {
             return
@@ -265,7 +265,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     @Throws(CirJacksonException::class)
     protected fun resetInt(negative: Boolean, integralLength: Int): CirJsonToken {
-        streamReadConstraints.validateIntegerLength(integralLength)
+        streamReadConstraints().validateIntegerLength(integralLength)
         myNumberNegative = negative
         myNumberIsNaN = false
         myIntegralLength = integralLength
@@ -278,7 +278,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     @Throws(CirJacksonException::class)
     protected fun resetFloat(negative: Boolean, integralLength: Int, fractionLength: Int,
             exponentLength: Int): CirJsonToken {
-        streamReadConstraints.validateFloatingPointLength(integralLength + fractionLength + exponentLength)
+        streamReadConstraints().validateFloatingPointLength(integralLength + fractionLength + exponentLength)
         myNumberNegative = negative
         myIntegralLength = integralLength
         myFractionLength = fractionLength
@@ -776,7 +776,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
     }
 
     protected fun convertBigDecimalToBigInteger(bigDecimal: BigDecimal): BigInteger {
-        streamReadConstraints.validateBigIntegerScale(bigDecimal.scale())
+        streamReadConstraints().validateBigIntegerScale(bigDecimal.scale())
         return bigDecimal.toBigInteger()
     }
 
@@ -1012,7 +1012,7 @@ abstract class ParserBase(objectReadContext: ObjectReadContext, ioContext: IOCon
 
     @Throws(StreamConstraintsException::class)
     protected fun growNameDecodeBuffer(array: IntArray, more: Int): IntArray {
-        streamReadConstraints.validateNameLength(array.size shl 2)
+        streamReadConstraints().validateNameLength(array.size shl 2)
         return array.growBy(more)
     }
 

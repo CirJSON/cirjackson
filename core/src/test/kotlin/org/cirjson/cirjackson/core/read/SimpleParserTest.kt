@@ -53,7 +53,7 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        val actualName = parser.currentName!!
+        val actualName = parser.currentName()!!
         assertEquals(expectedName, actualName)
 
         if (enableIntern) {
@@ -290,7 +290,7 @@ class SimpleParserTest : TestBase() {
     }
 
     private fun keywords(parser: CirJsonParser, checkColumn: Boolean) {
-        var context = parser.streamReadContext!!
+        var context = parser.streamReadContext()!!
         assertEquals("/", context.toString())
         assertTrue(context.isInRoot)
         assertFalse(context.isInArray)
@@ -316,7 +316,7 @@ class SimpleParserTest : TestBase() {
             assertEquals(1, location.lineNumber)
         }
 
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertFalse(context.isInRoot)
         assertFalse(context.isInArray)
         assertTrue(context.isInObject)
@@ -331,7 +331,7 @@ class SimpleParserTest : TestBase() {
         assertEquals("{\"key1\"}", context.toString())
         assertEquals(3, parser.currentTokenLocation().lineNumber)
 
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertFalse(context.isInRoot)
         assertFalse(context.isInArray)
         assertTrue(context.isInObject)
@@ -342,13 +342,13 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.VALUE_NULL, parser.nextToken())
         assertEquals("key1", context.currentName)
 
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertEquals(2, context.entryCount)
         assertEquals(1, context.currentIndex)
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
         verifyFieldName(parser, "key2")
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertEquals(3, context.entryCount)
         assertEquals(2, context.currentIndex)
 
@@ -363,7 +363,7 @@ class SimpleParserTest : TestBase() {
         verifyFieldName(parser, "key4")
 
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertFalse(context.isInRoot)
         assertTrue(context.isInArray)
         assertFalse(context.isInObject)
@@ -378,11 +378,11 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
         assertToken(CirJsonToken.END_ARRAY, parser.nextToken())
 
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertTrue(context.isInObject)
 
         assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
-        context = parser.streamReadContext!!
+        context = parser.streamReadContext()!!
         assertTrue(context.isInRoot)
         assertNull(context.currentName)
     }
@@ -456,7 +456,7 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        val actual = parser.currentName
+        val actual = parser.currentName()
         assertEquals(actual, getAndVerifyText(parser))
         assertEquals(expected, actual)
         assertToken(CirJsonToken.VALUE_NULL, parser.nextToken())
@@ -512,11 +512,11 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("doc", parser.currentName)
+        assertEquals("doc", parser.currentName())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         val actual = getAndVerifyText(parser)
         assertEquals(value, actual)
-        assertEquals("doc", parser.currentName)
+        assertEquals("doc", parser.currentName())
         assertToken(CirJsonToken.END_OBJECT, parser.nextToken())
         assertNull(parser.nextToken())
         parser.close()
@@ -693,7 +693,7 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
         assertTextViaWriter(parser, "a")
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertTextViaWriter(parser, longText)
@@ -701,7 +701,7 @@ class SimpleParserTest : TestBase() {
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
         assertTextViaWriter(parser, "b")
-        assertEquals("b", parser.currentName)
+        assertEquals("b", parser.currentName())
         assertToken(CirJsonToken.VALUE_TRUE, parser.nextToken())
         assertTextViaWriter(parser, "true")
 
@@ -743,7 +743,7 @@ class SimpleParserTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("a", parser.currentName)
+        assertEquals("a", parser.currentName())
         assertTextViaWriter(parser, "a")
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertTextViaWriter(parser, longText)
@@ -801,16 +801,16 @@ class SimpleParserTest : TestBase() {
 
         try {
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals("request", parser.currentName)
+            assertEquals("request", parser.currentName())
             assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
             assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals("mac", parser.currentName)
+            assertEquals("mac", parser.currentName())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertNotNull(parser.text)
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals("data", parser.currentName)
+            assertEquals("data", parser.currentName())
             assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
 
             @Suppress("ControlFlowWithEmptyBody")
@@ -834,7 +834,7 @@ class SimpleParserTest : TestBase() {
 
     private fun verifyFieldName(parser: CirJsonParser, expectedName: String) {
         assertEquals(expectedName, parser.text)
-        assertEquals(expectedName, parser.currentName)
+        assertEquals(expectedName, parser.currentName())
     }
 
     private fun assertTextViaWriter(parser: CirJsonParser, expected: String) {

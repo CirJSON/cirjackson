@@ -46,22 +46,22 @@ abstract class CirJsonParser : Closeable, Versioned {
      */
 
     /**
-     * Accessor that can be used to access current parsing context reader is in. There are 3 different types: root,
-     * array, and object contexts, with slightly different available information. Contexts are hierarchically nested,
-     * and can be used for example for figuring out part of the input document that correspond to specific array or
-     * object (for highlighting purposes, or error reporting). Contexts can also be used for simple xpath-like matching
-     * of input, if so desired.
+     * Method that can be used to access current parsing context reader is in. There are 3 different types: root, array,
+     * and object contexts, with slightly different available information. Contexts are hierarchically nested, and can
+     * be used for example for figuring out part of the input document that correspond to specific array or object (for
+     * highlighting purposes, or error reporting). Contexts can also be used for simple xpath-like matching of input, if
+     * so desired.
      */
-    abstract val streamReadContext: TokenStreamContext?
+    abstract fun streamReadContext(): TokenStreamContext?
 
     /**
-     * Accessor for context object provided by higher level data-binding functionality (or, in some cases, simple
+     * Method for context object provided by higher level data-binding functionality (or, in some cases, simple
      * placeholder of the same) that allows some level of interaction including ability to trigger deserialization of
      * Object values through generator instance.
      *
      * Context object is used by parser to implement some methods, like `readValueAs(...)`
      */
-    abstract val objectReadContext: ObjectReadContext
+    abstract fun objectReadContext(): ObjectReadContext
 
     /*
      *******************************************************************************************************************
@@ -223,7 +223,7 @@ abstract class CirJsonParser : Closeable, Versioned {
     /**
      * Bit mask that defines current states of all standard [StreamReadFeature]s.
      */
-    abstract val streamReadFeatures: Int
+    abstract fun streamReadFeatures(): Int
 
     /**
      * Accessor for Schema that this parser uses, if any. Default implementation returns `null`.
@@ -231,15 +231,15 @@ abstract class CirJsonParser : Closeable, Versioned {
     open val schema: FormatSchema? = null
 
     /**
-     * Accessor for getting metadata on capabilities of this parser, based on underlying data format being read
-     * (directly or indirectly).
+     * Method for getting metadata on capabilities of this parser, based on underlying data format being read (directly
+     * or indirectly).
      */
-    abstract val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
+    abstract fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability>
 
     /**
      * Get the constraints to apply when performing streaming reads.
      */
-    abstract val streamReadConstraints: StreamReadConstraints
+    abstract fun streamReadConstraints(): StreamReadConstraints
 
     /*
      *******************************************************************************************************************
@@ -641,11 +641,11 @@ abstract class CirJsonParser : Closeable, Versioned {
     abstract val idName: String
 
     /**
-     * Accessor that can be called to get the name associated with the current token: for [CirJsonToken.PROPERTY_NAME]s
+     * Method that can be called to get the name associated with the current token: for [CirJsonToken.PROPERTY_NAME]s
      * it will be the same as what [text] returns; for Object property values it will be the preceding property name;
      * and for others (array element, root-level values) `null`.
      */
-    abstract val currentName: String?
+    abstract fun currentName(): String?
 
     /**
      * Accessor for textual representation of the current token; if no current token (before first call to [nextToken],

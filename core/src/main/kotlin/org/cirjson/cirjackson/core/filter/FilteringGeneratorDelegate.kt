@@ -930,7 +930,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
                 }
 
                 CirJsonTokenId.ID_PROPERTY_NAME -> {
-                    writeName(parser.currentName!!)
+                    writeName(parser.currentName()!!)
                 }
 
                 CirJsonTokenId.ID_START_ARRAY -> {

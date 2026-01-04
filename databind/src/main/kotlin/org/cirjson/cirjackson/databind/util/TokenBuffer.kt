@@ -130,8 +130,8 @@ open class TokenBuffer : CirJsonGenerator {
     }
 
     protected constructor(parser: CirJsonParser, context: ObjectReadContext?) : super() {
-        myParentContext = parser.streamReadContext
-        myStreamReadConstraints = context?.streamReadConstraints ?: parser.streamReadConstraints
+        myParentContext = parser.streamReadContext()
+        myStreamReadConstraints = context?.streamReadConstraints ?: parser.streamReadConstraints()
 
         myHasNativeTypeIds = parser.isReadingTypeIdPossible
         myHasNativeObjectIds = true
@@ -213,7 +213,7 @@ open class TokenBuffer : CirJsonGenerator {
      */
     open fun asParser(readContext: ObjectReadContext, baseParser: CirJsonParser?): CirJsonParser {
         val parser = Parser(readContext, this, myFirst, myHasNativeTypeIds, myHasNativeObjectIds, myParentContext,
-                baseParser?.streamReadConstraints ?: myStreamReadConstraints)
+                baseParser?.streamReadConstraints() ?: myStreamReadConstraints)
 
         if (baseParser != null) {
             parser.myLocation = baseParser.currentTokenLocation()
@@ -486,7 +486,7 @@ open class TokenBuffer : CirJsonGenerator {
 
             if (token == CirJsonToken.PROPERTY_NAME) {
                 stringBuilder.append('(')
-                stringBuilder.append(parser.currentName)
+                stringBuilder.append(parser.currentName())
                 stringBuilder.append(')')
             }
 
@@ -939,7 +939,7 @@ open class TokenBuffer : CirJsonGenerator {
             }
 
             CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                writeName(parser.currentName!!)
+                writeName(parser.currentName()!!)
             }
 
             CirJsonToken.VALUE_STRING -> {
@@ -993,7 +993,7 @@ open class TokenBuffer : CirJsonGenerator {
                 checkNativeIds(parser)
             }
 
-            writeName(parser.currentName!!)
+            writeName(parser.currentName()!!)
             token = parser.nextToken() ?: throw UnexpectedEndOfInputException(parser, null, "Unexpected end-of-input")
         }
 
@@ -1041,7 +1041,7 @@ open class TokenBuffer : CirJsonGenerator {
                         checkNativeIds(parser)
                     }
 
-                    writeName(parser.currentName!!)
+                    writeName(parser.currentName()!!)
                 }
 
                 CirJsonToken.START_ARRAY -> {
@@ -1258,7 +1258,7 @@ open class TokenBuffer : CirJsonGenerator {
 
     protected class Parser(objectReadContext: ObjectReadContext, var mySource: TokenBuffer, firstSegment: Segment,
             val myHasNativeTypeIds: Boolean, val myHasNativeObjectIds: Boolean, parentContext: TokenStreamContext?,
-            override val streamReadConstraints: StreamReadConstraints) : ParserMinimalBase(objectReadContext) {
+            val myReadConstraints: StreamReadConstraints) : ParserMinimalBase(objectReadContext) {
 
         /*
          ***************************************************************************************************************
@@ -1305,12 +1305,13 @@ open class TokenBuffer : CirJsonGenerator {
             return PackageVersion.VERSION
         }
 
-        override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
-            get() = DEFAULT_READ_CAPABILITIES
+        override fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability> = DEFAULT_READ_CAPABILITIES
 
         override fun streamReadInputSource(): TokenBuffer {
             return mySource
         }
+
+        override fun streamReadConstraints(): StreamReadConstraints = myReadConstraints
 
         /*
          ***************************************************************************************************************
@@ -1414,7 +1415,7 @@ open class TokenBuffer : CirJsonGenerator {
                     nextType != CirJsonToken.CIRJSON_ID_PROPERTY_NAME && nextType != CirJsonToken.PROPERTY_NAME) {
                 val next = nextToken()
                 return if (next == CirJsonToken.CIRJSON_ID_PROPERTY_NAME || next == CirJsonToken.PROPERTY_NAME) {
-                    currentName
+                    currentName()
                 } else {
                     null
                 }
@@ -1458,8 +1459,7 @@ open class TokenBuffer : CirJsonGenerator {
          ***************************************************************************************************************
          */
 
-        override val streamReadContext: TokenStreamContext
-            get() = myParsingContext
+        override fun streamReadContext(): TokenStreamContext = myParsingContext
 
         override fun assignCurrentValue(value: Any?) {
             myParsingContext.assignCurrentValue(value)
@@ -1477,15 +1477,14 @@ open class TokenBuffer : CirJsonGenerator {
             return myLocation ?: CirJsonLocation.NA
         }
 
-        override val currentName: String?
-            get() {
-                if (myCurrentToken == CirJsonToken.START_OBJECT || myCurrentToken == CirJsonToken.START_ARRAY) {
-                    val parent = myParsingContext.parent!!
-                    return parent.currentName
-                }
-
-                return myParsingContext.currentName
+        override fun currentName(): String? {
+            if (myCurrentToken == CirJsonToken.START_OBJECT || myCurrentToken == CirJsonToken.START_ARRAY) {
+                val parent = myParsingContext.parent!!
+                return parent.currentName
             }
+
+            return myParsingContext.currentName
+        }
 
         /*
          ***************************************************************************************************************
@@ -1584,7 +1583,7 @@ open class TokenBuffer : CirJsonGenerator {
                 }
 
                 is BigDecimal -> {
-                    streamReadConstraints.validateBigIntegerScale(number.scale())
+                    streamReadConstraints().validateBigIntegerScale(number.scale())
                     number.toBigInteger()
                 }
 

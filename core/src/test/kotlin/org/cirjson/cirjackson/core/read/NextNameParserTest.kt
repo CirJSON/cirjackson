@@ -23,13 +23,13 @@ class NextNameParserTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("data", parser.currentName)
+        assertEquals("data", parser.currentName())
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-        assertEquals("primary", parser.currentName)
+        assertEquals("primary", parser.currentName())
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
         assertEquals(-15, parser.intValue)
 

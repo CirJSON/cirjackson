@@ -39,9 +39,9 @@ class DelegatesTest : TestBase() {
         }
 
         assertEquals(parser.version(), delegate.version())
-        assertSame(parser.streamReadConstraints, delegate.streamReadConstraints)
-        assertEquals(MAX_NUMBER_LENGTH, parser.streamReadConstraints.maxNumberLength)
-        assertSame(parser.streamReadCapabilities, delegate.streamReadCapabilities)
+        assertSame(parser.streamReadConstraints(), delegate.streamReadConstraints())
+        assertEquals(MAX_NUMBER_LENGTH, parser.streamReadConstraints().maxNumberLength)
+        assertSame(parser.streamReadCapabilities(), delegate.streamReadCapabilities())
 
         assertFalse(delegate.isEnabled(StreamReadFeature.IGNORE_UNDEFINED))
         assertSame(parser, delegate.delegate)
@@ -51,7 +51,7 @@ class DelegatesTest : TestBase() {
         assertFalse(delegate.isCurrentTokenNotNull)
         assertFalse(delegate.isTextCharactersAvailable)
         assertNull(delegate.currentValue())
-        assertNull(delegate.currentName)
+        assertNull(delegate.currentName())
 
         assertToken(CirJsonToken.START_ARRAY, delegate.nextToken())
         assertEquals(CirJsonTokenId.ID_START_ARRAY, delegate.currentTokenId())
@@ -63,8 +63,8 @@ class DelegatesTest : TestBase() {
         assertFalse(delegate.isExpectedStartObjectToken)
         assertFalse(delegate.isExpectedNumberIntToken)
         assertEquals("[", delegate.text)
-        assertNotNull(delegate.streamReadContext)
-        assertSame(parser.streamReadContext, delegate.streamReadContext)
+        assertNotNull(delegate.streamReadContext())
+        assertSame(parser.streamReadContext(), delegate.streamReadContext())
 
         assertToken(CirJsonToken.VALUE_STRING, delegate.nextToken())
 
@@ -106,11 +106,11 @@ class DelegatesTest : TestBase() {
         assertNull(delegate.currentValue())
 
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, delegate.nextToken())
-        assertEquals("__cirJsonId__", delegate.currentName)
+        assertEquals("__cirJsonId__", delegate.currentName())
         assertToken(CirJsonToken.VALUE_STRING, delegate.nextToken())
 
         assertToken(CirJsonToken.PROPERTY_NAME, delegate.nextToken())
-        assertEquals("a", delegate.currentName)
+        assertEquals("a", delegate.currentName())
 
         assertToken(CirJsonToken.VALUE_STRING, delegate.nextToken())
         assertTrue(delegate.isTextCharactersAvailable)

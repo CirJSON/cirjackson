@@ -78,7 +78,7 @@ open class NonBlockingByteBufferCirJsonParser(objectReadContext: ObjectReadConte
 
         myCurrentInputProcessed += myOriginalBufferLen
 
-        streamReadConstraints.validateDocumentLength(myCurrentInputProcessed)
+        streamReadConstraints().validateDocumentLength(myCurrentInputProcessed)
 
         myCurrentInputRowStart = start - (myInputEnd - myCurrentInputRowStart)
 

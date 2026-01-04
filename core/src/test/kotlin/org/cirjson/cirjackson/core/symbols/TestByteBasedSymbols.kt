@@ -53,8 +53,8 @@ class TestByteBasedSymbols : TestBase() {
             for (i in 0..<length) {
                 assertToken(CirJsonToken.PROPERTY_NAME, parser1.nextToken())
                 assertToken(CirJsonToken.PROPERTY_NAME, parser2.nextToken())
-                assertEquals(PROPERTY_NAMES[i], parser1.currentName)
-                assertEquals(PROPERTY_NAMES[length - i - 1], parser2.currentName)
+                assertEquals(PROPERTY_NAMES[i], parser1.currentName())
+                assertEquals(PROPERTY_NAMES[length - i - 1], parser2.currentName())
                 assertToken(CirJsonToken.VALUE_NUMBER_INT, parser1.nextToken())
                 assertToken(CirJsonToken.VALUE_NUMBER_INT, parser2.nextToken())
                 assertEquals(i, parser1.intValue)

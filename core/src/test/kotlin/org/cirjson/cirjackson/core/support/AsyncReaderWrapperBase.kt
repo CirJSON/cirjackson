@@ -36,10 +36,10 @@ abstract class AsyncReaderWrapperBase(val parser: CirJsonParser) : AutoCloseable
     abstract fun nextToken(): CirJsonToken?
 
     val currentName
-        get() = parser.currentName
+        get() = parser.currentName()
 
     val parsingContext
-        get() = parser.streamReadContext
+        get() = parser.streamReadContext()
 
     val intValue
         get() = parser.intValue

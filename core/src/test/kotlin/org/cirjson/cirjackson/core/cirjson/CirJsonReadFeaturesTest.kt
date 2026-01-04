@@ -20,10 +20,10 @@ class CirJsonReadFeaturesTest : TestBase() {
 
             assertFalse(parser.isReadingTypeIdPossible)
 
-            assertFalse(parser.streamReadCapabilities.isEnabled(StreamReadCapability.DUPLICATE_PROPERTIES))
-            assertFalse(parser.streamReadCapabilities.isEnabled(StreamReadCapability.SCALARS_AS_OBJECTS))
-            assertFalse(parser.streamReadCapabilities.isEnabled(StreamReadCapability.UNTYPED_SCALARS))
-            assertFalse(parser.streamReadCapabilities.isEnabled(StreamReadCapability.EXACT_FLOATS))
+            assertFalse(parser.streamReadCapabilities().isEnabled(StreamReadCapability.DUPLICATE_PROPERTIES))
+            assertFalse(parser.streamReadCapabilities().isEnabled(StreamReadCapability.SCALARS_AS_OBJECTS))
+            assertFalse(parser.streamReadCapabilities().isEnabled(StreamReadCapability.UNTYPED_SCALARS))
+            assertFalse(parser.streamReadCapabilities().isEnabled(StreamReadCapability.EXACT_FLOATS))
 
             assertFalse((parser as CirJsonParserBase).isEnabled(CirJsonReadFeature.ALLOW_JAVA_COMMENTS))
             assertFalse(parser.isEnabled(CirJsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS))
@@ -94,7 +94,7 @@ class CirJsonReadFeaturesTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
         assertEquals(name, parser.text)
-        assertEquals(name, parser.currentName)
+        assertEquals(name, parser.currentName())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals(value, parser.text)
         parser.close()

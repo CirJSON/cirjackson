@@ -83,7 +83,7 @@ class Base64BinaryParsingTest : TestBase() {
             assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-            assertEquals("b", parser.currentName)
+            assertEquals("b", parser.currentName())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
             val result = ByteArrayOutputStream(size)
             val gotten = parser.readBinaryValue(result)
@@ -197,7 +197,7 @@ class Base64BinaryParsingTest : TestBase() {
         var parser = createParser(factory, mode, doc)
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         var bytes = parser.binaryValue
-        assertEquals("Test!", String(bytes, Charsets.US_ASCII))
+        assertEquals("Test!", String(bytes!!, Charsets.US_ASCII))
 
         if (mode in ALL_ASYNC_PARSER_MODES) {
             assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
@@ -211,7 +211,7 @@ class Base64BinaryParsingTest : TestBase() {
         parser = createParser(factory, mode, doc)
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         bytes = parser.binaryValue
-        assertEquals("Test!", String(bytes, Charsets.US_ASCII))
+        assertEquals("Test!", String(bytes!!, Charsets.US_ASCII))
 
         if (mode in ALL_ASYNC_PARSER_MODES) {
             assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
@@ -234,7 +234,7 @@ class Base64BinaryParsingTest : TestBase() {
 
         var parser = createParser(factory, mode, doc)
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
-        assertEquals("Test!", String(parser.binaryValue, Charsets.US_ASCII))
+        assertEquals("Test!", String(parser.binaryValue!!, Charsets.US_ASCII))
 
         if (mode in ALL_ASYNC_PARSER_MODES) {
             assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())
@@ -260,7 +260,7 @@ class Base64BinaryParsingTest : TestBase() {
 
         parser = createParser(factory, mode, doc)
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
-        assertEquals("X", String(parser.binaryValue, Charsets.US_ASCII))
+        assertEquals("X", String(parser.binaryValue!!, Charsets.US_ASCII))
 
         if (mode in ALL_ASYNC_PARSER_MODES) {
             assertToken(CirJsonToken.NOT_AVAILABLE, parser.nextToken())

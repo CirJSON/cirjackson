@@ -159,7 +159,7 @@ class GeneratorMiscTest : TestBase() {
                         "__$i$letter"
                     }
 
-                    assertEquals(name, parser.currentName)
+                    assertEquals(name, parser.currentName())
                     assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
                     assertEquals(i - 1, parser.intValue)
                 }

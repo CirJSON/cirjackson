@@ -19,13 +19,15 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
     override val idName: String = ID_NAME
 
-    override var streamReadContext: CirJsonReadContext? = CirJsonReadContext.createRootContext(
+    /**
+     * Information about parser context, context in which the next token is to be parsed (root, array, object).
+     */
+    protected var myStreamReadContext = CirJsonReadContext.createRootContext(
             if (StreamReadFeature.STRICT_DUPLICATE_DETECTION.isEnabledIn(streamReadFeatures)) {
                 DuplicateDetector.rootDetector(this)
             } else {
                 null
             })
-        protected set
 
     /**
      * Secondary token related to the next token after current one; used if its type is known. This may be value token
@@ -55,8 +57,7 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
         return PackageVersion.VERSION
     }
 
-    override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
-        get() = DEFAULT_READ_CAPABILITIES
+    override fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability> = DEFAULT_READ_CAPABILITIES
 
     /*
      *******************************************************************************************************************
@@ -64,23 +65,26 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
      *******************************************************************************************************************
      */
 
+    override fun streamReadContext(): TokenStreamContext {
+        return myStreamReadContext
+    }
+
     override fun currentValue(): Any? {
-        return streamReadContext!!.currentValue()
+        return myStreamReadContext.currentValue()
     }
 
     override fun assignCurrentValue(value: Any?) {
-        streamReadContext!!.assignCurrentValue(value)
+        myStreamReadContext.assignCurrentValue(value)
     }
 
-    override val currentName: String?
-        get() {
-            if (myCurrentToken != CirJsonToken.START_OBJECT && myCurrentToken != CirJsonToken.START_ARRAY) {
-                return streamReadContext!!.currentName
-            }
-
-            val parent = streamReadContext!!.parent ?: return streamReadContext!!.currentName
-            return parent.currentName
+    override fun currentName(): String? {
+        if (myCurrentToken != CirJsonToken.START_OBJECT && myCurrentToken != CirJsonToken.START_ARRAY) {
+            return myStreamReadContext.currentName
         }
+
+        val parent = myStreamReadContext.parent ?: return myStreamReadContext.currentName
+        return parent.currentName
+    }
 
     override val isTextCharactersAvailable: Boolean
         get() = when (myCurrentToken) {
@@ -97,14 +101,14 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
     @Throws(CirJacksonException::class)
     protected fun createChildArrayContext(lineNumber: Int, columnNumber: Int) {
-        streamReadContext = streamReadContext!!.createChildArrayContext(lineNumber, columnNumber)
-        streamReadConstraints.validateNestingDepth(streamReadContext!!.nestingDepth)
+        myStreamReadContext = myStreamReadContext.createChildArrayContext(lineNumber, columnNumber)
+        streamReadConstraints().validateNestingDepth(myStreamReadContext.nestingDepth)
     }
 
     @Throws(CirJacksonException::class)
     protected fun createChildObjectContext(lineNumber: Int, columnNumber: Int) {
-        streamReadContext = streamReadContext!!.createChildObjectContext(lineNumber, columnNumber)
-        streamReadConstraints.validateNestingDepth(streamReadContext!!.nestingDepth)
+        myStreamReadContext = myStreamReadContext.createChildObjectContext(lineNumber, columnNumber)
+        streamReadConstraints().validateNestingDepth(myStreamReadContext.nestingDepth)
     }
 
     /*
@@ -258,7 +262,7 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
             return myNameCopyBuffer
         }
 
-        val name = streamReadContext!!.currentName!!
+        val name = myStreamReadContext.currentName!!
         val nameLength = name.length
 
         if (myNameCopyBuffer.size < nameLength) {
@@ -278,10 +282,10 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
     @Throws(CirJacksonException::class)
     protected fun reportTooLongIntegral(numericType: Int, rawNumber: String) {
-        if (numericType == NUMBER_INT) {
-            return reportOverflowInt(rawNumber)
+        return if (numericType == NUMBER_INT) {
+            reportOverflowInt(rawNumber)
         } else {
-            return reportOverflowLong(rawNumber)
+            reportOverflowLong(rawNumber)
         }
     }
 
@@ -300,9 +304,9 @@ abstract class CirJsonParserBase(objectReadContext: ObjectReadContext, ioContext
 
     @Throws(StreamReadException::class)
     protected fun reportMismatchedEndMarker(actualChar: Char, expectedChar: Char) {
-        val context = streamReadContext
+        val context = myStreamReadContext
         val message = "Unexpected close marker '$actualChar': expected '$expectedChar' (for ${
-            context!!.typeDescription
+            context.typeDescription
         } starting at ${context.startLocation(contentReference())})"
         throw constructReadException(message, currentLocationMinusOne())
     }

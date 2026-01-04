@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.core
 
+import org.cirjson.cirjackson.core.CirJsonPointer.Companion.compile
 import org.cirjson.cirjackson.core.io.NumberInput
 
 /**
@@ -469,7 +470,7 @@ class CirJsonPointer private constructor(private val myAsString: String, private
                 pathBuilder.append(SEPARATOR)
 
                 if (next.property != null) {
-                    appendEscaped(pathBuilder, next.property!!)
+                    appendEscaped(pathBuilder, next.property)
                 } else {
                     pathBuilder.append(next.index)
                 }
@@ -493,7 +494,7 @@ class CirJsonPointer private constructor(private val myAsString: String, private
 
             while (currentSegment != null) {
                 if (currentSegment.property != null) {
-                    currentPointer = CirJsonPointer(fullPath, currentSegment.pathOffset, currentSegment.property!!,
+                    currentPointer = CirJsonPointer(fullPath, currentSegment.pathOffset, currentSegment.property,
                             currentPointer)
                 } else {
                     val index = currentSegment.index

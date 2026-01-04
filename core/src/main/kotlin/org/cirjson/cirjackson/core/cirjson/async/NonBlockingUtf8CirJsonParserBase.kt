@@ -446,7 +446,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 CODE_SLASH -> startSlashComment(MINOR_PROPERTY_LEADING_COMMA)
 
                 else -> reportUnexpectedChar(ch.toChar(),
-                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+                        "was expecting comma to separate ${myStreamReadContext.typeDescription} entries")
             }
         }
 
@@ -550,14 +550,20 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         }
 
         updateTokenLocation()
-        streamReadContext!!.isExpectingComma
+        myStreamReadContext.isExpectingComma
 
-        return if (ch == CODE_QUOTE) {
-            startString()
-        } else if (ch == CODE_APOSTROPHE && formatReadFeatures and FEAT_MASK_ALLOW_SINGLE_QUOTES != 0) {
-            startApostropheString()
-        } else {
-            reportUnexpectedChar(ch.toChar(), "was expecting array's ID")
+        return when (ch) {
+            CODE_QUOTE -> {
+                startString()
+            }
+
+            CODE_APOSTROPHE if formatReadFeatures and FEAT_MASK_ALLOW_SINGLE_QUOTES != 0 -> {
+                startApostropheString()
+            }
+
+            else -> {
+                reportUnexpectedChar(ch.toChar(), "was expecting array's ID")
+            }
         }
     }
 
@@ -580,7 +586,7 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
         updateTokenLocation()
 
-        streamReadContext!!.isExpectingComma
+        myStreamReadContext.isExpectingComma
 
         if (ch == CODE_QUOTE) {
             return startString()
@@ -650,11 +656,11 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
                 CODE_HASH -> finishHashComment(MINOR_VALUE_EXPECTING_COMMA)
 
                 else -> reportUnexpectedChar(ch.toChar(),
-                        "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+                        "was expecting comma to separate ${myStreamReadContext.typeDescription} entries")
             }
         }
 
-        streamReadContext!!.isExpectingComma
+        myStreamReadContext.isExpectingComma
 
         val pointer = myInputPointer
 
@@ -890,8 +896,8 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
 
     @Throws(CirJacksonException::class)
     protected open fun startUnexpectedValue(code: Int, leadingComma: Boolean): CirJsonToken? {
-        if (code == CODE_R_BRACKET && streamReadContext!!.isInArray || code == CODE_COMMA) {
-            if (!streamReadContext!!.isInRoot) {
+        if (code == CODE_R_BRACKET && myStreamReadContext.isInArray || code == CODE_COMMA) {
+            if (!myStreamReadContext.isInRoot) {
                 if (formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
                     --myInputPointer
                     return valueComplete(CirJsonToken.VALUE_NULL)
@@ -1375,16 +1381,23 @@ abstract class NonBlockingUtf8CirJsonParserBase(objectReadContext: ObjectReadCon
         var ch = nextUnsignedByteFromBuffer
 
         if (ch <= CODE_0) {
-            return if (ch == CODE_0) {
-                finishNumberLeadingNegZero()
-            } else if (ch == CODE_PERIOD && isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS)) {
-                val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
-                outputBuffer[0] = '-'
-                outputBuffer[1] = '0'
-                myIntegralLength = 1
-                startFloat(outputBuffer, 2, ch)
-            } else {
-                reportUnexpectedChar(ch.toChar(), "expected digit (0-9) to follow minus sign, for valid numeric value")
+            return when (ch) {
+                CODE_0 -> {
+                    finishNumberLeadingNegZero()
+                }
+
+                CODE_PERIOD if isEnabled(CirJsonReadFeature.ALLOW_LEADING_DECIMAL_POINT_FOR_NUMBERS) -> {
+                    val outputBuffer = myTextBuffer.emptyAndGetCurrentSegment()
+                    outputBuffer[0] = '-'
+                    outputBuffer[1] = '0'
+                    myIntegralLength = 1
+                    startFloat(outputBuffer, 2, ch)
+                }
+
+                else -> {
+                    reportUnexpectedChar(ch.toChar(),
+                            "expected digit (0-9) to follow minus sign, for valid numeric value")
+                }
             }
         } else if (ch > CODE_9) {
             return if (ch == 'I'.code) {

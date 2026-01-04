@@ -83,7 +83,7 @@ open class AsPropertyTypeDeserializer : AsArrayTypeDeserializer {
         val ignoreCase = context.isEnabled(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
 
         while (token == CirJsonToken.PROPERTY_NAME) {
-            val name = parser.currentName!!
+            val name = parser.currentName()!!
             parser.nextToken()
 
             if (name == myTypePropertyName || ignoreCase && name.equals(myTypePropertyName, true)) {
@@ -120,7 +120,7 @@ open class AsPropertyTypeDeserializer : AsArrayTypeDeserializer {
                 realTokenBuffer = context.bufferForInputBuffering(realParser)
             }
 
-            realTokenBuffer.writeName(realParser.currentName!!)
+            realTokenBuffer.writeName(realParser.currentName()!!)
             realTokenBuffer.writeString(typeId)
         }
 

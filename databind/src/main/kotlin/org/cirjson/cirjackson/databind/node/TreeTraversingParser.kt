@@ -53,8 +53,7 @@ open class TreeTraversingParser(protected val mySource: CirJsonNode, readContext
         return PackageVersion.VERSION
     }
 
-    override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
-        get() = DEFAULT_READ_CAPABILITIES
+    override fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability> = DEFAULT_READ_CAPABILITIES
 
     override fun streamReadInputSource(): CirJsonNode {
         return mySource
@@ -141,19 +140,17 @@ open class TreeTraversingParser(protected val mySource: CirJsonNode, readContext
      *******************************************************************************************************************
      */
 
-    override val currentName: String?
-        get() {
-            var cursor = myNodeCursor
+    override fun currentName(): String? {
+        var cursor = myNodeCursor
 
-            if (myCurrentToken == CirJsonToken.START_OBJECT || myCurrentToken == CirJsonToken.START_ARRAY) {
-                cursor = cursor!!.parent
-            }
-
-            return cursor?.currentName
+        if (myCurrentToken == CirJsonToken.START_OBJECT || myCurrentToken == CirJsonToken.START_ARRAY) {
+            cursor = cursor!!.parent
         }
 
-    override val streamReadContext: TokenStreamContext?
-        get() = myNodeCursor
+        return cursor?.currentName
+    }
+
+    override fun streamReadContext(): TokenStreamContext? = myNodeCursor
 
     override fun assignCurrentValue(value: Any?) {
         myNodeCursor!!.assignCurrentValue(value)

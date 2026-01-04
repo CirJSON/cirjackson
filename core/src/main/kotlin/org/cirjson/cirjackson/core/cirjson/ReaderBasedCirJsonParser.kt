@@ -227,7 +227,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         val bufferSize = myInputEnd
         myCurrentInputProcessed += bufferSize
         myCurrentInputRowStart -= bufferSize
-        streamReadConstraints.validateDocumentLength(myCurrentInputProcessed)
+        streamReadConstraints().validateDocumentLength(myCurrentInputProcessed)
 
         myInputPointer = 0
 
@@ -283,7 +283,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
                 }
 
                 CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                    val name = streamReadContext!!.currentName!!
+                    val name = myStreamReadContext.currentName!!
                     writer.write(name)
                     name.length
                 }
@@ -316,7 +316,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
 
             CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                currentName
+                currentName()
             }
 
             else -> {
@@ -337,7 +337,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
 
             CirJsonToken.CIRJSON_ID_PROPERTY_NAME, CirJsonToken.PROPERTY_NAME -> {
-                currentName
+                currentName()
             }
 
             else -> {
@@ -352,7 +352,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         return when (token.id) {
             CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
-                streamReadContext!!.currentName
+                myStreamReadContext.currentName
             }
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
@@ -396,7 +396,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             null -> 0
 
             CirJsonTokenId.ID_PROPERTY_NAME, CirJsonTokenId.ID_CIRJSON_ID_PROPERTY_NAME -> {
-                streamReadContext!!.currentName!!.length
+                myStreamReadContext.currentName!!.length
             }
 
             CirJsonTokenId.ID_STRING, CirJsonTokenId.ID_NUMBER_INT, CirJsonTokenId.ID_NUMBER_FLOAT -> {
@@ -678,7 +678,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             return myCurrentToken
         }
 
-        if (streamReadContext!!.isExpectingComma) {
+        if (myStreamReadContext.isExpectingComma) {
             i = skipComma(i)
 
             if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
@@ -689,12 +689,12 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
         }
 
-        val isInObject = streamReadContext!!.isInObject
+        val isInObject = myStreamReadContext.isInObject
 
         if (isInObject) {
             updateNameLocation()
             val name = if (i == CODE_QUOTE) parseName() else handleOddName(i)
-            streamReadContext!!.currentName = name
+            myStreamReadContext.currentName = name
             myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
                 if (name != idName) {
                     return reportInvalidToken(name!!, "Expected property name '$idName', received '$name'")
@@ -841,7 +841,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             return false
         }
 
-        if (streamReadContext!!.isExpectingComma) {
+        if (myStreamReadContext.isExpectingComma) {
             i = skipComma(i)
 
             if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
@@ -852,7 +852,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
         }
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             updateLocation()
             nextTokenNotInObject(i)
             return false
@@ -873,7 +873,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
                     while (true) {
                         if (pointer == end) {
-                            streamReadContext!!.currentName = string.value
+                            myStreamReadContext.currentName = string.value
                             isNextTokenNameYes(skipColonFast(pointer + 1))
                             return true
                         }
@@ -917,7 +917,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             return null
         }
 
-        if (streamReadContext!!.isExpectingComma) {
+        if (myStreamReadContext.isExpectingComma) {
             i = skipComma(i)
 
             if (formatReadFeatures and FEAT_MASK_TRAILING_COMMA != 0) {
@@ -928,7 +928,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
         }
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             updateLocation()
             nextTokenNotInObject(i)
             return null
@@ -936,7 +936,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         updateNameLocation()
         val name = if (i == CODE_QUOTE) parseName() else handleOddName(i)
-        streamReadContext!!.currentName = name
+        myStreamReadContext.currentName = name
         myCurrentToken = CirJsonToken.PROPERTY_NAME
         i = skipColon()
         updateLocation()
@@ -1065,7 +1065,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
     protected fun isNextTokenNameMaybe(i: Int, nameToMatch: String): Boolean {
         var i = i
         val name = if (i == CODE_QUOTE) parseName() else handleOddName(i)
-        streamReadContext!!.currentName = name
+        myStreamReadContext.currentName = name
         myCurrentToken = if (myCurrentToken == CirJsonToken.START_OBJECT) {
             if (name != idName) {
                 return reportInvalidToken(name!!, "Expected property name '$idName', received '$name'")
@@ -1183,7 +1183,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
 
             ','.code -> {
-                if (!streamReadContext!!.isInRoot && formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
+                if (!myStreamReadContext.isInRoot && formatReadFeatures and FEAT_MASK_ALLOW_MISSING != 0) {
                     --myInputPointer
                     CirJsonToken.VALUE_NULL.also { myCurrentToken = it }
                 } else {
@@ -1381,7 +1381,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         --pointer
         myInputPointer = pointer
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace(ch)
         }
 
@@ -1458,7 +1458,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         myInputPointer = --pointer
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace(ch)
         }
 
@@ -1517,7 +1517,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         --pointer
         myInputPointer = pointer
 
-        if (streamReadContext!!.isInRoot) {
+        if (myStreamReadContext.isInRoot) {
             verifyRootSpace(ch)
         }
 
@@ -1689,7 +1689,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         if (!eof) {
             --myInputPointer
 
-            if (streamReadContext!!.isInRoot) {
+            if (myStreamReadContext.isInRoot) {
                 verifyRootSpace(c.code)
             }
         }
@@ -2051,9 +2051,9 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
 
             CODE_R_BRACKET, CODE_COMMA -> {
-                if (i == CODE_COMMA || streamReadContext!!.isInArray) {
-                    if (!streamReadContext!!.isInRoot) {
-                        if (streamReadContext!!.isInArray && streamReadContext!!.currentIndex == 0) {
+                if (i == CODE_COMMA || myStreamReadContext.isInArray) {
+                    if (!myStreamReadContext.isInRoot) {
+                        if (myStreamReadContext.isInArray && myStreamReadContext.currentIndex == 0) {
                             return reportUnexpectedChar(i.toChar(), "expected VALUE_STRING")
                         }
 
@@ -2448,7 +2448,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
             }
         }
 
-        return reportInvalidEOF("within/between ${streamReadContext!!.typeDescription} entries", null)
+        return reportInvalidEOF("within/between ${myStreamReadContext.typeDescription} entries", null)
     }
 
     @Throws(CirJacksonException::class)
@@ -2516,7 +2516,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         if (i != CODE_COMMA) {
             return reportUnexpectedChar(i.toChar(),
-                    "was expecting comma to separate ${streamReadContext!!.typeDescription} entries")
+                    "was expecting comma to separate ${myStreamReadContext.typeDescription} entries")
         }
 
         while (myInputPointer < myInputEnd) {
@@ -2579,7 +2579,7 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         }
 
         throw constructReadException(
-                "Unexpected end-of-input within/between ${streamReadContext!!.typeDescription} entries")
+                "Unexpected end-of-input within/between ${myStreamReadContext.typeDescription} entries")
     }
 
     @Throws(CirJacksonException::class)
@@ -3162,11 +3162,11 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
         if (i == CODE_R_BRACKET) {
             updateLocation()
 
-            if (!streamReadContext!!.isInArray) {
+            if (!myStreamReadContext.isInArray) {
                 reportMismatchedEndMarker(i.toChar(), '}')
             }
 
-            streamReadContext = streamReadContext!!.clearAndGetParent()
+            myStreamReadContext = myStreamReadContext.clearAndGetParent()!!
             myCurrentToken = CirJsonToken.END_ARRAY
         }
 
@@ -3176,11 +3176,11 @@ open class ReaderBasedCirJsonParser : CirJsonParserBase {
 
         updateLocation()
 
-        if (!streamReadContext!!.isInObject) {
+        if (!myStreamReadContext.isInObject) {
             reportMismatchedEndMarker(i.toChar(), ']')
         }
 
-        streamReadContext = streamReadContext!!.clearAndGetParent()
+        myStreamReadContext = myStreamReadContext.clearAndGetParent()!!
         myCurrentToken = CirJsonToken.END_OBJECT
     }
 

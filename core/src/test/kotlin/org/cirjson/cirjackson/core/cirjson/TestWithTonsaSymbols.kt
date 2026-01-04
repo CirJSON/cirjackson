@@ -26,7 +26,7 @@ class TestWithTonsaSymbols : TestBase() {
 
             for (i in 0..<PROP_COUNT) {
                 assertToken(CirJsonToken.PROPERTY_NAME, parser.nextToken())
-                assertEquals(fieldNameFor(i), parser.currentName)
+                assertEquals(fieldNameFor(i), parser.currentName())
                 assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.nextToken())
                 assertEquals(i, parser.intValue)
             }

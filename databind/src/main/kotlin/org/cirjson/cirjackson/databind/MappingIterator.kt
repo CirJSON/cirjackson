@@ -65,7 +65,7 @@ open class MappingIterator<T : Any> protected constructor(protected val myType: 
             mySequenceContext = null
             myState = STATE_CLOSED
         } else {
-            var sequenceContext = myParser.streamReadContext
+            var sequenceContext = myParser.streamReadContext()
 
             if (managedParser && myParser.isExpectedStartArrayToken) {
                 myParser.clearCurrentToken()
@@ -277,7 +277,7 @@ open class MappingIterator<T : Any> protected constructor(protected val myType: 
     protected open fun resync() {
         val parser = myParser!!
 
-        if (parser.streamReadContext === mySequenceContext) {
+        if (parser.streamReadContext() === mySequenceContext) {
             return
         }
 
@@ -285,7 +285,7 @@ open class MappingIterator<T : Any> protected constructor(protected val myType: 
             val token = parser.nextToken()
 
             if (token == CirJsonToken.END_ARRAY || token == CirJsonToken.END_OBJECT) {
-                if (parser.streamReadContext === mySequenceContext) {
+                if (parser.streamReadContext() === mySequenceContext) {
                     return
                 }
             } else if (token == CirJsonToken.START_ARRAY || token == CirJsonToken.START_OBJECT) {

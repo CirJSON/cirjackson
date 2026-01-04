@@ -28,11 +28,9 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
         return delegate.version()
     }
 
-    override val streamReadContext: TokenStreamContext?
-        get() = delegate.streamReadContext
+    override fun streamReadContext(): TokenStreamContext? = delegate.streamReadContext()
 
-    override val objectReadContext: ObjectReadContext
-        get() = delegate.objectReadContext
+    override fun objectReadContext(): ObjectReadContext = delegate.objectReadContext()
 
     override fun currentTokenLocation(): CirJsonLocation {
         return delegate.currentTokenLocation()
@@ -64,8 +62,7 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
         return delegate.isEnabled(feature)
     }
 
-    override val streamReadFeatures: Int
-        get() = delegate.streamReadFeatures
+    override fun streamReadFeatures(): Int = delegate.streamReadFeatures()
 
     override val schema: FormatSchema?
         get() = delegate.schema
@@ -83,11 +80,10 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
         return delegate.nonBlockingInputFeeder()
     }
 
-    override val streamReadCapabilities: CirJacksonFeatureSet<StreamReadCapability>
-        get() = delegate.streamReadCapabilities
+    override fun streamReadCapabilities(): CirJacksonFeatureSet<StreamReadCapability> =
+            delegate.streamReadCapabilities()
 
-    override val streamReadConstraints: StreamReadConstraints
-        get() = delegate.streamReadConstraints
+    override fun streamReadConstraints(): StreamReadConstraints = delegate.streamReadConstraints()
 
     /*
      *******************************************************************************************************************
@@ -116,8 +112,7 @@ open class CirJsonParserDelegate(delegate: CirJsonParser) : CirJsonParser() {
         return delegate.currentTokenId()
     }
 
-    override val currentName: String?
-        get() = delegate.currentName
+    override fun currentName(): String? = delegate.currentName()
 
     override val isCurrentTokenNotNull: Boolean
         get() = delegate.isCurrentTokenNotNull

@@ -40,24 +40,24 @@ class NextNameWithMatcherTest : TestBase() {
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
         assertEquals(1, parser.nextNameMatch(matcher))
-        assertEquals(names[1], parser.currentName)
+        assertEquals(names[1], parser.currentName())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
         assertToken(CirJsonToken.VALUE_NUMBER_INT, parser.currentToken())
         assertEquals(4, parser.intValue)
 
         assertEquals(0, parser.nextNameMatch(matcher))
-        assertEquals(names[0], parser.currentName)
+        assertEquals(names[0], parser.currentName())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
         assertToken(CirJsonToken.VALUE_TRUE, parser.currentToken())
 
         assertEquals(2, parser.nextNameMatch(matcher))
-        assertEquals(names[2], parser.currentName)
+        assertEquals(names[2], parser.currentName())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
         assertToken(CirJsonToken.VALUE_STRING, parser.currentToken())
         assertEquals("Billy-Bob Burger", parser.text)
 
         assertEquals(PropertyNameMatcher.MATCH_UNKNOWN_NAME, parser.nextNameMatch(matcher))
-        assertEquals("extra", parser.currentName)
+        assertEquals("extra", parser.currentName())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
         assertToken(CirJsonToken.START_ARRAY, parser.currentToken())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
@@ -69,7 +69,7 @@ class NextNameWithMatcherTest : TestBase() {
         assertToken(CirJsonToken.END_ARRAY, parser.currentToken())
 
         assertEquals(3, parser.nextNameMatch(matcher))
-        assertEquals(names[3], parser.currentName)
+        assertEquals(names[3], parser.currentName())
         assertEquals(PropertyNameMatcher.MATCH_ODD_TOKEN, parser.nextNameMatch(matcher))
         assertToken(CirJsonToken.VALUE_NUMBER_FLOAT, parser.currentToken())
         assertEquals(0.25, parser.doubleValue)
