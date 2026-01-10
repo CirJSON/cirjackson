@@ -142,7 +142,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
-    open val generator: CirJsonGenerator?
+    open val generator: CirJsonGenerator
         get() = TODO("Not yet implemented")
 
     /*
