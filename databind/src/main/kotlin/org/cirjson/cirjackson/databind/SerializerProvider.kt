@@ -57,7 +57,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     override val isPrettyPrinterNotNull: Boolean
         get() = TODO("Not yet implemented")
 
-    override fun getRootValueSeparator(defaultSeparator: SerializableString): SerializableString {
+    override fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
         TODO("Not yet implemented")
     }
 

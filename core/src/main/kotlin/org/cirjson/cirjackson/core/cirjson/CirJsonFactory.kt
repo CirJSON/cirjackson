@@ -296,7 +296,7 @@ open class CirJsonFactory : TextualTSFactory {
 
     override fun createGenerator(writeContext: ObjectWriteContext, context: IOContext,
             writer: Writer): CirJsonGenerator {
-        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator!!)
+        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator)
         val characterEscapes = writeContext.characterEscapes ?: characterEscapes
 
         return WriterBasedCirJsonGenerator(writeContext, context,
@@ -307,7 +307,7 @@ open class CirJsonFactory : TextualTSFactory {
 
     override fun createUTF8Generator(writeContext: ObjectWriteContext, context: IOContext,
             output: OutputStream): CirJsonGenerator {
-        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator!!)
+        val rootStep = writeContext.getRootValueSeparator(myRootValueSeparator)
         val characterEscapes = writeContext.characterEscapes ?: characterEscapes
 
         return UTF8CirJsonGenerator(writeContext, context, writeContext.getStreamWriteFeatures(streamWriteFeatures),

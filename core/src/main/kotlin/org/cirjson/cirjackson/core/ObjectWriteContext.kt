@@ -40,7 +40,7 @@ interface ObjectWriteContext {
      */
     val isPrettyPrinterNotNull: Boolean
 
-    fun getRootValueSeparator(defaultSeparator: SerializableString): SerializableString
+    fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString?
 
     fun getStreamWriteFeatures(defaults: Int): Int
 
@@ -128,7 +128,7 @@ interface ObjectWriteContext {
         override val isPrettyPrinterNotNull: Boolean
             get() = prettyPrinter != null
 
-        override fun getRootValueSeparator(defaultSeparator: SerializableString): SerializableString {
+        override fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
             return defaultSeparator
         }
 
