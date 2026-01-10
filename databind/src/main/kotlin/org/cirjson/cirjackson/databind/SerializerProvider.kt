@@ -18,10 +18,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
-    final override val config: SerializationConfig
-
-    open var generator: CirJsonGenerator? = null
-        protected set
+    private val myConfig: SerializationConfig
 
     /*
      *******************************************************************************************************************
@@ -32,11 +29,11 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     protected constructor(streamFactory: TokenStreamFactory, config: SerializationConfig,
             generatorConfig: GeneratorSettings, factory: SerializerFactory,
             serializerCache: SerializerCache) : super() {
-        this.config = config
+        this.myConfig = config
     }
 
     protected constructor(source: SerializerProvider, serializerCache: SerializerCache) : super() {
-        config = source.config
+        myConfig = source.myConfig
     }
 
     /*
@@ -102,6 +99,9 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
+    final override val config: SerializationConfig
+        get() = TODO("Not yet implemented")
+
     final override val annotationIntrospector: AnnotationIntrospector?
         get() = TODO("Not yet implemented")
 
@@ -135,6 +135,15 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     fun isEnabled(feature: SerializationFeature): Boolean {
         TODO("Not yet implemented")
     }
+
+    /*
+     *******************************************************************************************************************
+     * Access to other helper objects
+     *******************************************************************************************************************
+     */
+
+    open val generator: CirJsonGenerator?
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************
