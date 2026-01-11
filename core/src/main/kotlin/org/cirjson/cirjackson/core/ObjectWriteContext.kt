@@ -38,7 +38,7 @@ interface ObjectWriteContext {
      * if requested, or not. This is useful for backends that have custom pretty-printing instead of relying on
      * CirJackson standard mechanism.
      */
-    val isPrettyPrinterNotNull: Boolean
+    fun hasPrettyPrinter(): Boolean
 
     fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString?
 
@@ -46,7 +46,7 @@ interface ObjectWriteContext {
 
     fun getFormatWriteFeatures(defaults: Int): Int
 
-    val tokenStreamFactory: TokenStreamFactory
+    fun tokenStreamFactory(): TokenStreamFactory
 
     /*
      *******************************************************************************************************************
@@ -56,17 +56,17 @@ interface ObjectWriteContext {
 
     @Throws(CirJacksonException::class)
     fun createGenerator(output: OutputStream): CirJsonGenerator {
-        return tokenStreamFactory.createGenerator(this, output)
+        return tokenStreamFactory().createGenerator(this, output)
     }
 
     @Throws(CirJacksonException::class)
     fun createGenerator(output: OutputStream, encoding: CirJsonEncoding): CirJsonGenerator {
-        return tokenStreamFactory.createGenerator(this, output, encoding)
+        return tokenStreamFactory().createGenerator(this, output, encoding)
     }
 
     @Throws(CirJacksonException::class)
     fun createGenerator(writer: Writer): CirJsonGenerator {
-        return tokenStreamFactory.createGenerator(this, writer)
+        return tokenStreamFactory().createGenerator(this, writer)
     }
 
     /*
@@ -125,8 +125,9 @@ interface ObjectWriteContext {
         override val prettyPrinter: PrettyPrinter?
             get() = null
 
-        override val isPrettyPrinterNotNull: Boolean
-            get() = prettyPrinter != null
+        override fun hasPrettyPrinter(): Boolean {
+            return prettyPrinter != null
+        }
 
         override fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
             return defaultSeparator
@@ -140,8 +141,7 @@ interface ObjectWriteContext {
             return defaults
         }
 
-        override val tokenStreamFactory: TokenStreamFactory
-            get() = reportUnsupportedOperation()
+        override fun tokenStreamFactory(): TokenStreamFactory = reportUnsupportedOperation()
 
         override fun createArrayNode(): ArrayTreeNode {
             return reportUnsupportedOperation()

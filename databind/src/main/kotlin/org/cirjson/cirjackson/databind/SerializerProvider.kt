@@ -178,8 +178,9 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
-    override val tokenStreamFactory: TokenStreamFactory
-        get() = TODO("Not yet implemented")
+    override fun tokenStreamFactory(): TokenStreamFactory {
+        TODO("Not yet implemented")
+    }
 
     override val schema: FormatSchema?
         get() = TODO("Not yet implemented")
@@ -190,8 +191,9 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     override val prettyPrinter: PrettyPrinter?
         get() = TODO("Not yet implemented")
 
-    override val isPrettyPrinterNotNull: Boolean
-        get() = TODO("Not yet implemented")
+    override fun hasPrettyPrinter(): Boolean {
+        TODO("Not yet implemented")
+    }
 
     override fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
         TODO("Not yet implemented")
