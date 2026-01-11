@@ -4,7 +4,7 @@ import org.cirjson.cirjackson.databind.ValueSerializer
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitable
 import kotlin.reflect.KClass
 
-abstract class StandardSerializer<T> : ValueSerializer<T>, CirJsonFormatVisitable {
+abstract class StandardSerializer<T : Any> : ValueSerializer<T>, CirJsonFormatVisitable {
 
     /*
      *******************************************************************************************************************

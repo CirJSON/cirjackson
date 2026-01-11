@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind.serialization
 
 import org.cirjson.cirjackson.core.util.Snapshottable
 import org.cirjson.cirjackson.databind.ValueSerializer
+import org.cirjson.cirjackson.databind.serialization.implementation.ReadOnlyClassToSerializerMap
 import org.cirjson.cirjackson.databind.util.LookupCache
 import org.cirjson.cirjackson.databind.util.TypeKey
 
@@ -13,6 +14,9 @@ class SerializerCache : Snapshottable<SerializerCache> {
     override fun snapshot(): SerializerCache {
         TODO("Not yet implemented")
     }
+
+    val readOnlyLookupMap: ReadOnlyClassToSerializerMap
+        get() = TODO("Not yet implemented")
 
     /*
      *******************************************************************************************************************

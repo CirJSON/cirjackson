@@ -189,6 +189,20 @@ abstract class ValueSerializer<T : Any> : CirJsonFormatVisitable {
     abstract fun serialize(value: T, generator: CirJsonGenerator, serializers: SerializerProvider)
 
     /**
+     * Method that can be called to ask implementation to serialize values of type this serializer handles.
+     *
+     * @param value Value to serialize; can be `null`.
+     *
+     * @param generator Generator used to output resulting CirJSON content
+     *
+     * @param serializers Provider that can be used to get serializers for serializing Objects value contains, if any.
+     */
+    @Throws(CirJacksonException::class)
+    open fun serializeNullable(value: T?, generator: CirJsonGenerator, serializers: SerializerProvider) {
+        throw UnsupportedOperationException()
+    }
+
+    /**
      * Method that can be called to ask implementation to serialize values of type this serializer handles, using
      * specified type serializer for embedding necessary type information.
      * 
