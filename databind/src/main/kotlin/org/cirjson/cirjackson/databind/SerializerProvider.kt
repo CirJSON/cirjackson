@@ -179,32 +179,42 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      */
 
     override fun tokenStreamFactory(): TokenStreamFactory {
-        TODO("Not yet implemented")
+        return myStreamFactory
     }
 
     override val schema: FormatSchema?
-        get() = TODO("Not yet implemented")
+        get() = myGeneratorConfig.mySchema
 
     override val characterEscapes: CharacterEscapes?
-        get() = TODO("Not yet implemented")
+        get() = myGeneratorConfig.myCharacterEscapes
 
     override val prettyPrinter: PrettyPrinter?
-        get() = TODO("Not yet implemented")
+        get() {
+            var prettyPrinter = myGeneratorConfig.myPrettyPrinter
+
+            if (prettyPrinter == null) {
+                if (isEnabled(SerializationFeature.INDENT_OUTPUT)) {
+                    prettyPrinter = myConfig.constructDefaultPrettyPrinter()
+                }
+            }
+
+            return prettyPrinter
+        }
 
     override fun hasPrettyPrinter(): Boolean {
-        TODO("Not yet implemented")
+        return myGeneratorConfig.hasPrettyPrinter() || isEnabled(SerializationFeature.INDENT_OUTPUT)
     }
 
     override fun getRootValueSeparator(defaultSeparator: SerializableString?): SerializableString? {
-        TODO("Not yet implemented")
+        return myGeneratorConfig.getRootValueSeparator(defaultSeparator)
     }
 
     override fun getStreamWriteFeatures(defaults: Int): Int {
-        TODO("Not yet implemented")
+        return myConfig.streamWriteFeatures
     }
 
     override fun getFormatWriteFeatures(defaults: Int): Int {
-        TODO("Not yet implemented")
+        return myConfig.formatWriteFeatures
     }
 
     /*
