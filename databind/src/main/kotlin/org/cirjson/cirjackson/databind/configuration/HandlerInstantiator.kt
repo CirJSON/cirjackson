@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.databind.cirjsontype.TypeIdResolver
 import org.cirjson.cirjackson.databind.cirjsontype.TypeResolverBuilder
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiator
 import org.cirjson.cirjackson.databind.introspection.Annotated
+import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
 import org.cirjson.cirjackson.databind.serialization.VirtualBeanPropertyWriter
 import org.cirjson.cirjackson.databind.util.Converter
 import kotlin.reflect.KClass
@@ -159,8 +160,8 @@ abstract class HandlerInstantiator {
      * Default implementation returns `null` to indicate that default instantiation (use zero-arg constructor of the
      * `filterClass`) should be used.
      */
-    open fun includeFilterInstance(config: MapperConfig<*>, annotated: Annotated,
-            implementationClass: KClass<*>): Any? {
+    open fun includeFilterInstance(config: MapperConfig<*>, forProperty: BeanPropertyDefinition?,
+            filterClass: KClass<*>): Any? {
         return null
     }
 

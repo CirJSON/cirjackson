@@ -112,7 +112,7 @@ interface ObjectWriteContext {
     fun writeValue(generator: CirJsonGenerator, value: Any?)
 
     @Throws(CirJacksonException::class)
-    fun writeTree(generator: CirJsonGenerator, value: TreeNode)
+    fun writeTree(generator: CirJsonGenerator, value: TreeNode?)
 
     open class Base : ObjectWriteContext {
 
@@ -155,7 +155,7 @@ interface ObjectWriteContext {
             return reportUnsupportedOperation()
         }
 
-        override fun writeTree(generator: CirJsonGenerator, value: TreeNode) {
+        override fun writeTree(generator: CirJsonGenerator, value: TreeNode?) {
             return reportUnsupportedOperation()
         }
 

@@ -523,7 +523,7 @@ class SerializationConfig : MapperConfigBase<SerializationFeature, Serialization
      * annotations). Will be null if no provided was set for [ObjectWriter] (or if serialization directly called from
      * [ObjectMapper])
      */
-    val filterProviders: FilterProvider?
+    val filterProvider: FilterProvider?
         get() = myFilterProvider
 
     /**

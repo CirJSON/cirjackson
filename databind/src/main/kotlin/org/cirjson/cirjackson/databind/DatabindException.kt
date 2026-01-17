@@ -44,7 +44,7 @@ open class DatabindException : CirJacksonException {
             return DatabindException(generator, message)
         }
 
-        fun from(generator: CirJsonGenerator, message: String?, cause: Throwable?): DatabindException {
+        fun from(generator: CirJsonGenerator?, message: String?, cause: Throwable?): DatabindException {
             return DatabindException(generator, message, cause)
         }
 
