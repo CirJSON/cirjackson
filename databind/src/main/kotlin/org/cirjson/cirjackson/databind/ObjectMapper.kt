@@ -3,10 +3,9 @@ package org.cirjson.cirjackson.databind
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
-import org.cirjson.cirjackson.databind.configuration.CoercionConfigs
-import org.cirjson.cirjackson.databind.configuration.ConfigOverrides
-import org.cirjson.cirjackson.databind.configuration.MapperBuilder
+import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.type.TypeFactory
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
@@ -28,6 +27,8 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    protected val mySerializationContexts: SerializationContexts = TODO("Not yet implemented")
+
     protected val mySerializationConfig: SerializationConfig = TODO("Not yet implemented")
 
     /*
@@ -36,7 +37,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    protected val myDeserializationContexts: DeserializationContexts = TODO("Not yet implemented")
+
     protected val myDeserializationConfig: DeserializationConfig = TODO("Not yet implemented")
+
+    /*
+     *******************************************************************************************************************
+     * Caching
+     *******************************************************************************************************************
+     */
+
+    protected val myRootDeserializers = ConcurrentHashMap<KotlinType, ValueDeserializer<Any>>(64, 0.6f, 2)
 
     /*
      *******************************************************************************************************************
@@ -89,6 +100,28 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     open fun tokenStreamFactory(): TokenStreamFactory {
         TODO("Not yet implemented")
+    }
+
+    internal fun streamFactory(): TokenStreamFactory {
+        return myStreamFactory
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuration: internal accesses
+     *******************************************************************************************************************
+     */
+
+    internal fun serializationContexts(): SerializationContexts {
+        return mySerializationContexts
+    }
+
+    internal fun deserializationContexts(): SerializationContexts {
+        return mySerializationContexts
+    }
+
+    internal fun rootDeserializers(): ConcurrentHashMap<KotlinType, ValueDeserializer<Any>> {
+        return myRootDeserializers
     }
 
     /*
