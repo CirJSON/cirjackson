@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.databind.*
+import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 import org.cirjson.cirjackson.databind.configuration.GeneratorSettings
 import org.cirjson.cirjackson.databind.introspection.Annotated
 import kotlin.reflect.KClass
@@ -65,8 +66,19 @@ open class SerializationContextExtension protected constructor(streamFactory: To
     }
 
     @Throws(CirJacksonException::class)
+    open fun serializeValue(generator: CirJsonGenerator, value: Any?, rootType: KotlinType?) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
     open fun serializeValue(generator: CirJsonGenerator, value: Any?, rootType: KotlinType?,
             serializer: ValueSerializer<Any>?) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(CirJacksonException::class)
+    open fun serializePolymorphic(generator: CirJsonGenerator, value: Any?, rootType: KotlinType?,
+            serializer: ValueSerializer<Any>?, typeSerializer: TypeSerializer) {
         TODO("Not yet implemented")
     }
 

@@ -12,4 +12,14 @@ class TypeWrappedSerializer(private val myTypeSerializer: TypeSerializer, serial
         TODO("Not yet implemented")
     }
 
+    /*
+     *******************************************************************************************************************
+     * Extended API for other core classes
+     *******************************************************************************************************************
+     */
+
+    fun typeSerializer(): TypeSerializer {
+        TODO("Not yet implemented")
+    }
+
 }
