@@ -54,7 +54,7 @@ open class ObjectWriter : Versioned {
      * @property myTypeSerializer When dealing with polymorphic types, we cannot pre-fetch serializer, but can pre-fetch
      * [TypeSerializer].
      */
-    class Prefetch internal constructor(private val myRootType: KotlinType?,
+    class Prefetch private constructor(private val myRootType: KotlinType?,
             private val myValueSerializer: ValueSerializer<Any>?, private val myTypeSerializer: TypeSerializer?) {
 
         val valueSerializer: ValueSerializer<Any>?
