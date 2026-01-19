@@ -116,8 +116,8 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         return mySerializationContexts
     }
 
-    internal fun deserializationContexts(): SerializationContexts {
-        return mySerializationContexts
+    internal fun deserializationContexts(): DeserializationContexts {
+        return myDeserializationContexts
     }
 
     internal fun rootDeserializers(): ConcurrentHashMap<KotlinType, ValueDeserializer<Any>> {

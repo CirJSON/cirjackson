@@ -333,6 +333,11 @@ open class MappingIterator<T : Any> protected constructor(protected val myType: 
          */
         const val STATE_HAS_VALUE = 3
 
+        internal fun <T : Any> construct(type: KotlinType?, parser: CirJsonParser?, context: DeserializationContext?,
+                deserializer: ValueDeserializer<*>?, managedParser: Boolean, valueToUpdate: Any?): MappingIterator<T> {
+            return MappingIterator(type, parser, context, deserializer, managedParser, valueToUpdate)
+        }
+
     }
 
 }
