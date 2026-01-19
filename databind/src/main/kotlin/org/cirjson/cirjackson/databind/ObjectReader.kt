@@ -13,6 +13,9 @@ open class ObjectReader : Versioned, TreeCodec {
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that will return version information stored in and read from jar that contains this class.
+     */
     override fun version(): Version {
         TODO("Not yet implemented")
     }
@@ -51,6 +54,18 @@ open class ObjectReader : Versioned, TreeCodec {
         TODO("Not yet implemented")
     }
 
+    /**
+     * Convenience method that binds content read using given parser, using configuration of this reader, except that
+     * content is bound as CirJSON tree instead of configured root value type. Returns [CirJsonNode] that represents the
+     * root of the resulting tree, if there was content to read, or `null` if no more content is accessible via passed
+     * [CirJsonParser].
+     * 
+     * NOTE! Behavior with end-of-input (no more content) differs between this `readTree` method, and all other methods
+     * that take input source: latter will return "missing node", NOT `null`
+     * 
+     * Note: if an object was specified with [withValueToUpdate], it will be ignored.
+     */
+    @Throws(CirJacksonException::class)
     override fun <T : TreeNode> readTree(parser: CirJsonParser): T? {
         TODO("Not yet implemented")
     }
@@ -61,10 +76,14 @@ open class ObjectReader : Versioned, TreeCodec {
 
     /*
      *******************************************************************************************************************
-     * Construction
+     * Deserialization methods; first ones for pre-constructed parsers
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that binds content read using given parser, using configuration of this reader, including expected result
+     * type. Value return is either newly constructed, or root value that was specified with [withValueToUpdate].
+     */
     @Throws(CirJacksonException::class)
     open fun <T : Any> readValue(content: ByteArray): T {
         TODO("Not yet implemented")
