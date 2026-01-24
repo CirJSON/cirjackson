@@ -291,13 +291,15 @@ open class ObjectReader : Versioned, TreeCodec {
 
     /*
      *******************************************************************************************************************
-     * Deserialization methods; first ones for pre-constructed parsers
+     * Deserialization methods; others similar to what ObjectMapper has
      *******************************************************************************************************************
      */
 
     /**
-     * Method that binds content read using given parser, using configuration of this reader, including expected result
-     * type. Value return is either newly constructed, or root value that was specified with [withValueToUpdate].
+     * Method that binds content read using given ByteArray, using configuration of this reader, including expected
+     * result type. Value return is either newly constructed, or root value that was specified with [withValueToUpdate].
+     *
+     * @param content Byte array that contains encoded content to read
      */
     @Throws(CirJacksonException::class)
     open fun <T : Any> readValue(content: ByteArray): T? {
