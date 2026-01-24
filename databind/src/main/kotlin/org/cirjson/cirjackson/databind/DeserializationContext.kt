@@ -1480,8 +1480,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
     }
 
     @Throws(DatabindException::class)
-    open fun <T> reportTrailingTokens(targetType: KClass<*>, parser: CirJsonParser, trailingToken: CirJsonToken,
-            message: String?): T {
+    open fun <T> reportTrailingTokens(targetType: KClass<*>, parser: CirJsonParser, trailingToken: CirJsonToken): T {
         throw MismatchedInputException.from(parser, targetType,
                 "Trailing token (of type $trailingToken) found after value (bound as ${targetType.name}): not allowed as per `DeserializationFeature.FAIL_ON_TRAILING_TOKENS`")
     }
