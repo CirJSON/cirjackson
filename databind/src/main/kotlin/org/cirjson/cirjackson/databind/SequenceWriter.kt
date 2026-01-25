@@ -6,7 +6,7 @@ import org.cirjson.cirjackson.core.Version
 import org.cirjson.cirjackson.core.Versioned
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.databind.configuration.PackageVersion
-import org.cirjson.cirjackson.databind.serialization.SerializationContextExtension
+import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.serialization.implementation.PropertySerializerMap
 import org.cirjson.cirjackson.databind.serialization.implementation.TypeWrappedSerializer
 import java.io.Closeable
@@ -27,7 +27,7 @@ import kotlin.reflect.KClass
  * * Explicit [close] is needed after all values have been written ([ObjectWriter] can auto-close after individual value
  * writes)
  */
-open class SequenceWriter(protected val myProvider: SerializationContextExtension,
+open class SequenceWriter(protected val myProvider: SerializationContextExtended,
         protected val myGenerator: CirJsonGenerator, protected val myCloseGenerator: Boolean,
         prefetch: ObjectWriter.Prefetch) : Versioned, Closeable, Flushable {
 

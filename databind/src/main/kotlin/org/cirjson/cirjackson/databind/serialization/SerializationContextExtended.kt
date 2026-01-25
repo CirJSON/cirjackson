@@ -11,7 +11,7 @@ import org.cirjson.cirjackson.databind.configuration.GeneratorSettings
 import org.cirjson.cirjackson.databind.introspection.Annotated
 import kotlin.reflect.KClass
 
-open class SerializationContextExtension protected constructor(streamFactory: TokenStreamFactory,
+open class SerializationContextExtended protected constructor(streamFactory: TokenStreamFactory,
         config: SerializationConfig, generatorConfig: GeneratorSettings, factory: SerializerFactory,
         serializerCache: SerializerCache) :
         SerializerProvider(streamFactory, config, generatorConfig, factory, serializerCache) {
@@ -101,6 +101,6 @@ open class SerializationContextExtension protected constructor(streamFactory: To
 
     class Implementation(streamFactory: TokenStreamFactory, config: SerializationConfig,
             generatorConfig: GeneratorSettings, factory: SerializerFactory, serializerCache: SerializerCache) :
-            SerializationContextExtension(streamFactory, config, generatorConfig, factory, serializerCache)
+            SerializationContextExtended(streamFactory, config, generatorConfig, factory, serializerCache)
 
 }

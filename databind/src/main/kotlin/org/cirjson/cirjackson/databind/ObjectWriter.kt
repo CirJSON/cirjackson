@@ -12,7 +12,7 @@ import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.node.ArrayNode
 import org.cirjson.cirjackson.databind.node.ObjectNode
 import org.cirjson.cirjackson.databind.serialization.FilterProvider
-import org.cirjson.cirjackson.databind.serialization.SerializationContextExtension
+import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.serialization.implementation.TypeWrappedSerializer
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.closeOnFailAndThrowAsCirJacksonException
@@ -44,9 +44,8 @@ open class ObjectWriter : Versioned {
     /**
      * Factory used for constructing per-call [SerializerProviders][SerializerProvider].
      * 
-     * Note: while serializers are only exposed [SerializerProvider],
-     * mappers and readers need to access additional API defined by
-     * [SerializationContextExtension]
+     * Note: while serializers are only exposed [SerializerProvider], mappers and readers need to access additional API
+     * defined by [SerializationContextExtended]
      */
     protected val mySerializationContexts: SerializationContexts
 
@@ -191,7 +190,7 @@ open class ObjectWriter : Versioned {
      * necessary.
      */
     @Throws(CirJacksonException::class)
-    protected fun newSequenceWriter(context: SerializationContextExtension, wrapInArray: Boolean,
+    protected fun newSequenceWriter(context: SerializationContextExtended, wrapInArray: Boolean,
             generator: CirJsonGenerator, managedInput: Boolean): SequenceWriter {
         return SequenceWriter(context, generator, managedInput, myPrefetch).init(wrapInArray)
     }
@@ -987,8 +986,7 @@ open class ObjectWriter : Versioned {
      * Method called to configure the generator as necessary and then call write functionality
      */
     @Throws(CirJacksonException::class)
-    protected fun configAndWriteValue(context: SerializationContextExtension, generator: CirJsonGenerator,
-            value: Any?) {
+    protected fun configAndWriteValue(context: SerializationContextExtended, generator: CirJsonGenerator, value: Any?) {
         if (myConfig.isEnabled(SerializationFeature.CLOSE_CLOSEABLE) && value is Closeable) {
             writeCloseable(generator, value)
             return
@@ -1095,7 +1093,7 @@ open class ObjectWriter : Versioned {
     /**
      * Overridable helper method used for constructing [SerializerProvider] to use for serialization.
      */
-    protected fun serializerProvider(): SerializationContextExtension {
+    protected fun serializerProvider(): SerializationContextExtended {
         return mySerializationContexts.createContext(myConfig, myGeneratorSettings)
     }
 
@@ -1185,7 +1183,7 @@ open class ObjectWriter : Versioned {
         }
 
         @Throws(CirJacksonException::class)
-        fun serialize(generator: CirJsonGenerator, value: Any?, context: SerializationContextExtension) {
+        fun serialize(generator: CirJsonGenerator, value: Any?, context: SerializationContextExtended) {
             if (myTypeSerializer != null) {
                 context.serializePolymorphic(generator, value, myRootType, myValueSerializer, myTypeSerializer)
             } else if (myValueSerializer != null) {

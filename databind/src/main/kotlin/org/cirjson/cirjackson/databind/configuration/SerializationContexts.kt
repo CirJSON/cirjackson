@@ -2,7 +2,7 @@ package org.cirjson.cirjackson.databind.configuration
 
 import org.cirjson.cirjackson.core.TokenStreamFactory
 import org.cirjson.cirjackson.databind.SerializationConfig
-import org.cirjson.cirjackson.databind.serialization.SerializationContextExtension
+import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.serialization.SerializerCache
 import org.cirjson.cirjackson.databind.serialization.SerializerFactory
 
@@ -50,7 +50,7 @@ abstract class SerializationContexts protected constructor(protected val myStrea
      * Factory method for constructing context object for individual `writeValue()` calls.
      */
     abstract fun createContext(config: SerializationConfig,
-            generatorSettings: GeneratorSettings): SerializationContextExtension
+            generatorSettings: GeneratorSettings): SerializationContextExtended
 
     /*
      *******************************************************************************************************************
@@ -98,8 +98,8 @@ abstract class SerializationContexts protected constructor(protected val myStrea
         }
 
         override fun createContext(config: SerializationConfig,
-                generatorSettings: GeneratorSettings): SerializationContextExtension {
-            return SerializationContextExtension.Implementation(myStreamFactory!!, config, generatorSettings,
+                generatorSettings: GeneratorSettings): SerializationContextExtended {
+            return SerializationContextExtended.Implementation(myStreamFactory!!, config, generatorSettings,
                     mySerializerFactory!!, myCache!!)
         }
 
