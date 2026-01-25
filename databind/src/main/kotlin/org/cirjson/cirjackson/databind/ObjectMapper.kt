@@ -9,6 +9,54 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
+/**
+ * ObjectMapper provides functionality for reading and writing CirJSON, either to and from basic POJOs, or to and from a
+ * general-purpose CirJSON Tree Model ([CirJsonNode]), as well as related functionality for performing conversions. In
+ * addition to directly reading and writing JSON (and with different underlying [TokenStreamFactory] configuration,
+ * other formats), it is also the mechanism for creating [ObjectReaders][ObjectReader] and [ObjectWriters][ObjectWriter]
+ * which offer more advancing reading/writing functionality.
+ * 
+ * Construction of mapper instances proceeds either via no-arguments constructor (producing instance with default
+ * configuration); or through one of two build methods. First build method is the static `builder()` on exact type and
+ * second [rebuild] method on an existing mapper. Former starts with default configuration (same as one that
+ * no-arguments constructor created mapper has), and latter starts with configuration of the mapper it is called on. In
+ * both cases, after configuration (including addition of [CirJacksonModules][CirJacksonModule]) is complete, instance
+ * is created by calling [MapperBuilder.build] method.
+ * 
+ * Mapper (and [ObjectReaders][ObjectReader], [ObjectWriters][ObjectWriter] it constructs) will use instances of
+ * [CirJsonParser] and [CirJsonGenerator] for implementing actual reading/writing of CirJSON. Note that although most
+ * read and write methods are exposed through this class, some of the functionality is only exposed via [ObjectReader]
+ * and [ObjectWriter]: specifically, reading/writing of longer sequences of values is only available through
+ * [ObjectReader.readValues] and [ObjectWriter.writeValues].
+ * 
+ * Simplest usage is of form:
+ * ```
+ * val mapper = ObjectMapper() // can use static singleton, inject: just make sure to reuse!
+ * val value = MyValue()
+ * // ... and configure
+ * val newState = File("my-stuff.cirjson")
+ * mapper.writeValue(newState, value) // writes CirJSON serialization of MyValue instance
+ * // or, read
+ * val older = mapper.readValue(File("my-older-stuff.cirjson"), MyValue::class)
+ *
+ * // Or if you prefer CirJSON Tree representation:
+ * val root = mapper.readTree(newState)
+ * // and find values by, for example, using a CirJsonPointer expression:
+ * val age = root.at("/personal/age").valueAsInt
+ * ```
+ * 
+ * Mapper instances are fully thread-safe.
+ * 
+ * Note on caching: root-level deserializers are always cached, and accessed using full (generics-aware) type
+ * information. This is different from caching of referenced types, which is more limited and is done only for a subset
+ * of all deserializer types. The main reason for difference is that at root-level there is no incoming reference (and
+ * hence no referencing property, no referral information or annotations to produce differing deserializers), and that
+ * the performance impact greatest at root level (since it'll essentially cache the full graph of deserializers
+ * involved).
+ * 
+ * @constructor Constructor usually called either by [MapperBuilder.build] or by subclass constructor: will get all
+ * the settings through passed-in builder, including registration of any modules added to builder.
+ */
 open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : TreeCodec, Versioned {
 
     /*
@@ -17,8 +65,15 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory used to create [CirJsonParser] and [CirJsonGenerator] instances as necessary.
+     */
     protected val myStreamFactory = builder.streamFactory()
 
+    /**
+     * Specific factory used for creating [KotlinType] instances; needed to allow modules to add more custom type
+     * handling.
+     */
     protected val myTypeFactory: TypeFactory = TODO("Not yet implemented")
 
     /*
@@ -27,8 +82,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory used for constructing per-call [SerializerProviders][SerializerProvider].
+     * 
+     * Note: while serializers are only exposed [SerializerProvider], mappers and readers need to access additional API
+     * defined by [SerializationContextExtended]
+     */
     protected val mySerializationContexts: SerializationContexts = TODO("Not yet implemented")
 
+    /**
+     * Configuration object that defines basic global settings for the serialization process
+     */
     protected val mySerializationConfig: SerializationConfig = TODO("Not yet implemented")
 
     /*
@@ -37,8 +101,14 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory used for constructing per-call [DeserializationContexts][DeserializationContext].
+     */
     protected val myDeserializationContexts: DeserializationContexts = TODO("Not yet implemented")
 
+    /**
+     * Configuration object that defines basic global settings for the deserialization process
+     */
     protected val myDeserializationConfig: DeserializationConfig = TODO("Not yet implemented")
 
     /*
@@ -47,6 +117,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * We will use a separate main-level Map for keeping track of root-level deserializers. This is where most
+     * successful cache lookups get resolved. Map will contain resolvers for all kinds of types, including container
+     * types: this is different from the component cache which will only cache bean deserializers.
+     * 
+     * Given that we don't expect much concurrency for additions (should very quickly converge to zero after startup),
+     * let's explicitly define a low concurrency setting.
+     * 
+     * These may are either "raw" deserializers (when no type information is needed for base type), or type-wrapped
+     * deserializers (if it is needed)
+     */
     protected val myRootDeserializers = ConcurrentHashMap<KotlinType, ValueDeserializer<Any>>(64, 0.6f, 2)
 
     /*
@@ -55,6 +136,9 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Minimal state retained to allow both re-building (by creating new builder) and JDK serialization of this mapper.
+     */
     protected val mySavedBuilderState = builder.saveStateApplyModules()
 
     /*
@@ -78,6 +162,10 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         TODO("Not yet implemented")
     }
 
+    /**
+     * Method for creating a new [MapperBuilder] for constructing differently configured [ObjectMapper] instance,
+     * starting with current configuration including base settings and registered modules.
+     */
     open fun <M : ObjectMapper, B : MapperBuilder<M, B>> rebuild(): MapperBuilder<M, B> {
         TODO("Not yet implemented")
     }
@@ -88,6 +176,9 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that will return version information stored in and read from jar that contains this class.
+     */
     override fun version(): Version {
         TODO("Not yet implemented")
     }
@@ -98,6 +189,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that can be used to get hold of [TokenStreamFactory] that this mapper uses if it needs to construct
+     * [CirJsonParsers][CirJsonParser] and/or [CirJsonGenerators][CirJsonGenerator].
+     * 
+     * WARNING: note that all [ObjectReader] and [ObjectWriter] instances created by this mapper usually share the same
+     * configured [TokenStreamFactory], so changes to its configuration will "leak". To avoid such observed changes you
+     * should always use `with()` and `without()` methods of [ObjectReader] and [ObjectWriter] for changing
+     * [StreamReadFeature] and [StreamWriteFeature] settings to use on per-call basis.
+     *
+     * @return [TokenStreamFactory] that this mapper uses when it needs to construct CirJSON parser and generators
+     */
     open fun tokenStreamFactory(): TokenStreamFactory {
         TODO("Not yet implemented")
     }
@@ -130,10 +232,18 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Note: return type is co-variant, as basic ObjectCodec abstraction cannot refer to concrete node types (as it's
+     * part of core package, whereas implementations are part of mapper package)
+     */
     override fun createObjectNode(): ObjectTreeNode {
         TODO("Not yet implemented")
     }
 
+    /**
+     * Note: return type is co-variant, as basic ObjectCodec abstraction cannot refer to concrete node types (as it's
+     * part of core package, whereas implementations are part of mapper package)
+     */
     override fun createArrayNode(): ArrayTreeNode {
         TODO("Not yet implemented")
     }
@@ -154,10 +264,34 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         TODO("Not yet implemented")
     }
 
+    /**
+     * Method for constructing a [CirJsonParser] out of CirJSON tree representation.
+     *
+     * @param node Root node of the tree that resulting parser will read from
+     */
     override fun treeAsTokens(node: TreeNode): CirJsonParser {
         TODO("Not yet implemented")
     }
 
+    /**
+     * Method to deserialize CirJSON content as a tree [CirJsonNode]. Returns [CirJsonNode] that represents the root of
+     * the resulting tree, if there was content to read, or `null` if no more content is accessible via passed
+     * [CirJsonParser].
+     * 
+     * NOTE! Behavior with end-of-input (no more content) differs between this `readTree` method, and all other methods
+     * that take input source: latter will return "missing node", NOT `null`
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; null if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
     override fun <T : TreeNode> readTree(parser: CirJsonParser): T? {
         TODO("Not yet implemented")
     }
@@ -172,6 +306,10 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Method that can be used to serialize any value as a ByteArray. Functionally equivalent to calling [writeValue]
+     * with [ByteArrayOutputStream] and getting bytes, but more efficient. Encoding used will be UTF-8.
+     */
     @Throws(CirJacksonException::class)
     open fun writeValueAsBytes(value: Any?): ByteArray {
         TODO("Not yet implemented")
@@ -183,10 +321,17 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Convenience method for constructing [ObjectWriter] with default settings.
+     */
     open fun writer(): ObjectWriter {
         TODO("Not yet implemented")
     }
 
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using the default pretty printer for
+     * indentation.
+     */
     open fun writerWithDefaultPrettyPrinter(): ObjectWriter {
         TODO("Not yet implemented")
     }
@@ -197,6 +342,9 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      *******************************************************************************************************************
      */
 
+    /**
+     * Factory method for constructing [ObjectReader] that will read or update instances of specified type.
+     */
     open fun readerFor(type: KClass<*>): ObjectReader {
         TODO("Not yet implemented")
     }
