@@ -292,10 +292,12 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
      * type [CirJsonParser] supports (CirJSON for default case)
      */
+    @Throws(CirJacksonException::class)
     override fun <T : TreeNode> readTree(parser: CirJsonParser): T? {
         TODO("Not yet implemented")
     }
 
+    @Throws(CirJacksonException::class)
     override fun writeTree(generator: CirJsonGenerator, tree: TreeNode) {
         TODO("Not yet implemented")
     }
