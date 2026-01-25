@@ -7,6 +7,7 @@ import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
+import java.io.Serial
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -376,6 +377,40 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
     open fun readerFor(type: KClass<*>): ObjectReader {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper classes
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Base implementation for "Vanilla" [ObjectMapper].
+     */
+    private class PrivateBuilder : MapperBuilder<ObjectMapper, PrivateBuilder> {
+
+        constructor(tokenStreamFactory: TokenStreamFactory) : super(tokenStreamFactory)
+
+        constructor(state: MapperBuilderState) : super(state)
+
+        override fun build(): ObjectMapper {
+            return ObjectMapper(this)
+        }
+
+        override fun saveState(): MapperBuilderState {
+            return StateImplementation(this)
+        }
+
+        class StateImplementation(builder: PrivateBuilder) : MapperBuilderState(builder) {
+
+            @Serial
+            fun readResolve(): Any {
+                return PrivateBuilder(this).build()
+            }
+
+        }
+
     }
 
 }
