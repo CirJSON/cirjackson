@@ -4,7 +4,9 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.databind.configuration.*
+import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.type.TypeFactory
+import org.cirjson.cirjackson.databind.util.RootNameLookup
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -74,7 +76,12 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Specific factory used for creating [KotlinType] instances; needed to allow modules to add more custom type
      * handling.
      */
-    protected val myTypeFactory: TypeFactory = TODO("Not yet implemented")
+    protected val myTypeFactory: TypeFactory
+
+    /**
+     * Provider for values to inject in deserialized POJOs.
+     */
+    protected val myInjectableValues: InjectableValues?
 
     /*
      *******************************************************************************************************************
@@ -88,12 +95,12 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Note: while serializers are only exposed [SerializerProvider], mappers and readers need to access additional API
      * defined by [SerializationContextExtended]
      */
-    protected val mySerializationContexts: SerializationContexts = TODO("Not yet implemented")
+    protected val mySerializationContexts: SerializationContexts
 
     /**
      * Configuration object that defines basic global settings for the serialization process
      */
-    protected val mySerializationConfig: SerializationConfig = TODO("Not yet implemented")
+    protected val mySerializationConfig: SerializationConfig
 
     /*
      *******************************************************************************************************************
@@ -104,12 +111,12 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     /**
      * Factory used for constructing per-call [DeserializationContexts][DeserializationContext].
      */
-    protected val myDeserializationContexts: DeserializationContexts = TODO("Not yet implemented")
+    protected val myDeserializationContexts: DeserializationContexts
 
     /**
      * Configuration object that defines basic global settings for the deserialization process
      */
-    protected val myDeserializationConfig: DeserializationConfig = TODO("Not yet implemented")
+    protected val myDeserializationConfig: DeserializationConfig
 
     /*
      *******************************************************************************************************************
@@ -151,15 +158,35 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         val configOverrides = let {
             val ref = AtomicReference<ConfigOverrides>()
             builder.withAllConfigOverrides { ref.set(it) }
-            ref.get()?.snapshot()
+            ref.get()!!.snapshot()
         }
         val coercionConfigs = let {
             val ref = AtomicReference<CoercionConfigs>()
             builder.withAllCoercionConfigs { ref.set(it) }
-            ref.get()?.snapshot()
+            ref.get()!!.snapshot()
         }
-//        myTypeFactory = builder.typeFactory().snapshot()
-        TODO("Not yet implemented")
+
+        myTypeFactory = builder.typeFactory().snapshot()
+        val classIntrospector = builder.classIntrospector().forMapper()
+        val subtypeResolver = builder.subtypeResolver().snapshot()
+        val mixInHandler = builder.mixInHandler().snapshot() as MixInHandler
+
+        val rootNames = RootNameLookup()
+        val filterProvider = builder.filterProvider()?.snapshot()
+
+        mySerializationConfig =
+                builder.buildSerializationConfig(configOverrides, mixInHandler, myTypeFactory, classIntrospector,
+                        subtypeResolver, rootNames, filterProvider)
+        mySerializationContexts = builder.serializationContexts()
+                .forMapper(this, mySerializationConfig, myStreamFactory, builder.serializerFactory())
+
+        myDeserializationConfig =
+                builder.buildDeserializationConfig(configOverrides, mixInHandler, myTypeFactory, classIntrospector,
+                        subtypeResolver, rootNames, coercionConfigs)
+        myDeserializationContexts = builder.deserializationContexts()
+                .forMapper(this, myDeserializationConfig, myStreamFactory, builder.deserializerFactory())
+
+        myInjectableValues = builder.injectableValues()?.snapshot()
     }
 
     /**
