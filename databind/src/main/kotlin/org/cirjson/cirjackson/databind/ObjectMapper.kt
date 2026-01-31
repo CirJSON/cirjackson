@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
+import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.deserialization.DeserializationContextExtended
@@ -680,6 +681,82 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
         if (config.isEnabled(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)) {
             generator.flush()
         }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: deserialization, main methods
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to deserialize CirJSON content into a non-container type (it can be an array type, however): typically a
+     * bean, array or a wrapper type (like [java.lang.Boolean]).
+     * 
+     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is
+     * that, due to type erasure, key and value types cannot be introspected when using this method.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     * 
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(parser: CirJsonParser, valueType: KClass<T>): T? {
+        return readValue(deserializationContext(parser), parser, myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content into a type, reference to which is passed as argument. Type is passed using
+     * CirJackson specific type; instance of which can be constructed using [TypeFactory].
+     * 
+     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is
+     * that, due to type erasure, key and value types cannot be introspected when using this method.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     * 
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(parser: CirJsonParser, valueType: ResolvedType): T? {
+        return readValue(deserializationContext(parser), parser,
+                myTypeFactory.constructType(valueType as KotlinType)) as T?
+    }
+
+    /**
+     * Type-safe overloaded method to deserialize CirJSON content into a non-container type (it can be an array type,
+     * however): typically a bean, array or a wrapper type (like [java.lang.Boolean]).
+     * 
+     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is
+     * that, due to type erasure, key and value types cannot be introspected when using this method.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     * 
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> readValue(parser: CirJsonParser, valueType: KotlinType): T? {
+        return readValue(deserializationContext(parser), parser, myTypeFactory.constructType(valueType)) as T?
     }
 
     /*
