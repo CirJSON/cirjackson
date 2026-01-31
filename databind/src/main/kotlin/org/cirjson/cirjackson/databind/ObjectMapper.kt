@@ -1,13 +1,18 @@
 package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.core.*
+import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
+import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
+import org.cirjson.cirjackson.databind.type.SimpleType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
+import org.cirjson.cirjackson.databind.util.verifyMustOverride
 import java.io.Serial
+import java.lang.reflect.Type
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -194,9 +199,30 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Method for creating a new [MapperBuilder] for constructing differently configured [ObjectMapper] instance,
      * starting with current configuration including base settings and registered modules.
      */
+    @Suppress("UNCHECKED_CAST")
     open fun <M : ObjectMapper, B : MapperBuilder<M, B>> rebuild(): MapperBuilder<M, B> {
-        TODO("Not yet implemented")
+        verifyMustOverride(ObjectMapper::class, this, "rebuild")
+        return PrivateBuilder(mySavedBuilderState) as MapperBuilder<M, B>
     }
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle: other construction
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Default constructor, which will construct the default CirJSON-handling [TokenStreamFactory] as necessary and all
+     * other unmodified default settings, and no additional registered modules.
+     */
+    constructor() : this(PrivateBuilder(CirJsonFactory()))
+
+    /**
+     * Constructs instance that uses specified [TokenStreamFactory] for constructing necessary
+     * [CirJsonParsers][CirJsonParser] and/or [CirJsonGenerators][CirJsonGenerator], but without registering additional
+     * modules.
+     */
+    constructor(tokenStreamFactory: TokenStreamFactory) : this(PrivateBuilder(tokenStreamFactory))
 
     /*
      *******************************************************************************************************************
@@ -208,7 +234,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Method that will return version information stored in and read from jar that contains this class.
      */
     override fun version(): Version {
-        TODO("Not yet implemented")
+        return PackageVersion.VERSION
     }
 
     /*
@@ -216,6 +242,26 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Configuration: main config object access
      *******************************************************************************************************************
      */
+
+    /**
+     * Accessor for internal configuration object that contains settings for serialization operations (`writeValue(...)`
+     * methods).
+     * 
+     * NOTE: Not to be used by application code; needed by some tests.
+     */
+    internal open fun serializationConfig(): SerializationConfig {
+        return mySerializationConfig
+    }
+
+    /**
+     * Accessor for internal configuration object that contains settings for deserialization operations
+     * (`readValue(...)` methods).
+     * 
+     * NOTE: Not to be used by application code; needed by some tests.
+     */
+    internal open fun deserializationConfig(): DeserializationConfig {
+        return myDeserializationConfig
+    }
 
     /**
      * Method that can be used to get hold of [TokenStreamFactory] that this mapper uses if it needs to construct
@@ -229,7 +275,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * @return [TokenStreamFactory] that this mapper uses when it needs to construct CirJSON parser and generators
      */
     open fun tokenStreamFactory(): TokenStreamFactory {
-        TODO("Not yet implemented")
+        return myStreamFactory
     }
 
     internal fun streamFactory(): TokenStreamFactory {
@@ -238,7 +284,86 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     /*
      *******************************************************************************************************************
-     * Configuration: internal accesses
+     * Configuration: type factory and type resolution access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Accessor for getting currently configured [TypeFactory] instance.
+     */
+    open val typeFactory: TypeFactory
+        get() = myTypeFactory
+
+    /**
+     * Convenience method for constructing [KotlinType] out of given type (typically `java.lang.Class`), but without
+     * explicit context.
+     */
+    open fun constructType(type: Type): KotlinType {
+        return myTypeFactory.constructType(type)
+    }
+
+    /**
+     * Convenience method for constructing [KotlinType] out of given type reference.
+     */
+    open fun constructType(typeReference: TypeReference<*>): KotlinType {
+        return myTypeFactory.constructType(typeReference)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuration: features access
+     *******************************************************************************************************************
+     */
+
+    open fun isEnabled(feature: TokenStreamFactory.Feature): Boolean {
+        return myStreamFactory.isEnabled(feature)
+    }
+
+    open fun isEnabled(feature: StreamReadFeature): Boolean {
+        return myDeserializationConfig.isEnabled(feature)
+    }
+
+    open fun isEnabled(feature: StreamWriteFeature): Boolean {
+        return mySerializationConfig.isEnabled(feature)
+    }
+
+    /**
+     * Method for checking whether given [MapperFeature] is enabled.
+     */
+    open fun isEnabled(feature: MapperFeature): Boolean {
+        return mySerializationConfig.isEnabled(feature)
+    }
+
+    /**
+     * Method for checking whether given deserialization-specific feature is enabled.
+     */
+    open fun isEnabled(feature: DeserializationFeature): Boolean {
+        return myDeserializationConfig.isEnabled(feature)
+    }
+
+    /**
+     * Method for checking whether given serialization-specific feature is enabled.
+     */
+    open fun isEnabled(feature: SerializationFeature): Boolean {
+        return mySerializationConfig.isEnabled(feature)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Configuration: module information access
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Accessor that may be used to find out [CirJacksonModules][CirJacksonModule] that were registered when creating
+     * this mapper (if any).
+     */
+    open val registeredModules: Collection<CirJacksonModule>
+        get() = mySavedBuilderState.modules()
+
+    /*
+     *******************************************************************************************************************
+     * Configuration: internal access
      *******************************************************************************************************************
      */
 
@@ -410,6 +535,12 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
             }
 
         }
+
+    }
+
+    companion object {
+
+        private val CIRJSON_NODE_TYPE: KotlinType = SimpleType.constructUnsafe(CirJsonNode::class)
 
     }
 
