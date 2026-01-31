@@ -6,13 +6,20 @@ import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.TypeReference
 import org.cirjson.cirjackson.databind.configuration.*
+import org.cirjson.cirjackson.databind.deserialization.DeserializationContextExtended
+import org.cirjson.cirjackson.databind.exception.MismatchedInputException
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
+import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
+import org.cirjson.cirjackson.databind.node.TreeTraversingParser
+import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.type.SimpleType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
 import org.cirjson.cirjackson.databind.util.verifyMustOverride
-import java.io.Serial
+import java.io.*
 import java.lang.reflect.Type
+import java.net.URL
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -246,21 +253,25 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     /**
      * Accessor for internal configuration object that contains settings for serialization operations (`writeValue(...)`
      * methods).
-     * 
-     * NOTE: Not to be used by application code; needed by some tests.
      */
-    internal open fun serializationConfig(): SerializationConfig {
+    protected open fun serializationConfig(): SerializationConfig {
         return mySerializationConfig
+    }
+
+    internal fun serializationConfigAccess(): SerializationConfig {
+        return serializationConfig()
     }
 
     /**
      * Accessor for internal configuration object that contains settings for deserialization operations
      * (`readValue(...)` methods).
-     * 
-     * NOTE: Not to be used by application code; needed by some tests.
      */
-    internal open fun deserializationConfig(): DeserializationConfig {
+    protected open fun deserializationConfig(): DeserializationConfig {
         return myDeserializationConfig
+    }
+
+    internal fun deserializationConfigAccess(): DeserializationConfig {
+        return deserializationConfig()
     }
 
     /**
@@ -281,6 +292,22 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     internal fun streamFactory(): TokenStreamFactory {
         return myStreamFactory
     }
+
+    /**
+     * Accessor that can be used to get hold of [CirJsonNodeFactory]
+     * that this mapper will use when directly constructing
+     * root [CirJsonNode] instances for Trees.
+     * 
+     * Note: this is just a shortcut for calling
+     * ```
+     * deserializationConfig.nodeFactory
+     * ```
+     */
+    open val nodeFactory: CirJsonNodeFactory
+        get() = myDeserializationConfig.nodeFactory
+
+    open val injectableValues: InjectableValues?
+        get() = myInjectableValues
 
     /*
      *******************************************************************************************************************
@@ -381,6 +408,198 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     /*
      *******************************************************************************************************************
+     * Public API: constructing Parsers that are properly linked to ObjectReadContext
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(file: File): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, file))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(path: Path): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, path))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(url: URL): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, url))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(inputStream: InputStream): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, inputStream))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(reader: Reader): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, reader))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(content: ByteArray): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, content))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(content: ByteArray, offset: Int, length: Int): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, content, offset, length))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(content: String): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, content))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(content: CharArray): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, content))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(content: CharArray, offset: Int, length: Int): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, content, offset, length))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls the related [TokenStreamFactory.createParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createParser(dataInput: DataInput): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createParser(context, dataInput))
+    }
+
+    /**
+     * Factory method for constructing [CirJsonParser] that is properly wired to allow callbacks for deserialization:
+     * basically constructs an [ObjectReadContext] and then calls [TokenStreamFactory.createNonBlockingByteArrayParser].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createNonBlockingByteArrayParser(): CirJsonParser {
+        val context = deserializationContext()
+        return context.assignAndReturnParser(myStreamFactory.createNonBlockingByteArrayParser(context))
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: constructing Generators that are properly linked to ObjectWriteContext
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(outputStream: OutputStream): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, outputStream)
+    }
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(outputStream: OutputStream, encoding: CirJsonEncoding): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, outputStream, encoding)
+    }
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(writer: Writer): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, writer)
+    }
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(file: File, encoding: CirJsonEncoding): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, file, encoding)
+    }
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(path: Path, encoding: CirJsonEncoding): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, path, encoding)
+    }
+
+    /**
+     * Factory method for constructing [CirJsonGenerator] that is properly wired to allow callbacks for serialization:
+     * basically constructs an [ObjectWriteContext] and then calls the related [TokenStreamFactory.createGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun createGenerator(dataOutput: DataOutput): CirJsonGenerator {
+        val context = serializerProvider()
+        return myStreamFactory.createGenerator(context, dataOutput)
+    }
+
+    /*
+     *******************************************************************************************************************
      * TreeCodec implementation
      *******************************************************************************************************************
      */
@@ -390,7 +609,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * part of core package, whereas implementations are part of mapper package)
      */
     override fun createObjectNode(): ObjectTreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.objectNode()
     }
 
     /**
@@ -398,23 +617,23 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * part of core package, whereas implementations are part of mapper package)
      */
     override fun createArrayNode(): ArrayTreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.arrayNode()
     }
 
     override fun booleanNode(boolean: Boolean): TreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.booleanNode(boolean)
     }
 
     override fun stringNode(text: String?): TreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.textNode(text)
     }
 
     override fun missingNode(): TreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.missingNode()
     }
 
     override fun nullNode(): TreeNode {
-        TODO("Not yet implemented")
+        return myDeserializationConfig.nodeFactory.nullNode()
     }
 
     /**
@@ -423,7 +642,8 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * @param node Root node of the tree that resulting parser will read from
      */
     override fun treeAsTokens(node: TreeNode): CirJsonParser {
-        TODO("Not yet implemented")
+        val context = deserializationContext()
+        return TreeTraversingParser(node as CirJsonNode, context)
     }
 
     /**
@@ -446,13 +666,20 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * type [CirJsonParser] supports (CirJSON for default case)
      */
     @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
     override fun <T : TreeNode> readTree(parser: CirJsonParser): T? {
-        TODO("Not yet implemented")
+        val token = parser.currentToken() ?: parser.nextToken() ?: return null
+        return readValue(deserializationContext(parser), parser, CIRJSON_NODE_TYPE) as T? ?: nodeFactory.nullNode() as T
     }
 
     @Throws(CirJacksonException::class)
     override fun writeTree(generator: CirJsonGenerator, tree: TreeNode) {
-        TODO("Not yet implemented")
+        val config = serializationConfig()
+        serializerProvider(config).serializeValue(generator, tree)
+
+        if (config.isEnabled(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)) {
+            generator.flush()
+        }
     }
 
     /*
@@ -502,6 +729,218 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
     open fun readerFor(type: KClass<*>): ObjectReader {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods for serialization, overridable
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Overridable helper method used for constructing [SerializerProvider] to use for serialization.
+     */
+    protected open fun serializerProvider(config: SerializationConfig): SerializationContextExtended {
+        return mySerializationContexts.createContext(config, GeneratorSettings.EMPTY)
+    }
+
+    /**
+     * Overridable helper method used for constructing [SerializerProvider] to use for serialization.
+     */
+    protected open fun serializerProvider(): SerializationContextExtended {
+        return mySerializationContexts.createContext(serializationConfig(), GeneratorSettings.EMPTY)
+    }
+
+    internal fun serializerProviderAccess(): SerializationContextExtended {
+        return serializerProvider()
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods for deserialization, overridable
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Actual implementation of value reading+binding operation.
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun readValue(context: DeserializationContextExtended, parser: CirJsonParser,
+            valueType: KotlinType): Any? {
+        val token = initForReading(parser, valueType)
+
+        val result = when (token) {
+            CirJsonToken.VALUE_NULL -> findRootDeserializer(context, valueType).getNullValue(context)
+            CirJsonToken.END_ARRAY, CirJsonToken.END_OBJECT -> null
+            else -> context.readRootValue(parser, valueType, findRootDeserializer(context, valueType), null)
+        }
+
+        parser.clearCurrentToken()
+
+        if (context.isEnabled(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)) {
+            verifyNoTrailingTokens(parser, context, valueType)
+        }
+
+        return result
+    }
+
+    @Throws(CirJacksonException::class)
+    protected open fun readMapAndClose(context: DeserializationContextExtended, parser: CirJsonParser,
+            valueType: KotlinType): Any? {
+        context.assignParser(parser)
+
+        parser.use {
+            val token = initForReading(it, valueType)
+
+            val result = when (token) {
+                CirJsonToken.VALUE_NULL -> findRootDeserializer(context, valueType).getNullValue(context)
+                CirJsonToken.END_ARRAY, CirJsonToken.END_OBJECT -> null
+                else -> context.readRootValue(it, valueType, findRootDeserializer(context, valueType), null)
+                        .also { context.checkUnresolvedObjectId() }
+            }
+
+            if (context.isEnabled(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)) {
+                verifyNoTrailingTokens(it, context, valueType)
+            }
+
+            return result
+        }
+    }
+
+    /**
+     * Similar to [readMapAndClose] but specialized for `CirJsonNode` reading.
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun readTreeAndClose(context: DeserializationContextExtended, parser: CirJsonParser): CirJsonNode {
+        context.assignAndReturnParser(parser).use {
+            val valueType = CIRJSON_NODE_TYPE
+            val config = deserializationConfig()
+
+            val token = it.currentToken() ?: it.nextToken() ?: return config.nodeFactory.missingNode()
+
+            val resultNode = if (token == CirJsonToken.VALUE_NULL) {
+                config.nodeFactory.nullNode()
+            } else {
+                context.readRootValue(it, valueType, findRootDeserializer(context, valueType), null) as CirJsonNode
+            }
+
+            if (context.isEnabled(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)) {
+                verifyNoTrailingTokens(it, context, valueType)
+            }
+
+            return resultNode
+        }
+    }
+
+    /**
+     * Internal helper method called to create an instance of [DeserializationContext] for deserializing a single root
+     * value. Can be overridden if a custom context is needed.
+     */
+    protected open fun deserializationContext(parser: CirJsonParser): DeserializationContextExtended {
+        return myDeserializationContexts.createContext(deserializationConfig(), null, myInjectableValues)
+                .assignParser(parser)
+    }
+
+    protected open fun deserializationContext(): DeserializationContextExtended {
+        return myDeserializationContexts.createContext(deserializationConfig(), null, myInjectableValues)
+    }
+
+    internal open fun deserializationContextAccess(): DeserializationContextExtended {
+        return deserializationContext()
+    }
+
+    protected open fun deserializationContext(config: DeserializationConfig,
+            parser: CirJsonParser): DeserializationContextExtended {
+        return myDeserializationContexts.createContext(config, null, myInjectableValues).assignParser(parser)
+    }
+
+    /**
+     * Method called to ensure that given parser is ready for reading content for data binding.
+     *
+     * @return First token to be used for data binding after this call: can never be null as exception will be thrown if
+     * parser cannot provide more tokens.
+     *
+     * @throws CirJacksonException if the initialization fails during initialization of the streaming parser
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun initForReading(parser: CirJsonParser, targetType: KotlinType): CirJsonToken {
+        return parser.currentToken() ?: parser.nextToken() ?: throw MismatchedInputException.from(parser, targetType,
+                "No content to map due to end-of-input")
+    }
+
+    @Throws(CirJacksonException::class)
+    protected fun verifyNoTrailingTokens(parser: CirJsonParser, context: DeserializationContext, bindType: KotlinType) {
+        val token = parser.nextToken() ?: return
+        val type = bindType.rawClass
+        return context.reportTrailingTokens(type, parser, token)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal factory methods for ObjectReaders/ObjectWriters
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Factory method subclasses must override to produce [ObjectReader] instances of proper subtype
+     */
+    protected open fun newReader(config: DeserializationConfig): ObjectReader {
+        return ObjectReader.construct(this, config)
+    }
+
+    /**
+     * Factory method subclasses must override to produce [ObjectReader] instances of proper subtype
+     */
+    protected open fun newReader(config: DeserializationConfig, valueType: KotlinType?, valueToUpdate: Any?,
+            schema: FormatSchema?, injectableValues: InjectableValues?): ObjectReader {
+        return ObjectReader.construct(this, config, valueType, valueToUpdate, schema, injectableValues)
+    }
+
+    /**
+     * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
+     */
+    protected open fun newReader(config: SerializationConfig): ObjectWriter {
+        return ObjectWriter.construct(this, config)
+    }
+
+    /**
+     * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
+     */
+    protected open fun newReader(config: SerializationConfig, schema: FormatSchema?): ObjectWriter {
+        return ObjectWriter.construct(this, config, schema)
+    }
+
+    /**
+     * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
+     */
+    protected open fun newReader(config: SerializationConfig, rootType: KotlinType?,
+            prettyPrinter: PrettyPrinter?): ObjectWriter {
+        return ObjectWriter.construct(this, config, rootType, prettyPrinter)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Internal methods, other
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method called to locate deserializer for the passed root-level value.
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun findRootDeserializer(context: DeserializationContext,
+            valueType: KotlinType): ValueDeserializer<Any> {
+        return myRootDeserializers[valueType] ?: context.findRootValueDeserializer(valueType)
+                .also { myRootDeserializers[valueType] = it }
+    }
+
+    protected open fun verifySchemaType(schema: FormatSchema?) {
+        schema ?: return
+
+        if (!myStreamFactory.canUseSchema(schema)) {
+            throw IllegalArgumentException(
+                    "Cannot use FormatSchema of type ${schema::class.qualifiedName} for format ${myStreamFactory.formatName}")
+        }
     }
 
     /*

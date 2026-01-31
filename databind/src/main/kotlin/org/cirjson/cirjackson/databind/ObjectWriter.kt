@@ -1205,8 +1205,8 @@ open class ObjectWriter : Versioned {
 
     companion object {
 
-        internal fun construct(mapper: ObjectMapper, config: SerializationConfig, rootType: KotlinType,
-                prettyPrinter: PrettyPrinter): ObjectWriter {
+        internal fun construct(mapper: ObjectMapper, config: SerializationConfig, rootType: KotlinType?,
+                prettyPrinter: PrettyPrinter?): ObjectWriter {
             return ObjectWriter(mapper, config, rootType, prettyPrinter)
         }
 
