@@ -4,6 +4,55 @@ The databinding module of CirJackson
 
 # Package org.cirjson.cirjackson.databind
 
+Basic data binding (mapping) functionality that allows for reading CirJSON content into objects (POJOs) and CirJSON
+Trees ([org.cirjson.cirjackson.databind.CirJsonNode]), as well as writing objects and trees as CirJSON.
+
+Reading and writing (as well as related additional functionality) is accessed through
+[org.cirjson.cirjackson.databind.ObjectMapper], [org.cirjson.cirjackson.databind.ObjectReader] and
+[org.cirjson.cirjackson.databind.ObjectWriter] classes.
+
+In addition to reading and writing CirJSON content, it is also possible to use the general databinding functionality for
+many other data formats, using CirJackson extension modules that provide such support: if so, you typically simply
+construct an [org.cirjson.cirjackson.databind.ObjectMapper] with different underlying streaming parser, generator
+implementation.
+
+The main starting point for operations is [org.cirjson.cirjackson.databind.ObjectMapper], which can be used either
+directly (via multiple overloaded `readValue`, `readTree`, `writeValue` and `writeTree` methods, or it can be used as a
+configurable factory for constructing fully immutable, thread-safe and reusable
+[org.cirjson.cirjackson.databind.ObjectReader] and [org.cirjson.cirjackson.databind.ObjectWriter] objects.
+
+In addition to simple reading and writing of CirJSON as POJOs or CirJSON trees (represented as
+[org.cirjson.cirjackson.databind.CirJsonNode], and configurability needed to change aspects of reading/writing, mapper
+contains additional functionality such as:
+
+* Value conversions using [org.cirjson.cirjackson.databind.ObjectMapper.convertValue],
+  [org.cirjson.cirjackson.databind.ObjectMapper.valueToTree] and
+  [org.cirjson.cirjackson.databind.ObjectMapper.treeToValue] methods;
+
+* Type introspection needed for things like generation of Schemas (like CirJSON Schema), using
+  [org.cirjson.cirjackson.databind.ObjectMapper.acceptCirJsonFormatVisitor] (note: actual handles are usually provided
+  by various CirJackson modules: mapper simply initiates calling of callbacks, based on serializers registered).
+
+Simplest usage is of form:
+
+```kotlin
+val mapper = ObjectMapper() // can use static singleton, inject: just make sure to reuse!
+val value = MyValue()
+// ... and configure
+val newState = File("my-stuff.cirjson")
+mapper.writeValue(newState, value) // writes CirJSON serialization of MyValue instance
+// or, read
+val older = mapper.readValue(File("my-older-stuff.cirjson"), MyValue::class)
+
+// Or if you prefer CirJSON Tree representation:
+val root = mapper.readTree(newState)
+// and find values by, for example, using a JsonPointer expression:
+val age = root.at("/personal/age").valueAsInt
+```
+
+For more usage, refer to documentation of [org.cirjson.cirjackson.databind.ObjectMapper],
+[org.cirjson.cirjackson.databind.ObjectReader], and [org.cirjson.cirjackson.databind.ObjectWriter].
+
 # Package org.cirjson.cirjackson.databind.annotation
 
 Annotations that directly depend on classes in databinding bundle (not just CirJackson core) and cannot be included in
@@ -31,8 +80,8 @@ Package that contains standard implementations for [org.cirjson.cirjackson.datab
 
 # Package org.cirjson.cirjackson.databind.configuration
 
-Package that contains most of configuration-related classes; exception being couple of most-commonly used configuration
-things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
+Package that contains most of configuration-related classes; exception being a couple of most-commonly used
+configuration things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
 
 # Package org.cirjson.cirjackson.databind.introspect
 
