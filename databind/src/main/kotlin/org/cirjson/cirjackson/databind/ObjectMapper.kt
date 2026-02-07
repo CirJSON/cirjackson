@@ -714,10 +714,8 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     /**
      * Method to deserialize CirJSON content into a type, reference to which is passed as argument. Type is passed using
-     * CirJackson specific type; instance of which can be constructed using [TypeFactory].
-     * 
-     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is
-     * that, due to type erasure, key and value types cannot be introspected when using this method.
+     * so-called "super type token" and specifically needs to be used if the root type is a parameterized (generic)
+     * container type.
      *
      * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
      * through as-is without additional wrapping -- note that this is one case where
@@ -731,7 +729,27 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
     @Throws(CirJacksonException::class)
     @Suppress("UNCHECKED_CAST")
-    open fun <T : Any> readValue(parser: CirJsonParser, valueType: ResolvedType): T? {
+    open fun <T : Any> readValue(parser: CirJsonParser, valueTypeReference: TypeReference<T>): T? {
+        return readValue(deserializationContext(parser), parser, myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content into a type, reference to which is passed as argument. Type is passed using
+     * CirJackson specific type; instance of which can be constructed using [TypeFactory].
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     * 
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> readValue(parser: CirJsonParser, valueType: ResolvedType): T? {
         return readValue(deserializationContext(parser), parser,
                 myTypeFactory.constructType(valueType as KotlinType)) as T?
     }
@@ -755,13 +773,287 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
     @Throws(CirJacksonException::class)
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> readValue(parser: CirJsonParser, valueType: KotlinType): T? {
+    open fun <T : Any> readValue(parser: CirJsonParser, valueType: KotlinType): T? {
         return readValue(deserializationContext(parser), parser, myTypeFactory.constructType(valueType)) as T?
+    }
+
+    /**
+     * Convenience method, equivalent in function to:
+     * ```
+     * readerFor(valueType).readValues(parser)
+     * ```
+     * 
+     * Method for reading sequence of Objects from parser stream. Sequence can be either root-level "unwrapped" sequence
+     * (without surrounding CirJSON array), or a sequence contained in a CirJSON Array. In either case [CirJsonParser]
+     * **MUST** point to the first token of the first element, OR not point to any token (in which case it is advanced
+     * to the next token). This means, specifically, that for wrapped sequences, parser MUST NOT point to the
+     * surrounding `START_ARRAY` (one that contains values to read) but rather to the token following it which is the
+     * first token of the first value to read.
+     * 
+     * Note that [ObjectReader] has more complete set of variants.
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readValues(parser: CirJsonParser, valueType: KotlinType): MappingIterator<T> {
+        val context = deserializationContext(parser)
+        val deserializer = findRootDeserializer(context, valueType)
+        return MappingIterator.construct(valueType, parser, context, deserializer, false, null)
+    }
+
+    /**
+     * Convenience method, equivalent in function to:
+     * ```
+     * readerFor(valueType).readValues(parser)
+     * ```
+     * 
+     * Method for reading sequence of Objects from parser stream. Sequence can be either root-level "unwrapped" sequence
+     * (without surrounding CirJSON array), or a sequence contained in a CirJSON Array. In either case [CirJsonParser]
+     * **MUST** point to the first token of the first element, OR not point to any token (in which case it is advanced
+     * to the next token). This means, specifically, that for wrapped sequences, parser MUST NOT point to the
+     * surrounding `START_ARRAY` (one that contains values to read) but rather to the token following it which is the
+     * first token of the first value to read.
+     * 
+     * Type-safe overload of [readValues] using [KotlinType].
+     * 
+     * Note that [ObjectReader] has more complete set of variants.
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readValues(parser: CirJsonParser, valueType: KClass<T>): MappingIterator<T> {
+        return readValues(parser, myTypeFactory.constructType(valueType.java))
+    }
+
+    /**
+     * Convenience method, equivalent in function to:
+     * ```
+     * readerFor(valueType).readValues(parser)
+     * ```
+     * 
+     * Method for reading sequence of Objects from parser stream. Sequence can be either root-level "unwrapped" sequence
+     * (without surrounding CirJSON array), or a sequence contained in a CirJSON Array. In either case [CirJsonParser]
+     * **MUST** point to the first token of the first element, OR not point to any token (in which case it is advanced
+     * to the next token). This means, specifically, that for wrapped sequences, parser MUST NOT point to the
+     * surrounding `START_ARRAY` (one that contains values to read) but rather to the token following it which is the
+     * first token of the first value to read.
+     * 
+     * Note that [ObjectReader] has more complete set of variants.
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> readValues(parser: CirJsonParser, valueType: TypeReference<T>): MappingIterator<T> {
+        return readValues(parser, myTypeFactory.constructType(valueType))
     }
 
     /*
      *******************************************************************************************************************
-     * Public API: serialization (mapping from types to external format)
+     * Public API: deserialization, mapping from token stream to types
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     * 
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param inputStream Input stream used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     * 
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(inputStream: InputStream): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, inputStream))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param reader Reader used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(reader: Reader): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, reader))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param content String used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(content: String): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, content))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param content ByteArray used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(content: ByteArray): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, content))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param content ByteArray used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(content: ByteArray, offset: Int, length: Int): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, content, offset, length))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param file File used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(file: File): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, file))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), Java `null` will be returned.
+     *
+     * @param path Path used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(path: Path): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, path))
+    }
+
+    /**
+     * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
+     * resulting tree (where root can consist of just a single node if the current event is a value event, not
+     * container).
+     *
+     * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
+     * problem occurs (invalid CirJSON),
+     * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
+     * found from input (end-of-input), `null` will be returned.
+     *
+     * NOTE: handling of [URL] is delegated to [TokenStreamFactory.createParser] and usually simply calls
+     * [URL.openStream], meaning no special handling is done. If different HTTP connection options are needed you will
+     * need to create [InputStream] separately.
+     *
+     * @param url File used to read CirJSON content for building the CirJSON tree.
+     *
+     * @return a [CirJsonNode], if valid CirJSON content found; `null` if input has no content to bind -- note, however,
+     * that if CirJSON `null` token is found, it will be represented as a non-`null` [CirJsonNode] (one that returns
+     * `true` for [CirJsonNode.isNull])
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     */
+    @Throws(CirJacksonException::class)
+    open fun readTree(url: URL): CirJsonNode {
+        val context = deserializationContext()
+        return readTreeAndClose(context, myStreamFactory.createParser(context, url))
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: serialization, mapping from types to external format
      *******************************************************************************************************************
      */
 
