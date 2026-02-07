@@ -284,43 +284,43 @@ open class ObjectReader : Versioned, TreeCodec {
     /**
      * Method for constructing a new reader instance that is configured with specified feature enabled.
      */
-    open fun with(feature: DeserializationFeature): ObjectReader {
-        return with(myConfig.with(feature))
+    open fun withConfig(feature: DeserializationFeature): ObjectReader {
+        return withConfig(myConfig.with(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features enabled.
      */
-    open fun with(first: DeserializationFeature, vararg other: DeserializationFeature): ObjectReader {
-        return with(myConfig.with(first, *other))
+    open fun withConfig(first: DeserializationFeature, vararg other: DeserializationFeature): ObjectReader {
+        return withConfig(myConfig.with(first, *other))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features enabled.
      */
     open fun withFeatures(vararg features: DeserializationFeature): ObjectReader {
-        return with(myConfig.withFeatures(*features))
+        return withConfig(myConfig.withFeatures(*features))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified feature disabled.
      */
     open fun without(feature: DeserializationFeature): ObjectReader {
-        return with(myConfig.without(feature))
+        return withConfig(myConfig.without(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features disabled.
      */
     open fun without(first: DeserializationFeature, vararg other: DeserializationFeature): ObjectReader {
-        return with(myConfig.without(first, *other))
+        return withConfig(myConfig.without(first, *other))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features disabled.
      */
     open fun withoutFeatures(vararg features: DeserializationFeature): ObjectReader {
-        return with(myConfig.withoutFeatures(*features))
+        return withConfig(myConfig.withoutFeatures(*features))
     }
 
     /*
@@ -332,29 +332,29 @@ open class ObjectReader : Versioned, TreeCodec {
     /**
      * Method for constructing a new reader instance that is configured with specified feature enabled.
      */
-    open fun with(feature: DatatypeFeature): ObjectReader {
-        return with(myConfig.with(feature))
+    open fun withConfig(feature: DatatypeFeature): ObjectReader {
+        return withConfig(myConfig.with(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features enabled.
      */
     open fun withFeatures(vararg features: DatatypeFeature): ObjectReader {
-        return with(myConfig.withFeatures(*features))
+        return withConfig(myConfig.withFeatures(*features))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified feature disabled.
      */
     open fun without(feature: DatatypeFeature): ObjectReader {
-        return with(myConfig.without(feature))
+        return withConfig(myConfig.without(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features disabled.
      */
     open fun withoutFeatures(vararg features: DatatypeFeature): ObjectReader {
-        return with(myConfig.withoutFeatures(*features))
+        return withConfig(myConfig.withoutFeatures(*features))
     }
 
     /*
@@ -366,29 +366,29 @@ open class ObjectReader : Versioned, TreeCodec {
     /**
      * Method for constructing a new reader instance that is configured with specified feature enabled.
      */
-    open fun with(feature: StreamReadFeature): ObjectReader {
-        return with(myConfig.with(feature))
+    open fun withConfig(feature: StreamReadFeature): ObjectReader {
+        return withConfig(myConfig.with(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features enabled.
      */
     open fun withFeatures(vararg features: StreamReadFeature): ObjectReader {
-        return with(myConfig.withFeatures(*features))
+        return withConfig(myConfig.withFeatures(*features))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified feature disabled.
      */
     open fun without(feature: StreamReadFeature): ObjectReader {
-        return with(myConfig.without(feature))
+        return withConfig(myConfig.without(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features disabled.
      */
     open fun withoutFeatures(vararg features: StreamReadFeature): ObjectReader {
-        return with(myConfig.withoutFeatures(*features))
+        return withConfig(myConfig.withoutFeatures(*features))
     }
 
     /*
@@ -400,29 +400,29 @@ open class ObjectReader : Versioned, TreeCodec {
     /**
      * Method for constructing a new reader instance that is configured with specified feature enabled.
      */
-    open fun with(feature: FormatFeature): ObjectReader {
-        return with(myConfig.with(feature))
+    open fun withConfig(feature: FormatFeature): ObjectReader {
+        return withConfig(myConfig.with(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features enabled.
      */
     open fun withFeatures(vararg features: FormatFeature): ObjectReader {
-        return with(myConfig.withFeatures(*features))
+        return withConfig(myConfig.withFeatures(*features))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified feature disabled.
      */
     open fun without(feature: FormatFeature): ObjectReader {
-        return with(myConfig.without(feature))
+        return withConfig(myConfig.without(feature))
     }
 
     /**
      * Method for constructing a new reader instance that is configured with specified features disabled.
      */
     open fun withoutFeatures(vararg features: FormatFeature): ObjectReader {
-        return with(myConfig.withoutFeatures(*features))
+        return withConfig(myConfig.withoutFeatures(*features))
     }
 
     /*
@@ -448,6 +448,30 @@ open class ObjectReader : Versioned, TreeCodec {
     }
 
     /**
+     * Mutant factory method that will construct a new instance that has specified underlying [DeserializationConfig].
+     * 
+     * NOTE: use of this method is not recommended, as there are many other re-configuration methods available.
+     */
+    open fun with(config: DeserializationConfig): ObjectReader {
+        return withConfig(config)
+    }
+
+    /**
+     * Method for constructing a new instance with configuration that uses passed [InjectableValues] to provide
+     * injectable values.
+     * 
+     * Note that the method does NOT change state of this reader, but rather construct and returns a newly configured
+     * instance if the provided values aren't the same object as the one this ObjectReader uses.
+     */
+    open fun with(injectableValues: InjectableValues?): ObjectReader {
+        if (myInjectableValues === injectableValues) {
+            return this
+        }
+
+        return new(this, myConfig, myValueType, myRootDeserializer, myValueToUpdate, mySchema, injectableValues)
+    }
+
+    /**
      * Method for constructing a new reader instance with configuration that uses passed [CirJsonNodeFactory] for
      * constructing [CirJsonNode] instances.
      * 
@@ -455,7 +479,7 @@ open class ObjectReader : Versioned, TreeCodec {
      * instance.
      */
     open fun with(factory: CirJsonNodeFactory): ObjectReader {
-        return with(myConfig.with(factory))
+        return withConfig(myConfig.with(factory))
     }
 
     /**
@@ -466,7 +490,7 @@ open class ObjectReader : Versioned, TreeCodec {
      * instance.
      */
     open fun withRootName(rootName: String?): ObjectReader {
-        return with(myConfig.withRootName(rootName))
+        return withConfig(myConfig.withRootName(rootName))
     }
 
     /**
@@ -477,7 +501,7 @@ open class ObjectReader : Versioned, TreeCodec {
      * instance.
      */
     open fun withRootName(rootName: PropertyName): ObjectReader {
-        return with(myConfig.withRootName(rootName))
+        return withConfig(myConfig.withRootName(rootName))
     }
 
     /**
@@ -485,7 +509,7 @@ open class ObjectReader : Versioned, TreeCodec {
      * wrapping when writing values with this [ObjectReader].
      */
     open fun withoutRootName(): ObjectReader {
-        return with(myConfig.withRootName(PropertyName.NO_NAME))
+        return withConfig(myConfig.withRootName(PropertyName.NO_NAME))
     }
 
     /**
@@ -556,23 +580,23 @@ open class ObjectReader : Versioned, TreeCodec {
      * Note that the method does NOT change state of this reader, but rather construct and returns a newly configured instance.
      */
     open fun withView(activeView: KClass<*>): ObjectReader {
-        return with(myConfig.withView(activeView))
+        return withConfig(myConfig.withView(activeView))
     }
 
     open fun with(locale: Locale): ObjectReader {
-        return with(myConfig.with(locale))
+        return withConfig(myConfig.with(locale))
     }
 
     open fun with(timeZone: TimeZone): ObjectReader {
-        return with(myConfig.with(timeZone))
+        return withConfig(myConfig.with(timeZone))
     }
 
     open fun withHandler(handler: DeserializationProblemHandler): ObjectReader {
-        return with(myConfig.withHandler(handler))
+        return withConfig(myConfig.withHandler(handler))
     }
 
     open fun with(base64Variant: Base64Variant): ObjectReader {
-        return with(myConfig.with(base64Variant))
+        return withConfig(myConfig.with(base64Variant))
     }
 
     /**
@@ -586,19 +610,19 @@ open class ObjectReader : Versioned, TreeCodec {
      * instance with otherwise identical settings)
      */
     open fun with(attributes: ContextAttributes): ObjectReader {
-        return with(myConfig.with(attributes))
+        return withConfig(myConfig.with(attributes))
     }
 
     open fun withAttributes(attributes: Map<*, *>): ObjectReader {
-        return with(myConfig.withAttributes(attributes))
+        return withConfig(myConfig.withAttributes(attributes))
     }
 
     open fun withAttribute(key: Any, value: Any): ObjectReader {
-        return with(myConfig.withAttribute(key, value))
+        return withConfig(myConfig.withAttribute(key, value))
     }
 
     open fun withoutAttribute(key: Any): ObjectReader {
-        return with(myConfig.withoutAttribute(key))
+        return withConfig(myConfig.withoutAttribute(key))
     }
 
     /*
@@ -607,7 +631,7 @@ open class ObjectReader : Versioned, TreeCodec {
      *******************************************************************************************************************
      */
 
-    protected fun with(newConfig: DeserializationConfig): ObjectReader {
+    protected fun withConfig(newConfig: DeserializationConfig): ObjectReader {
         if (newConfig === myConfig) {
             return this
         }
