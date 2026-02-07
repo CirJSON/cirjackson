@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind
 
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
+import org.cirjson.cirjackson.core.exception.CirJacksonIOException
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
@@ -11,11 +12,14 @@ import org.cirjson.cirjackson.databind.deserialization.DeserializationContextExt
 import org.cirjson.cirjackson.databind.exception.MismatchedInputException
 import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
+import org.cirjson.cirjackson.databind.node.POJONode
 import org.cirjson.cirjackson.databind.node.TreeTraversingParser
 import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.type.SimpleType
 import org.cirjson.cirjackson.databind.type.TypeFactory
 import org.cirjson.cirjackson.databind.util.RootNameLookup
+import org.cirjson.cirjackson.databind.util.closeOnFailAndThrowAsCirJacksonException
+import org.cirjson.cirjackson.databind.util.isAssignableFrom
 import org.cirjson.cirjackson.databind.util.verifyMustOverride
 import java.io.*
 import java.lang.reflect.Type
@@ -693,7 +697,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Method to deserialize CirJSON content into a non-container type (it can be an array type, however): typically a
      * bean, array or a wrapper type (like [java.lang.Boolean]).
      * 
-     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]. The reason is
+     * Note: this method should NOT be used if the result type is a container ([Collection] or [Map]). The reason is
      * that, due to type erasure, key and value types cannot be introspected when using this method.
      *
      * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
@@ -851,11 +855,11 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Method to deserialize CirJSON content as tree expressed using set of [CirJsonNode] instances. Returns root of the
      * resulting tree (where root can consist of just a single node if the current event is a value event, not
      * container).
-     * 
+     *
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param inputStream Input stream used to read CirJSON content for building the CirJSON tree.
      *
@@ -880,7 +884,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param reader Reader used to read CirJSON content for building the CirJSON tree.
      *
@@ -905,7 +909,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param content String used to read CirJSON content for building the CirJSON tree.
      *
@@ -930,7 +934,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param content ByteArray used to read CirJSON content for building the CirJSON tree.
      *
@@ -955,7 +959,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param content ByteArray used to read CirJSON content for building the CirJSON tree.
      *
@@ -980,7 +984,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param file File used to read CirJSON content for building the CirJSON tree.
      *
@@ -1005,7 +1009,7 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * If a low-level I/O problem (missing input, network error) occurs, a [IOException] will be thrown. If a parsing
      * problem occurs (invalid CirJSON),
      * [StreamReadException][org.cirjson.cirjackson.core.exception.StreamReadException] will be thrown. If no content is
-     * found from input (end-of-input), Java `null` will be returned.
+     * found from input (end-of-input), `null` will be returned.
      *
      * @param path Path used to read CirJSON content for building the CirJSON tree.
      *
@@ -1053,6 +1057,715 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
 
     /*
      *******************************************************************************************************************
+     * Public API: serialization, mapping from types to token streams
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method that can be used to serialize any value as CirJSON output, using provided [CirJsonGenerator].
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(generator: CirJsonGenerator, value: Any?) {
+        val config = serializationConfig()
+
+        if (config.isEnabled(SerializationFeature.CLOSE_CLOSEABLE) && value is Closeable) {
+            writeCloseableValue(generator, value, config)
+        } else {
+            serializerProvider(config).serializeValue(generator, value)
+
+            if (config.isEnabled(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)) {
+                generator.flush()
+            }
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: Additional Tree Model support beyond TreeCodec
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Convenience conversion method that will bind data given CirJSON tree contains into specific value (usually bean)
+     * type.
+     * 
+     * Functionally equivalent to:
+     * ```
+     * objectMapper.convertValue(node, valueType)
+     * ```
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> treeToValue(node: TreeNode?, valueType: KClass<T>): T? {
+        node ?: return null
+
+        if (TreeNode::class.isAssignableFrom(valueType) && valueType.isAssignableFrom(node::class)) {
+            return node as T
+        }
+
+        val token = node.asToken()
+
+        if (token == CirJsonToken.VALUE_EMBEDDED_OBJECT && node is POJONode) {
+            val obj = node.pojo ?: return null
+
+            if (valueType.isInstance(obj)) {
+                return obj as T
+            }
+        }
+
+        return readValue(treeAsTokens(node), valueType)
+    }
+
+    /**
+     * Convenience conversion method that will bind data given CirJSON tree contains into specific value (usually bean)
+     * type.
+     * 
+     * Functionally equivalent to:
+     * ```
+     * objectMapper.convertValue(node, valueType)
+     * ```
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> treeToValue(node: TreeNode?, valueType: KotlinType): T? {
+        node ?: return null
+
+        if (valueType.isTypeOrSubTypeOf(TreeNode::class) && valueType.isTypeOrSuperTypeOf(node::class)) {
+            return node as T
+        }
+
+        val token = node.asToken()
+
+        if (token == CirJsonToken.VALUE_EMBEDDED_OBJECT && node is POJONode) {
+            val obj = node.pojo ?: return null
+
+            if (valueType.isTypeOrSuperTypeOf(obj::class)) {
+                return obj as T
+            }
+        }
+
+        return readValue(treeAsTokens(node), valueType)
+    }
+
+    /**
+     * Convenience conversion method that will bind data given CirJSON tree contains into specific value (usually bean)
+     * type.
+     * 
+     * Functionally equivalent to:
+     * ```
+     * objectMapper.convertValue(node, valueType)
+     * ```
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> treeToValue(node: TreeNode?, valueTypeReference: TypeReference<T>): T? {
+        return treeToValue(node, constructType(valueTypeReference))
+    }
+
+    /**
+     * Method that is reverse of [treeToValue]: it will convert given value (usually bean) into its equivalent Tree
+     * model [CirJsonNode] representation. Functionally similar to serializing value into token stream and parsing that
+     * stream back as tree model node, but more efficient as [TokenBuffer] is used to contain the intermediate
+     * representation instead of fully serialized contents.
+     * 
+     * NOTE: while results are usually identical to that of serialization followed by deserialization, this is not
+     * always the case. In some cases serialization into intermediate representation will retain encapsulation of things
+     * like raw value ([org.cirjson.cirjackson.databind.util.RawValue]) or basic node identity ([CirJsonNode]). If so,
+     * result is a valid tree, but values are not re-constructed through actual format representation. So if
+     * transformation requires actual materialization of encoded content, it will be necessary to do actual
+     * serialization.
+     *
+     * @param T Actual node type; usually either basic [CirJsonNode] or [org.cirjson.cirjackson.databind.node.ObjectNode]
+     * 
+     * @param fromValue value to convert
+     *
+     * @return (non-`null`) Root node of the resulting content tree: in case of `null`, value node for which
+     * [CirJsonNode.isNull] returns `true`.
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : CirJsonNode> valueToTree(fromValue: Any?): T {
+        return serializerProvider().valueToTree(fromValue)
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API: deserialization, external format to objects
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method to deserialize CirJSON content from given file into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: File, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given file into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: File, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given file into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: File, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given path into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Path, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given path into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Path, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given path into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Path, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given URL into given type.
+     *
+     * NOTE: handling of [URL] is delegated to [TokenStreamFactory.createParser] and usually simply calls
+     * [URL.openStream], meaning no special handling is done. If different HTTP connection options are needed you will
+     * need to create [InputStream] separately.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: URL, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given URL into given type.
+     *
+     * NOTE: handling of [URL] is delegated to [TokenStreamFactory.createParser] and usually simply calls
+     * [URL.openStream], meaning no special handling is done. If different HTTP connection options are needed you will
+     * need to create [InputStream] separately.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: URL, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given URL into given type.
+     *
+     * NOTE: handling of [URL] is delegated to [TokenStreamFactory.createParser] and usually simply calls
+     * [URL.openStream], meaning no special handling is done. If different HTTP connection options are needed you will
+     * need to create [InputStream] separately.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: URL, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given string into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: String, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given string into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: String, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given string into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: String, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given reader into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Reader, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given reader into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Reader, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given reader into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: Reader, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given input stream into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: InputStream, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given input stream into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: InputStream, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given input stream into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: InputStream, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueType: KClass<T>, offset: Int, length: Int): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content, offset, length),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueTypeReference: TypeReference<T>, offset: Int,
+            length: Int): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content, offset, length),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given byte array into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(content: ByteArray, valueType: KotlinType, offset: Int, length: Int): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, content, offset, length), valueType) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given data input into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: DataInput, valueType: KClass<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueType.java)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given data input into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: DataInput, valueTypeReference: TypeReference<T>): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source),
+                myTypeFactory.constructType(valueTypeReference)) as T?
+    }
+
+    /**
+     * Method to deserialize CirJSON content from given data input into given type.
+     *
+     * @throws CirJacksonIOException if a low-level I/O problem (unexpected end-of-input, network error) occurs (passed
+     * through as-is without additional wrapping -- note that this is one case where
+     * [DeserializationFeature.WRAP_EXCEPTIONS] does NOT result in wrapping of exception even if enabled)
+     *
+     * @throws org.cirjson.cirjackson.core.exception.StreamReadException if underlying input contains invalid content of
+     * type [CirJsonParser] supports (CirJSON for default case)
+     *
+     * @throws DatabindException if the input CirJSON structure does not match structure expected for result type (or
+     * has other mismatch issues)
+     */
+    @Throws(CirJacksonException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> readValue(source: DataInput, valueType: KotlinType): T? {
+        val context = deserializationContext()
+        return readMapAndClose(context, myStreamFactory.createParser(context, source), valueType) as T?
+    }
+
+    /*
+     *******************************************************************************************************************
      * Public API: serialization, mapping from types to external format
      *******************************************************************************************************************
      */
@@ -1064,6 +1777,75 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     @Throws(CirJacksonException::class)
     open fun writeValueAsBytes(value: Any?): ByteArray {
         TODO("Not yet implemented")
+    }
+
+    /**
+     * Method called to configure the generator as necessary and then call write functionality
+     */
+    @Throws(CirJacksonException::class)
+    protected fun configAndWriteValue(provider: SerializationContextExtended, generator: CirJsonGenerator,
+            value: Any?) {
+        if (provider.isEnabled(SerializationFeature.CLOSE_CLOSEABLE) && value is Closeable) {
+            configAndWriteCloseable(provider, generator, value)
+            return
+        }
+
+        try {
+            provider.serializeValue(generator, value)
+        } catch (e: Exception) {
+            closeOnFailAndThrowAsCirJacksonException(generator, e)
+            return
+        }
+
+        generator.close()
+    }
+
+    /**
+     * Helper method used when value to serialize is [Closeable] and its `close()` method is to be called right after
+     * serialization has been called
+     */
+    @Throws(CirJacksonException::class)
+    private fun configAndWriteCloseable(provider: SerializationContextExtended, generator: CirJsonGenerator,
+            value: Any) {
+        var toClose = value as Closeable?
+
+        try {
+            provider.serializeValue(generator, value)
+            val tempToClose = toClose!!
+            toClose = null
+            tempToClose.close()
+        } catch (e: Exception) {
+            closeOnFailAndThrowAsCirJacksonException(generator, toClose, e)
+            return
+        }
+
+        generator.close()
+    }
+
+    /**
+     * Helper method used when value to serialize is [Closeable] and its `close()` method is to be called right after
+     * serialization has been called
+     */
+    @Throws(CirJacksonException::class)
+    protected fun writeCloseableValue(generator: CirJsonGenerator, value: Any, config: SerializationConfig) {
+        val toClose = value as Closeable
+
+        try {
+            serializerProvider(config).serializeValue(generator, value)
+
+            if (config.isEnabled(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)) {
+                generator.flush()
+            }
+        } catch (e: Exception) {
+            closeOnFailAndThrowAsCirJacksonException(null, toClose, e)
+            return
+        }
+
+        try {
+            toClose.close()
+        } catch (e: IOException) {
+            throw CirJacksonIOException.construct(e)
+        }
     }
 
     /*
