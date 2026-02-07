@@ -24,7 +24,7 @@ abstract class JavaBeansAnnotations {
                 "org.cirjson.cirjackson.databind.external.beans.JavaBeansAnnotationsImplementation").kotlin.let {
             try {
                 it.createInstance(false) as JavaBeansAnnotations
-            } catch (e: IllegalAccessException) {
+            } catch (_: IllegalAccessException) {
                 null
             } catch (t: Throwable) {
                 t.rethrowIfFatal()

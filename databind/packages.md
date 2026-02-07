@@ -83,6 +83,11 @@ Package that contains standard implementations for [org.cirjson.cirjackson.datab
 Package that contains most of configuration-related classes; exception being a couple of most-commonly used
 configuration things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
 
+# Package org.cirjson.cirjackson.databind.external.beans
+
+Package that contains two dynamically loaded annotations that were added in JDK7 but that Module system carved out of
+core into `java.beans`.
+
 # Package org.cirjson.cirjackson.databind.introspect
 
 Functionality needed for Bean introspection, required for detecting accessors and mutators for Beans, as well as
