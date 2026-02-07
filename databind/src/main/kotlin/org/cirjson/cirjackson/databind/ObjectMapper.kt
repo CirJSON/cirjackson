@@ -3,10 +3,14 @@ package org.cirjson.cirjackson.databind
 import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.io.CharacterEscapes
+import org.cirjson.cirjackson.core.io.SegmentedStringWriter
 import org.cirjson.cirjackson.core.tree.ArrayTreeNode
 import org.cirjson.cirjackson.core.tree.ObjectTreeNode
 import org.cirjson.cirjackson.core.type.ResolvedType
 import org.cirjson.cirjackson.core.type.TypeReference
+import org.cirjson.cirjackson.core.util.ByteArrayBuilder
+import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisitorWrapper
 import org.cirjson.cirjackson.databind.configuration.*
 import org.cirjson.cirjackson.databind.deserialization.DeserializationContextExtended
 import org.cirjson.cirjackson.databind.exception.MismatchedInputException
@@ -14,6 +18,7 @@ import org.cirjson.cirjackson.databind.introspection.MixInHandler
 import org.cirjson.cirjackson.databind.node.CirJsonNodeFactory
 import org.cirjson.cirjackson.databind.node.POJONode
 import org.cirjson.cirjackson.databind.node.TreeTraversingParser
+import org.cirjson.cirjackson.databind.serialization.FilterProvider
 import org.cirjson.cirjackson.databind.serialization.SerializationContextExtended
 import org.cirjson.cirjackson.databind.type.SimpleType
 import org.cirjson.cirjackson.databind.type.TypeFactory
@@ -25,6 +30,7 @@ import java.io.*
 import java.lang.reflect.Type
 import java.net.URL
 import java.nio.file.Path
+import java.text.DateFormat
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -1165,8 +1171,8 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     /**
      * Method that is reverse of [treeToValue]: it will convert given value (usually bean) into its equivalent Tree
      * model [CirJsonNode] representation. Functionally similar to serializing value into token stream and parsing that
-     * stream back as tree model node, but more efficient as [TokenBuffer] is used to contain the intermediate
-     * representation instead of fully serialized contents.
+     * stream back as tree model node, but more efficient as [org.cirjson.cirjackson.databind.util.TokenBuffer] is used
+     * to contain the intermediate representation instead of fully serialized contents.
      * 
      * NOTE: while results are usually identical to that of serialization followed by deserialization, this is not
      * always the case. In some cases serialization into intermediate representation will retain encapsulation of things
@@ -1771,12 +1777,94 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
 
     /**
+     * Method that can be used to serialize any value as CirJSON output, written to File provided (using encoding
+     * [CirJsonEncoding.UTF8]).
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(file: File, value: Any?) {
+        val provider = serializerProvider()
+        configAndWriteValue(provider, myStreamFactory.createGenerator(provider, file, CirJsonEncoding.UTF8), value)
+    }
+
+    /**
+     * Method that can be used to serialize any value as CirJSON output, written to Path provided (using encoding
+     * [CirJsonEncoding.UTF8]).
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(path: Path, value: Any?) {
+        val provider = serializerProvider()
+        configAndWriteValue(provider, myStreamFactory.createGenerator(provider, path, CirJsonEncoding.UTF8), value)
+    }
+
+    /**
+     * Method that can be used to serialize any value as CirJSON output, written to OutputStream provided (using
+     * encoding [CirJsonEncoding.UTF8]).
+     * 
+     * Note: method does not close the underlying stream explicitly here; however, [TokenStreamFactory] this mapper uses
+     * may choose to close the stream depending on its settings (by default, it will try to close it when constructed
+     * [CirJsonGenerator] is closed).
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(outputStream: OutputStream, value: Any?) {
+        val provider = serializerProvider()
+        configAndWriteValue(provider, myStreamFactory.createGenerator(provider, outputStream, CirJsonEncoding.UTF8),
+                value)
+    }
+
+    /**
+     * Method that can be used to serialize any value as CirJSON output, written to DataOutput provided.
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(dataOutput: DataOutput, value: Any?) {
+        val provider = serializerProvider()
+        configAndWriteValue(provider, myStreamFactory.createGenerator(provider, dataOutput), value)
+    }
+
+    /**
+     * Method that can be used to serialize any value as CirJSON output, written to Writer provided.
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValue(writer: Writer, value: Any?) {
+        val provider = serializerProvider()
+        configAndWriteValue(provider, myStreamFactory.createGenerator(provider, writer), value)
+    }
+
+    /**
+     * Method that can be used to serialize any value as a String. Functionally equivalent to calling [writeValue] with
+     * [StringWriter] and constructing String, but more efficient.
+     */
+    @Throws(CirJacksonException::class)
+    open fun writeValueAsString(value: Any?): String {
+        val bufferRecycler = myStreamFactory.bufferRecycler
+
+        try {
+            SegmentedStringWriter(bufferRecycler).use {
+                val provider = serializerProvider()
+                configAndWriteValue(provider, myStreamFactory.createGenerator(provider, it), value)
+                return it.contentAndClear
+            }
+        } finally {
+            bufferRecycler.releaseToPool()
+        }
+    }
+
+    /**
      * Method that can be used to serialize any value as a ByteArray. Functionally equivalent to calling [writeValue]
      * with [ByteArrayOutputStream] and getting bytes, but more efficient. Encoding used will be UTF-8.
      */
     @Throws(CirJacksonException::class)
     open fun writeValueAsBytes(value: Any?): ByteArray {
-        TODO("Not yet implemented")
+        val bufferRecycler = myStreamFactory.bufferRecycler
+
+        try {
+            ByteArrayBuilder(bufferRecycler).use {
+                val provider = serializerProvider()
+                configAndWriteValue(provider, myStreamFactory.createGenerator(provider, it), value)
+                return it.getClearAndRelease()
+            }
+        } finally {
+            bufferRecycler.releaseToPool()
+        }
     }
 
     /**
@@ -1858,7 +1946,70 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * Convenience method for constructing [ObjectWriter] with default settings.
      */
     open fun writer(): ObjectWriter {
-        TODO("Not yet implemented")
+        return newWriter(serializationConfig())
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] with specified feature enabled (compared to settings that this
+     * mapper instance has).
+     */
+    open fun writer(feature: SerializationFeature): ObjectWriter {
+        return newWriter(serializationConfig().with(feature))
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] with specified features enabled (compared to settings that this
+     * mapper instance has).
+     */
+    open fun writer(first: SerializationFeature, vararg features: SerializationFeature): ObjectWriter {
+        return newWriter(serializationConfig().with(first, *features))
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified [DateFormat].
+     */
+    open fun writer(dateFormat: DateFormat): ObjectWriter {
+        return newWriter(serializationConfig().with(dateFormat))
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified CirJSON View (filter).
+     */
+    open fun writerWithView(serializationView: KClass<*>?): ObjectWriter {
+        return newWriter(serializationConfig().withView(serializationView))
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified root type, instead of
+     * actual runtime type of value. Type must be a supertype of runtime type.
+     * 
+     * Main reason for using this method is performance, as writer is able to pre-fetch serializer to use before write,
+     * and if writer is used more than once this avoids addition per-value serializer lookups.
+     */
+    open fun writerFor(rootType: KClass<*>?): ObjectWriter {
+        return newWriter(serializationConfig(), rootType?.let { myTypeFactory.constructType(rootType.java) }, null)
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified root type, instead of
+     * actual runtime type of value. Type must be a supertype of runtime type.
+     * 
+     * Main reason for using this method is performance, as writer is able to pre-fetch serializer to use before write,
+     * and if writer is used more than once this avoids addition per-value serializer lookups.
+     */
+    open fun writerFor(rootType: TypeReference<*>?): ObjectWriter {
+        return newWriter(serializationConfig(), rootType?.let { myTypeFactory.constructType(rootType) }, null)
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified root type, instead of
+     * actual runtime type of value. Type must be a supertype of runtime type.
+     * 
+     * Main reason for using this method is performance, as writer is able to pre-fetch serializer to use before write,
+     * and if writer is used more than once this avoids addition per-value serializer lookups.
+     */
+    open fun writerFor(rootType: KotlinType?): ObjectWriter {
+        return newWriter(serializationConfig(), rootType, null)
     }
 
     /**
@@ -1866,7 +2017,41 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      * indentation.
      */
     open fun writerWithDefaultPrettyPrinter(): ObjectWriter {
-        TODO("Not yet implemented")
+        val config = serializationConfig()
+        return newWriter(config, null, config.defaultPrettyPrinter)
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will serialize objects using specified filter provider.
+     */
+    open fun writer(filterProvider: FilterProvider?): ObjectWriter {
+        return newWriter(serializationConfig().withFilters(filterProvider))
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will pass specific schema object to [CirJsonGenerator] used
+     * for writing content.
+     *
+     * @param schema Schema to pass to generator
+     */
+    open fun writer(schema: FormatSchema?): ObjectWriter {
+        return newWriter(serializationConfig(), schema)
+    }
+
+    /**
+     * Factory method for constructing [ObjectWriter] that will use specified Base64 encoding variant for Base64-encoded
+     * binary data.
+     */
+    open fun writer(base64Variant: Base64Variant): ObjectWriter {
+        return newWriter(serializationConfig().with(base64Variant))
+    }
+
+    open fun writer(escapes: CharacterEscapes?): ObjectWriter {
+        return newWriter(serializationConfig()).with(escapes)
+    }
+
+    open fun writer(attributes: ContextAttributes): ObjectWriter {
+        return newWriter(serializationConfig().with(attributes))
     }
 
     /*
@@ -1876,10 +2061,319 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
      */
 
     /**
+     * Factory method for constructing [ObjectReader] with default settings. Note that the resulting instance is NOT
+     * usable as is, without defining expected value type.
+     */
+    open fun reader(): ObjectReader {
+        return newReader(deserializationConfig()).with(myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] with specified feature enabled (compared to settings that this
+     * mapper instance has). Note that the resulting instance is NOT usable as is, without defining expected value type.
+     */
+    open fun reader(feature: DeserializationFeature): ObjectReader {
+        return newReader(deserializationConfig().with(feature))
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] with specified features enabled (compared to settings that this
+     * mapper instance has). Note that the resulting instance is NOT usable as is, without defining expected value type.
+     */
+    open fun reader(first: DeserializationFeature, vararg features: DeserializationFeature): ObjectReader {
+        return newReader(deserializationConfig().with(first, *features))
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will update given object (usually Bean, but can be a
+     * [Collection] or [Map] as well, but NOT an [Array]) with CirJSON data. Deserialization occurs normally except that
+     * the root-level value in CirJSON is not used for instantiating a new object; instead give updatable object is used
+     * as root. Runtime type of value object is used for locating deserializer, unless overridden by other factory
+     * methods of [ObjectReader]
+     */
+    open fun readerForUpdating(valueToUpdate: Any?): ObjectReader {
+        val type = valueToUpdate?.let { myTypeFactory.constructType(it::class.java) }
+        return newReader(deserializationConfig(), type, valueToUpdate, null, myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will read or update instances of specified type.
+     */
+    open fun readerFor(type: KotlinType): ObjectReader {
+        return newReader(deserializationConfig(), type, null, null, myInjectableValues)
+    }
+
+    /**
      * Factory method for constructing [ObjectReader] that will read or update instances of specified type.
      */
     open fun readerFor(type: KClass<*>): ObjectReader {
-        TODO("Not yet implemented")
+        return newReader(deserializationConfig(), myTypeFactory.constructType(type.java), null, null,
+                myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will read or update instances of specified type.
+     */
+    open fun readerFor(type: TypeReference<*>): ObjectReader {
+        return newReader(deserializationConfig(), myTypeFactory.constructType(type), null, null, myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will read values of a type `Array<type>`. Functionally same
+     * as:
+     * ```
+     * readerFor(Array<type>::class)
+     * ```
+     */
+    open fun readerForArrayOf(type: KClass<*>): ObjectReader {
+        return newReader(deserializationConfig(), myTypeFactory.constructArrayType(type), null, null,
+                myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will read or update instances of a type `List<type>`.
+     * Functionally same as:
+     * ```
+     * readerFor(object : TypeReference<List<type>>() {})
+     * ```
+     */
+    open fun readerForListOf(type: KClass<*>): ObjectReader {
+        return newReader(deserializationConfig(), myTypeFactory.constructCollectionLikeType(List::class, type), null,
+                null, myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will read or update instances of a type `Map<String, type>`.
+     * Functionally same as:
+     * ```
+     * readerFor(object : TypeReference<Map<String, type>>() {})
+     * ```
+     */
+    open fun readerForMapOf(type: KClass<*>): ObjectReader {
+        return newReader(deserializationConfig(), myTypeFactory.constructMapLikeType(Map::class, String::class, type),
+                null, null, myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will use specified [CirJsonNodeFactory] for constructing
+     * CirJSON trees.
+     */
+    open fun reader(nodeFactory: CirJsonNodeFactory): ObjectReader {
+        return newReader(deserializationConfig()).with(nodeFactory)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will pass specific schema object to [CirJsonParser] used for
+     * reading content.
+     *
+     * @param schema Schema to pass to parser
+     */
+    open fun reader(schema: FormatSchema?): ObjectReader {
+        return newReader(deserializationConfig(), null, null, schema, myInjectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will use specified injectable values.
+     *
+     * @param injectableValues Injectable values to use
+     */
+    open fun reader(injectableValues: InjectableValues): ObjectReader {
+        return newReader(deserializationConfig(), null, null, null, injectableValues)
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will deserialize objects using specified CirJSON View
+     * (filter).
+     */
+    open fun readerWithView(view: KClass<*>): ObjectReader {
+        return newReader(deserializationConfig().withView(view))
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will use specified Base64 encoding variant for Base64-encoded
+     * binary data.
+     */
+    open fun reader(base64Variant: Base64Variant): ObjectReader {
+        return newReader(deserializationConfig().with(base64Variant))
+    }
+
+    /**
+     * Factory method for constructing [ObjectReader] that will use specified default attributes.
+     */
+    open fun reader(attributes: ContextAttributes): ObjectReader {
+        return newReader(deserializationConfig().with(attributes))
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Extended Public API: convenience type conversion
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Convenience method for doing two-step conversion from given value, into instance of given value type, by writing
+     * value into temporary buffer and reading from the buffer into specified target type.
+     * 
+     * This method is functionally similar to first serializing given value into CirJSON, and then binding CirJSON data
+     * into value of given type, but should be more efficient since full serialization does not (need to) occur.
+     * However, same converters (serializers, deserializers) will be used as for data binding, meaning same object
+     * mapper configuration works.
+     * 
+     * Note that it is possible that in some cases behavior does differ from full serialize-then-deserialize cycle: in
+     * most case differences are unintentional (that is, flaws to fix) and should be reported, but the behavior is not
+     * guaranteed to be 100% the same: the goal is to allow efficient value conversions for structurally compatible
+     * objects, according to standard CirJackson configuration.
+     * 
+     * Further note that this functionality is not designed to support "advanced" use cases, such as conversion of
+     * polymorphic values, or cases where Object Identity is used.
+     *
+     * @throws IllegalArgumentException If conversion fails due to incompatible type; if so, root cause will contain
+     * underlying checked exception that data binding functionality threw.
+     */
+    @Throws(IllegalArgumentException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> convertValue(fromValue: Any?, toValueType: KotlinType): T? {
+        return convert(fromValue, toValueType) as T?
+    }
+
+    /**
+     * See [convertValue]
+     */
+    @Throws(IllegalArgumentException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> convertValue(fromValue: Any?, toValueType: KClass<T>): T? {
+        return convert(fromValue, myTypeFactory.constructType(toValueType.java)) as T?
+    }
+
+    /**
+     * See [convertValue]
+     */
+    @Throws(IllegalArgumentException::class)
+    @Suppress("UNCHECKED_CAST")
+    open fun <T : Any> convertValue(fromValue: Any?, toValueTypeReference: TypeReference<T>): T? {
+        return convert(fromValue, myTypeFactory.constructType(toValueTypeReference)) as T?
+    }
+
+    /**
+     * Actual conversion implementation: instead of using existing read and write methods, much of code is inlined.
+     * Reason for this is that we must avoid root value wrapping/unwrapping both for efficiency and for correctness. If
+     * root value wrapping/unwrapping is actually desired, caller must use explicit `writeValue` and `readValue`
+     * methods.
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun convert(fromValue: Any?, toValueType: KotlinType): Any? {
+        val config = serializationConfig().without(SerializationFeature.WRAP_ROOT_VALUE)
+        val context = serializerProvider(config)
+        var buffer = context.bufferForValueConversion()
+
+        if (isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
+            buffer = buffer.forceUseOfBigDecimal(true)
+        }
+
+        context.serializeValue(buffer, fromValue)
+
+        val readContext = deserializationContext()
+
+        buffer.asParser(readContext).use {
+            readContext.assignParser(it)
+            val token = initForReading(it, toValueType)
+
+            return when (token) {
+                CirJsonToken.VALUE_NULL -> findRootDeserializer(readContext, toValueType).getNullValue(readContext)
+                CirJsonToken.END_ARRAY, CirJsonToken.END_OBJECT -> null
+                else -> findRootDeserializer(readContext, toValueType).deserialize(it, readContext)
+            }
+        }
+    }
+
+    /**
+     * Convenience method similar to [convertValue].
+     * 
+     * Implementation is approximately as follows:
+     *
+     * 1. Serialize `updateWithValue` into [org.cirjson.cirjackson.databind.util.TokenBuffer];
+     *
+     * 2. Construct [ObjectReader] with `valueToUpdate` (using [readerForUpdating]);
+     *
+     * 3. Construct [CirJsonParser] (using [org.cirjson.cirjackson.databind.util.TokenBuffer.asParser]);
+     *
+     * 4. Update using [ObjectReader.readValue];
+     *
+     * 5. Return `valueToUpdate`.
+     * 
+     * Note that update is "shallow" in that only first level of properties (or, immediate contents of container to
+     * update) are modified, unless properties themselves indicate that merging should be applied for contents. Such
+     * merging can be specified using annotations (see `CirJsonMerge`) as well as using "config overrides" (see
+     * [MapperBuilder.withConfigOverride] and [MapperBuilder.defaultMergeable]).
+     *
+     * @param valueToUpdate Object to update
+     *
+     * @param overrides Object to conceptually serialize and merge into value to update; can be thought of as a provider
+     * for overrides to apply.
+     *
+     * @return Either the first argument (`valueToUpdate`), if it is mutable; or a result of creating new instance that
+     * is result of "merging" values (for example, "updating" an array will create a new array)
+     *
+     * @throws CirJacksonException if there are structural incompatibilities that prevent update.
+     */
+    @Throws(CirJacksonException::class)
+    open fun <T : Any> updateValue(valueToUpdate: T?, overrides: Any?): T? {
+        valueToUpdate ?: return null
+        overrides ?: return valueToUpdate
+
+        val config = serializationConfig().without(SerializationFeature.WRAP_ROOT_VALUE)
+        val context = serializerProvider(config)
+        var buffer = context.bufferForValueConversion()
+
+        if (isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
+            buffer = buffer.forceUseOfBigDecimal(true)
+        }
+
+        context.serializeValue(buffer, overrides)
+
+        buffer.asParser(ObjectReadContext.empty()).use {
+            return readerForUpdating(valueToUpdate).readValue(it)
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Extended Public API: CirJSON Schema generation
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for visiting type hierarchy for given type, using specified visitor.
+     *
+     * This method can be used for things like generating CirJSON Schema instance for specified type.
+     *
+     * @param type Type to generate schema for (possibly with generic signature)
+     */
+    open fun acceptCirJsonFormatVisitor(type: KClass<*>, visitor: CirJsonFormatVisitorWrapper) {
+        serializerProvider().acceptCirJsonFormatVisitor(myTypeFactory.constructType(type.java), visitor)
+    }
+
+    /**
+     * Method for visiting type hierarchy for given type, using specified visitor.
+     *
+     * This method can be used for things like generating CirJSON Schema instance for specified type.
+     *
+     * @param type Type to generate schema for (possibly with generic signature)
+     */
+    open fun acceptCirJsonFormatVisitor(type: TypeReference<*>, visitor: CirJsonFormatVisitorWrapper) {
+        serializerProvider().acceptCirJsonFormatVisitor(myTypeFactory.constructType(type), visitor)
+    }
+
+    /**
+     * Method for visiting type hierarchy for given type, using specified visitor. Visitation uses `Serializer`
+     * hierarchy and related properties
+     *
+     * This method can be used for things like generating CirJSON Schema instance for specified type.
+     *
+     * @param type Type to generate schema for (possibly with generic signature)
+     */
+    open fun acceptCirJsonFormatVisitor(type: KotlinType, visitor: CirJsonFormatVisitorWrapper) {
+        serializerProvider().acceptCirJsonFormatVisitor(type, visitor)
     }
 
     /*
@@ -2050,21 +2544,21 @@ open class ObjectMapper protected constructor(builder: MapperBuilder<*, *>) : Tr
     /**
      * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
      */
-    protected open fun newReader(config: SerializationConfig): ObjectWriter {
+    protected open fun newWriter(config: SerializationConfig): ObjectWriter {
         return ObjectWriter.construct(this, config)
     }
 
     /**
      * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
      */
-    protected open fun newReader(config: SerializationConfig, schema: FormatSchema?): ObjectWriter {
+    protected open fun newWriter(config: SerializationConfig, schema: FormatSchema?): ObjectWriter {
         return ObjectWriter.construct(this, config, schema)
     }
 
     /**
      * Factory method subclasses must override to produce [ObjectWriter] instances of proper subtype
      */
-    protected open fun newReader(config: SerializationConfig, rootType: KotlinType?,
+    protected open fun newWriter(config: SerializationConfig, rootType: KotlinType?,
             prettyPrinter: PrettyPrinter?): ObjectWriter {
         return ObjectWriter.construct(this, config, rootType, prettyPrinter)
     }
