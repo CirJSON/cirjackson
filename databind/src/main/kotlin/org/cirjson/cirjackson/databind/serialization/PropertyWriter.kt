@@ -109,8 +109,6 @@ abstract class PropertyWriter : ConcreteBeanPropertyBase {
     /**
      * Traversal method used for things like CirJSON Schema generation, or POJO introspection.
      */
-    override fun depositSchemaProperty(objectVisitor: CirJsonObjectFormatVisitor, provider: SerializerProvider) {
-        TODO("Not yet implemented")
-    }
+    abstract override fun depositSchemaProperty(objectVisitor: CirJsonObjectFormatVisitor, provider: SerializerProvider)
 
 }
