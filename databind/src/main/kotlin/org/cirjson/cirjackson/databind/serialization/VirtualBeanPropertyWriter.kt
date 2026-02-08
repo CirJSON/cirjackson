@@ -1,7 +1,9 @@
 package org.cirjson.cirjackson.databind.serialization
 
 import org.cirjson.cirjackson.annotations.CirJsonInclude
+import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.ValueSerializer
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 import org.cirjson.cirjackson.databind.configuration.MapperConfig
@@ -28,6 +30,22 @@ abstract class VirtualBeanPropertyWriter : BeanPropertyWriter {
 
     abstract fun withConfig(config: MapperConfig<*>, declaringClass: AnnotatedClass,
             propertyDefinition: BeanPropertyDefinition, type: KotlinType): VirtualBeanPropertyWriter
+
+    /*
+     *******************************************************************************************************************
+     * PropertyWriter methods: serialization
+     *******************************************************************************************************************
+     */
+
+    @Throws(Exception::class)
+    override fun serializeAsProperty(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(Exception::class)
+    override fun serializeAsElement(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
 
     companion object {
 

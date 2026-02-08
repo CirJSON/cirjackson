@@ -39,9 +39,12 @@ abstract class BasicSerializerFactory protected constructor(config: SerializerFa
      *******************************************************************************************************************
      */
 
-    override fun createKeySerializer(context: SerializerProvider, type: KotlinType): ValueSerializer<Any> {
+    override fun createKeySerializer(context: SerializerProvider, type: KotlinType): ValueSerializer<Any>? {
         TODO("Not yet implemented")
     }
+
+    override val defaultNullKeySerializer: ValueSerializer<Any>
+        get() = TODO("Not yet implemented")
 
     override val defaultNullValueSerializer: ValueSerializer<Any>
         get() = TODO("Not yet implemented")

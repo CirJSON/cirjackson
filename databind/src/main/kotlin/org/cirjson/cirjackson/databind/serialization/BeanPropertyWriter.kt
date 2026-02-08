@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.serialization
 
+import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonObjectFormatVisitor
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
@@ -56,7 +57,33 @@ open class BeanPropertyWriter : PropertyWriter {
 
     /*
      *******************************************************************************************************************
-     * PropertyWriter methods (schema generation)
+     * PropertyWriter methods: serialization
+     *******************************************************************************************************************
+     */
+
+    @Throws(Exception::class)
+    override fun serializeAsProperty(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(Exception::class)
+    override fun serializeAsOmittedProperty(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(Exception::class)
+    override fun serializeAsElement(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
+
+    @Throws(Exception::class)
+    override fun serializeAsOmittedElement(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
+        TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * PropertyWriter methods: schema generation
      *******************************************************************************************************************
      */
 
