@@ -6,8 +6,8 @@ import org.cirjson.cirjackson.databind.introspection.ConcreteBeanPropertyBase
 
 abstract class PropertyWriter : ConcreteBeanPropertyBase {
 
-    protected constructor(propertyDefinition: BeanPropertyDefinition) : super(propertyDefinition.metadata)
-
     protected constructor(metadata: PropertyMetadata?) : super(metadata)
+
+    protected constructor(propertyDefinition: BeanPropertyDefinition) : super(propertyDefinition.metadata)
 
 }
