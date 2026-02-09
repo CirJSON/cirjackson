@@ -35,6 +35,10 @@ abstract class PropertySerializerMap {
 
     companion object {
 
+        fun emptyForProperties(): PropertySerializerMap {
+            TODO("Not yet implemented")
+        }
+
         fun emptyForRootValues(): PropertySerializerMap {
             TODO("Not yet implemented")
         }
