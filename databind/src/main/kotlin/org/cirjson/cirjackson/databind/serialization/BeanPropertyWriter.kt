@@ -1,7 +1,9 @@
 package org.cirjson.cirjackson.databind.serialization
 
 import org.cirjson.cirjackson.annotations.CirJsonInclude
+import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.SerializableString
 import org.cirjson.cirjackson.core.io.SerializedString
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonObjectFormatVisitor
@@ -10,17 +12,16 @@ import org.cirjson.cirjackson.databind.introspection.AnnotatedField
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMethod
 import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
+import org.cirjson.cirjackson.databind.serialization.bean.BeanSerializerBase
 import org.cirjson.cirjackson.databind.serialization.bean.UnwrappingBeanPropertyWriter
 import org.cirjson.cirjackson.databind.serialization.implementation.PropertySerializerMap
 import org.cirjson.cirjackson.databind.util.Annotations
 import org.cirjson.cirjackson.databind.util.NameTransformer
 import org.cirjson.cirjackson.databind.util.className
+import org.cirjson.cirjackson.databind.util.name
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
-import kotlin.reflect.KProperty
-import kotlin.reflect.jvm.kotlinFunction
-import kotlin.reflect.jvm.kotlinProperty
 
 /**
  * Base bean property handler class, which implements common parts of reflection-based functionality for accessing a
@@ -92,7 +93,7 @@ open class BeanPropertyWriter : PropertyWriter {
      * `transient` (and `var`) only to support JDK serializability.
      */
     @Transient
-    protected var myAccessorMethod: KFunction<*>?
+    protected var myAccessorMethod: Method?
 
     /**
      * Field that contains the property value for field-accessible properties. `null` if and only if [myAccessorMethod]
@@ -101,7 +102,7 @@ open class BeanPropertyWriter : PropertyWriter {
      * `transient` (and `var`) only to support JDK serializability.
      */
     @Transient
-    protected var myField: KProperty<*>?
+    protected var myField: Field?
 
     /*
      *******************************************************************************************************************
@@ -189,9 +190,9 @@ open class BeanPropertyWriter : PropertyWriter {
 
         if (member is AnnotatedField) {
             myAccessorMethod = null
-            myField = (member.member as Field).kotlinProperty!!
+            myField = member.member as Field
         } else if (member is AnnotatedMethod) {
-            myAccessorMethod = (member.member).kotlinFunction!!
+            myAccessorMethod = member.member
             myField = null
         } else {
             myAccessorMethod = null
@@ -391,28 +392,232 @@ open class BeanPropertyWriter : PropertyWriter {
 
     /*
      *******************************************************************************************************************
+     * Managing and accessing of opaque internal settings (used by extensions)
+     *******************************************************************************************************************
+     */
+
+    /**
+     * Method for accessing value of specified internal setting.
+     *
+     * @return Value of the setting, if any; `null` if none.
+     */
+    open fun getInternalSetting(key: Any): Any? {
+        return myInternalSettings?.get(key)
+    }
+
+    /**
+     * Method for setting specific internal setting to given value
+     *
+     * @return Old value of the setting, if any (`null` if none)
+     */
+    open fun setInternalSetting(key: Any, value: Any): Any? {
+        return (myInternalSettings ?: HashMap<Any, Any>().also { myInternalSettings = it }).put(key, value)
+    }
+
+    /**
+     * Method for removing entry for specified internal setting.
+     *
+     * @return Existing value of the setting, if any (`null` if none)
+     */
+    open fun removeInternalSetting(key: Any): Any? {
+        myInternalSettings ?: return null
+
+        val removed = myInternalSettings!!.remove(key)
+
+        if (myInternalSettings!!.isEmpty()) {
+            myInternalSettings = null
+        }
+
+        return removed
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors
+     *******************************************************************************************************************
+     */
+
+    open val serializedName: SerializableString?
+        get() = myName
+
+    open fun hasSerializer(): Boolean {
+        return mySerializer != null
+    }
+
+    open fun hasNullSerializer(): Boolean {
+        return myNullSerializer != null
+    }
+
+    open val typeSerializer: TypeSerializer?
+        get() = myTypeSerializer
+
+    /**
+     * Accessor that will return true if this bean property has to support "unwrapping"; ability to replace POJO 
+     * structural wrapping with optional name prefix and/or suffix (or in some cases, just removal of wrapper name).
+     * 
+     * Default implementation simply returns `false`.
+     */
+    open val isUnwrapping: Boolean
+        get() = false
+
+    open fun willSuppressNulls(): Boolean {
+        return mySuppressNulls
+    }
+
+    /**
+     * Method called to check to see if this property has a name that would conflict with a given name.
+     */
+    open fun wouldConflictWithName(name: PropertyName): Boolean {
+        if (myWrapperName != null) {
+            return myWrapperName == name
+        }
+
+        return name.hasSimpleName(myName!!.value) && !name.hasNamespace()
+    }
+
+    open val serializer: ValueSerializer<Any>?
+        get() = mySerializer
+
+    open val mySerializationType: KotlinType?
+        get() = myConfigSerializationType
+
+    open val views: Array<KClass<*>>?
+        get() = myIncludeInViews
+
+    /*
+     *******************************************************************************************************************
      * PropertyWriter methods: serialization
      *******************************************************************************************************************
      */
 
+    /**
+     * Method called to access property that this bean stands for, from within given bean, and to serialize it as a
+     * CirJSON Object field using appropriate serializer.
+     */
     @Throws(Exception::class)
     override fun serializeAsProperty(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
-        TODO("Not yet implemented")
+        val v = get(value)
+
+        if (v == null) {
+            if (mySuppressableValue != null && provider.includeFilterSuppressNulls(mySuppressableValue)) {
+                return
+            }
+
+            if (myNullSerializer != null) {
+                generator.writeName(myName!!)
+                myNullSerializer!!.serializeNullable(null, generator, provider)
+            }
+
+            return
+        }
+
+        val serializer = if (mySerializer != null) {
+            mySerializer!!
+        } else {
+            val clazz = v::class
+            val map = myDynamicSerializers!!
+            map.serializerFor(clazz) ?: findAndAddDynamic(map, clazz, provider)
+        }
+
+        if (mySuppressableValue != null) {
+            if (MARKER_FOR_EMPTY === mySuppressableValue) {
+                if (serializer.isEmpty(provider, v)) {
+                    return
+                }
+            } else if (mySuppressableValue == v) {
+                return
+            }
+        }
+
+        if (v === value) {
+            if (handleSelfReference(value, generator, provider, serializer)) {
+                return
+            }
+        }
+
+        generator.writeName(myName!!)
+
+        if (myTypeSerializer != null) {
+            serializer.serializeWithType(v, generator, provider, myTypeSerializer!!)
+        } else {
+            serializer.serialize(v, generator, provider)
+        }
     }
 
+    /**
+     * Method called to indicate that serialization of a field was omitted due to filtering, in cases where backend data
+     * format does not allow basic omission.
+     */
     @Throws(Exception::class)
     override fun serializeAsOmittedProperty(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
-        TODO("Not yet implemented")
+        if (!generator.isAbleOmitProperties) {
+            generator.writeOmittedProperty(myName!!.value)
+        }
     }
 
+    /**
+     * Alternative to [serializeAsProperty] that is used when a POJO is serialized as CirJSON Array (usually when
+     * "Shape" is forced as 'Array'): the difference is that no property names are written.
+     */
     @Throws(Exception::class)
     override fun serializeAsElement(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
-        TODO("Not yet implemented")
+        val v = get(value)
+
+        if (v == null) {
+            if (myNullSerializer != null) {
+                myNullSerializer!!.serializeNullable(null, generator, provider)
+            } else {
+                generator.writeNull()
+            }
+
+            return
+        }
+
+        val serializer = if (mySerializer != null) {
+            mySerializer!!
+        } else {
+            val clazz = v::class
+            val map = myDynamicSerializers!!
+            map.serializerFor(clazz) ?: findAndAddDynamic(map, clazz, provider)
+        }
+
+        if (mySuppressableValue != null) {
+            if (MARKER_FOR_EMPTY === mySuppressableValue) {
+                if (serializer.isEmpty(provider, v)) {
+                    serializeAsOmittedElement(value, generator, provider)
+                    return
+                }
+            } else if (mySuppressableValue == v) {
+                serializeAsOmittedElement(value, generator, provider)
+                return
+            }
+        }
+
+        if (v === value) {
+            if (handleSelfReference(value, generator, provider, serializer)) {
+                return
+            }
+        }
+
+        if (myTypeSerializer != null) {
+            serializer.serializeWithType(v, generator, provider, myTypeSerializer!!)
+        } else {
+            serializer.serialize(v, generator, provider)
+        }
     }
 
+    /**
+     * Method called to serialize a placeholder used in tabular output when real value is not to be included (is
+     * filtered out), but when we need an entry so that field indexes will not be off. Typically, this should output
+     * `null` or empty String, depending on datatype.
+     */
     @Throws(Exception::class)
     override fun serializeAsOmittedElement(value: Any, generator: CirJsonGenerator, provider: SerializerProvider) {
-        TODO("Not yet implemented")
+        if (myNullSerializer != null) {
+            myNullSerializer!!.serializeNullable(null, generator, provider)
+        } else {
+            generator.writeNull()
+        }
     }
 
     /*
@@ -422,7 +627,106 @@ open class BeanPropertyWriter : PropertyWriter {
      */
 
     override fun depositSchemaProperty(objectVisitor: CirJsonObjectFormatVisitor, provider: SerializerProvider) {
-        TODO("Not yet implemented")
+        if (isRequired) {
+            objectVisitor.property(this)
+        } else {
+            objectVisitor.optionalProperty(this)
+        }
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Helper methods
+     *******************************************************************************************************************
+     */
+
+    protected open fun findAndAddDynamic(map: PropertySerializerMap, rawType: KClass<*>,
+            provider: SerializerProvider): ValueSerializer<Any> {
+        val type =
+                myNonTrivialBaseType?.let { provider.constructSpecializedType(it, rawType) } ?: provider.constructType(
+                        rawType)!!
+        val result = map.findAndAddPrimarySerializer(type, provider, this)
+
+        if (map !== result.map) {
+            myDynamicSerializers = result.map
+        }
+
+        return result.serializer
+    }
+
+    /**
+     * Method that can be used to access value of the property this Object describes, from given bean instance.
+     * 
+     * Note: method is final as it should not need to be overridden -- rather, calling method(s) ([serializeAsProperty])
+     * should be overridden to change the behavior
+     */
+    fun get(bean: Any): Any? {
+        return if (myAccessorMethod != null) myAccessorMethod!!.invoke(bean) else myField!!.get(bean)
+    }
+
+    /**
+     * Method called to handle a direct self-reference through this property. Method can choose to indicate an error by
+     * throwing [DatabindException]; fully handle serialization (and return `true`); or indicate that it should be
+     * serialized normally (return `false`).
+     * 
+     * Default implementation will throw [DatabindException] if [SerializationFeature.FAIL_ON_SELF_REFERENCES] is
+     * enabled; or return `false` if it is disabled.
+     *
+     * @return `true` if method fully handled self-referential value; `false` if not (caller is to handle it) or
+     * [DatabindException] if there is no way handle it
+     */
+    @Throws(CirJacksonException::class)
+    protected open fun handleSelfReference(bean: Any, generator: CirJsonGenerator, context: SerializerProvider,
+            serializer: ValueSerializer<Any>): Boolean {
+        if (serializer.usesObjectId()) {
+            return false
+        }
+
+        if (context.isEnabled(SerializationFeature.FAIL_ON_SELF_REFERENCES)) {
+            if (serializer is BeanSerializerBase) {
+                return context.reportBadDefinition(type, "Direct self-reference leading to cycle")
+            }
+
+            return false
+        }
+
+        if (!context.isEnabled(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL)) {
+            return false
+        }
+
+        if (myNullSerializer != null) {
+            if (!generator.streamWriteContext.isInArray) {
+                generator.writeName(myName!!)
+            }
+
+            myNullSerializer!!.serializeNullable(null, generator, context)
+        }
+
+        return true
+    }
+
+    override fun toString(): String {
+        val stringBuilder = StringBuilder(40)
+        stringBuilder.append("property '").append(name).append("' (")
+
+        if (myAccessorMethod != null) {
+            stringBuilder.append("via method ").append(myAccessorMethod!!.declaringClass.kotlin.name).append('#')
+                    .append(myAccessorMethod!!.name)
+        } else if (myField != null) {
+            stringBuilder.append("field \"").append(myField!!.declaringClass.kotlin.name).append('#')
+                    .append(myField!!.name).append('"')
+        } else {
+            stringBuilder.append("virtual")
+        }
+
+        if (mySerializer != null) {
+            stringBuilder.append(", static serializer of type ").append(mySerializer!!::class.qualifiedName)
+        } else {
+            stringBuilder.append(", no static serializer")
+        }
+
+        stringBuilder.append(')')
+        return stringBuilder.toString()
     }
 
     companion object {

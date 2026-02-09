@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.serialization.implementation
 
+import org.cirjson.cirjackson.databind.BeanProperty
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.ValueSerializer
@@ -8,6 +9,11 @@ import kotlin.reflect.KClass
 abstract class PropertySerializerMap {
 
     abstract fun serializerFor(type: KClass<*>): ValueSerializer<Any>?
+
+    fun findAndAddPrimarySerializer(type: KotlinType, provider: SerializerProvider,
+            property: BeanProperty): SerializerAndMapResult {
+        TODO("Not yet implemented")
+    }
 
     fun findAndAddRootValueSerializer(type: KClass<*>, provider: SerializerProvider): SerializerAndMapResult {
         TODO("Not yet implemented")
