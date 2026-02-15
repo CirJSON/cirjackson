@@ -701,13 +701,13 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      *******************************************************************************************************************
      */
 
-    open fun findKeySerializer(keyType: KotlinType, property: BeanProperty): ValueSerializer<Any> {
+    open fun findKeySerializer(keyType: KotlinType, property: BeanProperty?): ValueSerializer<Any> {
         val serializer = mySerializerFactory.createKeySerializer(this, keyType)
-        serializer.resolve(this)
+        serializer!!.resolve(this)
         return handleSecondaryContextualization(serializer, property)!!
     }
 
-    open fun findKeySerializer(rawKeyType: KClass<*>, property: BeanProperty): ValueSerializer<Any> {
+    open fun findKeySerializer(rawKeyType: KClass<*>, property: BeanProperty?): ValueSerializer<Any> {
         return findKeySerializer(myConfig.constructType(rawKeyType), property)
     }
 
