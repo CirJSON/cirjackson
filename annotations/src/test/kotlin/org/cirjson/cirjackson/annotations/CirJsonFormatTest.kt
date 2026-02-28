@@ -13,7 +13,7 @@ class CirJsonFormatTest {
         assertFalse(EMPTY.hasLocale())
         assertFalse(EMPTY.hasPattern())
         assertFalse(EMPTY.hasShape())
-        assertFalse(EMPTY.hasTimezone())
+        assertFalse(EMPTY.hasTimeZone())
         assertFalse(EMPTY.hasLenient())
 
         assertFalse(EMPTY.isLenient)
@@ -52,7 +52,7 @@ class CirJsonFormatTest {
         assertFalse(EMPTY.hasLocale())
         assertFalse(EMPTY.hasPattern())
         assertFalse(EMPTY.hasShape())
-        assertFalse(EMPTY.hasTimezone())
+        assertFalse(EMPTY.hasTimeZone())
 
         assertNull(EMPTY.locale)
 
@@ -61,13 +61,13 @@ class CirJsonFormatTest {
         assertEquals(TEST_PATTERN, value.pattern)
         assertFalse(value.hasLocale())
         assertFalse(value.hasShape())
-        assertFalse(value.hasTimezone())
+        assertFalse(value.hasTimeZone())
 
         var merged = value.withOverrides(EMPTY)
         assertEquals(TEST_PATTERN, merged.pattern)
         assertFalse(merged.hasLocale())
         assertFalse(merged.hasShape())
-        assertFalse(merged.hasTimezone())
+        assertFalse(merged.hasTimeZone())
 
         assertSame(merged, merged.withOverrides(merged))
 
@@ -75,7 +75,7 @@ class CirJsonFormatTest {
         assertEquals(TEST_PATTERN, merged.pattern)
         assertFalse(merged.hasLocale())
         assertFalse(merged.hasShape())
-        assertFalse(merged.hasTimezone())
+        assertFalse(merged.hasTimeZone())
 
         assertSame(merged, merged.withOverrides(null))
 
@@ -85,13 +85,13 @@ class CirJsonFormatTest {
         assertEquals(TEST_PATTERN, merged.pattern)
         assertFalse(merged.hasLocale())
         assertEquals(TEST_SHAPE, merged.shape)
-        assertFalse(merged.hasTimezone())
+        assertFalse(merged.hasTimeZone())
 
         merged = value2.withOverrides(value)
         assertEquals(TEST_PATTERN, merged.pattern)
         assertFalse(merged.hasLocale())
         assertEquals(TEST_SHAPE, merged.shape)
-        assertFalse(merged.hasTimezone())
+        assertFalse(merged.hasTimeZone())
     }
 
     @Test

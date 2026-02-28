@@ -2,8 +2,6 @@ package org.cirjson.cirjackson.annotations
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat.Companion.DEFAULT_LOCALE
 import org.cirjson.cirjackson.annotations.CirJsonFormat.Companion.DEFAULT_TIMEZONE
-import org.cirjson.cirjackson.annotations.CirJsonFormat.Feature
-import org.cirjson.cirjackson.annotations.CirJsonFormat.Shape
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -561,7 +559,7 @@ annotation class CirJsonFormat(val pattern: String = "", val shape: Shape = Shap
             return locale != null
         }
 
-        fun hasTimezone(): Boolean {
+        fun hasTimeZone(): Boolean {
             return myTimezone != null || !myTimezoneString.isNullOrEmpty()
         }
 
