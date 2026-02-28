@@ -172,7 +172,7 @@ abstract class StandardSerializer<T : Any> : ValueSerializer<T>, CirJsonFormatVi
      */
 
     @Throws(CirJacksonException::class)
-    open fun wrapAndThrow(provider: SerializerProvider?, throwable: Throwable, bean: Any, fieldName: String) {
+    open fun wrapAndThrow(provider: SerializerProvider?, throwable: Throwable, bean: Any?, fieldName: String) {
         var realThrowable = throwable
 
         while (realThrowable is InvocationTargetException && realThrowable.cause != null) {
@@ -197,7 +197,7 @@ abstract class StandardSerializer<T : Any> : ValueSerializer<T>, CirJsonFormatVi
     }
 
     @Throws(CirJacksonException::class)
-    open fun wrapAndThrow(provider: SerializerProvider?, throwable: Throwable, bean: Any, index: Int) {
+    open fun wrapAndThrow(provider: SerializerProvider?, throwable: Throwable, bean: Any?, index: Int) {
         var realThrowable = throwable
 
         while (realThrowable is InvocationTargetException && realThrowable.cause != null) {

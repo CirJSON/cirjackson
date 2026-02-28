@@ -303,16 +303,16 @@ open class CirJacksonException : RuntimeException {
 
         protected constructor()
 
-        constructor(from: Any) {
+        constructor(from: Any?) {
             this.from = from
         }
 
-        constructor(from: Any, propertyName: String) {
+        constructor(from: Any?, propertyName: String) {
             this.from = from
             this.propertyName = propertyName
         }
 
-        constructor(from: Any, index: Int) {
+        constructor(from: Any?, index: Int) {
             this.from = from
             this.index = index
         }
@@ -337,7 +337,7 @@ open class CirJacksonException : RuntimeException {
          * This version of method is called when the reference is through a non-indexed object, such as a Map or
          * POJO/bean.
          */
-        fun wrapWithPath(src: Throwable, from: Any, propertyName: String): CirJacksonException {
+        fun wrapWithPath(src: Throwable, from: Any?, propertyName: String): CirJacksonException {
             return wrapWithPath(src, Reference(from, propertyName))
         }
 
@@ -348,7 +348,7 @@ open class CirJacksonException : RuntimeException {
          * This version of method is called when the reference is through an index, which happens with arrays and
          * Collections.
          */
-        fun wrapWithPath(src: Throwable, from: Any, index: Int): CirJacksonException {
+        fun wrapWithPath(src: Throwable, from: Any?, index: Int): CirJacksonException {
             return wrapWithPath(src, Reference(from, index))
         }
 
