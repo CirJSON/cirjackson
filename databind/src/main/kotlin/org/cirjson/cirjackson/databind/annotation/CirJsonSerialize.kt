@@ -2,8 +2,6 @@ package org.cirjson.cirjackson.databind.annotation
 
 import org.cirjson.cirjackson.annotations.CirJacksonAnnotation
 import org.cirjson.cirjackson.databind.ValueSerializer
-import org.cirjson.cirjackson.databind.annotation.CirJsonSerialize.Typing.DYNAMIC
-import org.cirjson.cirjackson.databind.annotation.CirJsonSerialize.Typing.STATIC
 import org.cirjson.cirjackson.databind.util.Converter
 import kotlin.reflect.KClass
 

@@ -736,6 +736,14 @@ open class BeanPropertyWriter : PropertyWriter {
          */
         val MARKER_FOR_EMPTY = CirJsonInclude.Include.NON_EMPTY
 
+        internal fun construct(propertyDefinition: BeanPropertyDefinition, member: AnnotatedMember?,
+                contextAnnotations: Annotations?, declaredType: KotlinType?, serializer: ValueSerializer<*>?,
+                typeSerializer: TypeSerializer?, serializationType: KotlinType?, suppressNulls: Boolean,
+                suppressableValue: Any?, includeInViews: Array<KClass<*>>?): BeanPropertyWriter {
+            return BeanPropertyWriter(propertyDefinition, member, contextAnnotations, declaredType, serializer,
+                    typeSerializer, serializationType, suppressNulls, suppressableValue, includeInViews)
+        }
+
     }
 
 }
