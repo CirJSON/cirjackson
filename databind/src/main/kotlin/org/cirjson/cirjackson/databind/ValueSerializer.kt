@@ -273,7 +273,7 @@ abstract class ValueSerializer<T : Any> : CirJsonFormatVisitable {
      *
      * @return Serializer this serializer delegates calls to, if `null`; `null` otherwise.
      */
-    open val delegates: ValueSerializer<*>?
+    open val delegatee: ValueSerializer<*>?
         get() = null
 
     open val properties: Iterator<PropertyWriter>

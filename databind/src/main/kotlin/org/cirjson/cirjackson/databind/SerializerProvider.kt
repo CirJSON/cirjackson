@@ -910,7 +910,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      */
     @Suppress("UNCHECKED_CAST")
     open fun handlePrimaryContextualization(serializer: ValueSerializer<*>?,
-            property: BeanProperty): ValueSerializer<Any>? {
+            property: BeanProperty?): ValueSerializer<Any>? {
         return serializer?.createContextual(this, property) as ValueSerializer<Any>?
     }
 
