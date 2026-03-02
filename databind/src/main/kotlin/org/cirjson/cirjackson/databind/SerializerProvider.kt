@@ -575,7 +575,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * @param property Property that is being handled; will never be `null`, and its type has to match `valueType`
      * parameter.
      */
-    open fun findPrimaryPropertySerializer(valueType: KotlinType, property: BeanProperty): ValueSerializer<Any> {
+    open fun findPrimaryPropertySerializer(valueType: KotlinType, property: BeanProperty?): ValueSerializer<Any> {
         val serializer =
                 myKnownSerializers.untypedValueSerializer(valueType) ?: createAndCachePropertySerializer(valueType,
                         property)
@@ -585,7 +585,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     /**
      * See [findPrimaryPropertySerializer].
      */
-    open fun findPrimaryPropertySerializer(rawType: KClass<*>, property: BeanProperty): ValueSerializer<Any> {
+    open fun findPrimaryPropertySerializer(rawType: KClass<*>, property: BeanProperty?): ValueSerializer<Any> {
         var serializer = myKnownSerializers.untypedValueSerializer(rawType)
 
         if (serializer == null) {
@@ -888,7 +888,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * @param forProperty (optional) If filter is created for a property, that property; `null` if filter created via
      * defaulting, global or per-type.
      */
-    abstract fun includeFilterInstance(forProperty: BeanProperty?, filterClass: KClass<*>?): Any?
+    abstract fun includeFilterInstance(forProperty: BeanPropertyDefinition?, filterClass: KClass<*>?): Any?
 
     /**
      * Follow-up method that may be called after calling [includeFilterInstance], to check handling of `null` values by

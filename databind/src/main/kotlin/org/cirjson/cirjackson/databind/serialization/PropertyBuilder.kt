@@ -143,11 +143,15 @@ open class PropertyBuilder(protected val myConfig: SerializationConfig,
                 valueToSuppress = BeanPropertyWriter.MARKER_FOR_EMPTY
             }
 
-            CirJsonInclude.Include.NON_NULL -> {
-                suppressNulls = true
+            CirJsonInclude.Include.CUSTOM -> {
+                valueToSuppress = context.includeFilterInstance(propertyDefinition, includeValue.valueFilter)
             }
 
             else -> {
+                if (inclusion == CirJsonInclude.Include.NON_NULL) {
+                    suppressNulls = true
+                }
+
                 val emptyCirJsonArrays = SerializationFeature.WRITE_EMPTY_CIRJSON_ARRAYS
 
                 if (actualType.isContainerType && !myConfig.isEnabled(emptyCirJsonArrays)) {

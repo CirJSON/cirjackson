@@ -9,6 +9,7 @@ import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonFormatVisito
 import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
 import org.cirjson.cirjackson.databind.configuration.GeneratorSettings
 import org.cirjson.cirjackson.databind.introspection.Annotated
+import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
 import kotlin.reflect.KClass
 
 open class SerializationContextExtended protected constructor(streamFactory: TokenStreamFactory,
@@ -26,7 +27,7 @@ open class SerializationContextExtended protected constructor(streamFactory: Tok
         TODO("Not yet implemented")
     }
 
-    override fun includeFilterInstance(forProperty: BeanProperty?, filterClass: KClass<*>?): Any? {
+    override fun includeFilterInstance(forProperty: BeanPropertyDefinition?, filterClass: KClass<*>?): Any? {
         TODO("Not yet implemented")
     }
 
