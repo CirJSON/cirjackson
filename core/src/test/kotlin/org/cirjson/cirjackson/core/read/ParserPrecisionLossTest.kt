@@ -26,7 +26,7 @@ class ParserPrecisionLossTest : TestBase() {
         generator.copyCurrentEventExact(parser)
         generator.close()
         parser.close()
-        assertEquals(value, generator.streamWriteOutputTarget!!.toString())
+        assertEquals(value, generator.streamWriteOutputTarget()!!.toString())
     }
 
 }

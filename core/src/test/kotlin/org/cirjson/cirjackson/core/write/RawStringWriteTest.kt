@@ -114,7 +114,7 @@ class RawStringWriteTest : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())

@@ -47,7 +47,7 @@ class WriteTypeIdTest : TestBase() {
         typeID.asProperty = "type"
 
         var generator = createGenerator(factory, mode)
-        var output = generator.streamWriteOutputTarget!!
+        var output = generator.streamWriteOutputTarget()!!
         generator.writeTypePrefix(typeID)
         generator.writeNumberProperty("value", 13)
         generator.writeTypeSuffix(typeID)
@@ -57,7 +57,7 @@ class WriteTypeIdTest : TestBase() {
         typeID = WritableTypeID(data, CirJsonToken.START_OBJECT, "typeId")
         typeID.inclusion = WritableTypeID.Inclusion.WRAPPER_ARRAY
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         generator.writeTypePrefix(typeID)
         generator.writeNumberProperty("value", 13)
         generator.writeTypeSuffix(typeID)
@@ -67,7 +67,7 @@ class WriteTypeIdTest : TestBase() {
         typeID = WritableTypeID(data, CirJsonToken.START_OBJECT, "typeId")
         typeID.inclusion = WritableTypeID.Inclusion.WRAPPER_OBJECT
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         generator.writeTypePrefix(typeID)
         generator.writeNumberProperty("value", 13)
         generator.writeTypeSuffix(typeID)
@@ -78,7 +78,7 @@ class WriteTypeIdTest : TestBase() {
         typeID.inclusion = WritableTypeID.Inclusion.PARENT_PROPERTY
         typeID.asProperty = "extId"
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         generator.writeStartObject()
         generator.writeObjectId(Any())
         generator.writeName("value")
@@ -103,7 +103,7 @@ class WriteTypeIdTest : TestBase() {
         var typeID = WritableTypeID(data, CirJsonToken.START_ARRAY, "typeId")
         typeID.inclusion = WritableTypeID.Inclusion.WRAPPER_OBJECT
         var generator = createGenerator(factory, mode)
-        var output = generator.streamWriteOutputTarget!!
+        var output = generator.streamWriteOutputTarget()!!
         generator.writeTypePrefix(typeID)
         generator.writeNumber(13)
         generator.writeNumber(42)
@@ -114,7 +114,7 @@ class WriteTypeIdTest : TestBase() {
         typeID = WritableTypeID(data, CirJsonToken.START_ARRAY, "typeId")
         typeID.inclusion = WritableTypeID.Inclusion.PAYLOAD_PROPERTY
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         generator.writeTypePrefix(typeID)
         generator.writeNumber(13)
         generator.writeNumber(42)

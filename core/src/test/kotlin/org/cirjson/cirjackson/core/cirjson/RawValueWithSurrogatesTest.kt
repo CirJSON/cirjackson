@@ -36,7 +36,7 @@ class RawValueWithSurrogatesTest : TestBase() {
             }
 
             generator.close()
-            assertTrue(generator.streamWriteOutputTarget!!.toString().isNotEmpty())
+            assertTrue(generator.streamWriteOutputTarget()!!.toString().isNotEmpty())
         }
     }
 

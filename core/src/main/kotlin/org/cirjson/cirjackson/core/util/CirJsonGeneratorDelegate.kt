@@ -51,11 +51,9 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
         return delegate.version()
     }
 
-    override val streamWriteOutputTarget: Any?
-        get() = delegate.streamWriteOutputTarget
+    override fun streamWriteOutputTarget(): Any? = delegate.streamWriteOutputTarget()
 
-    override val streamWriteOutputBuffered: Int
-        get() = delegate.streamWriteOutputBuffered
+    override fun streamWriteOutputBuffered(): Int = delegate.streamWriteOutputBuffered()
 
     /*
      *******************************************************************************************************************
@@ -439,7 +437,7 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
         if (pojo == null) {
             writeNull()
         } else {
-            objectWriteContext.writeValue(this, pojo)
+            objectWriteContext().writeValue(this, pojo)
         }
 
         return this
@@ -455,7 +453,7 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
         if (rootNode == null) {
             writeNull()
         } else {
-            objectWriteContext.writeTree(this, rootNode)
+            objectWriteContext().writeTree(this, rootNode)
         }
 
         return this
@@ -491,11 +489,9 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
      *******************************************************************************************************************
      */
 
-    override val streamWriteContext: TokenStreamContext
-        get() = delegate.streamWriteContext
+    override fun streamWriteContext(): TokenStreamContext = delegate.streamWriteContext()
 
-    override val objectWriteContext: ObjectWriteContext
-        get() = delegate.objectWriteContext!!
+    override fun objectWriteContext(): ObjectWriteContext = delegate.objectWriteContext()!!
 
     /*
      *******************************************************************************************************************

@@ -118,7 +118,7 @@ class CirJsonBufferRecyclersTest : TestBase() {
             assertEquals(expectedSizeAfter, pool.pooledCount())
         }
 
-        val output = generator.streamWriteOutputTarget!!
+        val output = generator.streamWriteOutputTarget()!!
         assertEquals(apostropheToQuote("{'__cirJsonId__':'0','a':-42,'b':'barfoo'}"), output.toString())
     }
 
@@ -167,7 +167,7 @@ class CirJsonBufferRecyclersTest : TestBase() {
         parser.close()
         generator.close()
 
-        val output = generator.streamWriteOutputTarget!!
+        val output = generator.streamWriteOutputTarget()!!
         assertEquals(apostropheToQuote("{'__cirJsonId__':'root','a':123,'b':'foobar'}"), output.toString())
     }
 

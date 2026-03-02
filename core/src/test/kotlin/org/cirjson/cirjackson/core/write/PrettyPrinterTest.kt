@@ -45,7 +45,7 @@ class PrettyPrinterTest : TestBase() {
         generator.writeEndObject()
         generator.close()
 
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("{\"__cirJsonId__\":\"0\",\"x\":{\"__cirJsonId__\":\"1\",\"a\":1,\"b\":2(3)}(2)}", actual)
     }
 
@@ -81,7 +81,7 @@ class PrettyPrinterTest : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("[\"0\",6,[\"1\",1,2,9(4)](3)]", actual)
     }
 
@@ -137,7 +137,7 @@ class PrettyPrinterTest : TestBase() {
     private fun simpleDocWithMinimal(generator: CirJsonGenerator, parserMode: Int): String {
         writeTestDocument(generator)
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
 
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
@@ -225,7 +225,7 @@ class PrettyPrinterTest : TestBase() {
         generator.writeBoolean(false)
         generator.writeNull()
         generator.close()
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("13##false##null", actual)
     }
 
@@ -252,7 +252,7 @@ class PrettyPrinterTest : TestBase() {
         }
 
         writeTestDocument(generator)
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("[\"0\"|3|\"abc\"|[\"1\"|true]|{\"__cirJsonId__\"=\"2\";\"f\"=false;\"f2\"=null}]", actual)
     }
 
@@ -279,7 +279,7 @@ class PrettyPrinterTest : TestBase() {
         }
 
         writeTestDocument(generator)
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         val lf = System.lineSeparator()
         assertEquals(
                 "[ \"0\"| 3| \"abc\"| [ \"1\"| true ]| {$lf  \"__cirJsonId__\" = \"2\";$lf  \"f\" = false;$lf  \"f2\" = null$lf} ]",
@@ -310,7 +310,7 @@ class PrettyPrinterTest : TestBase() {
         }
 
         writeTestDocument(generator)
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         val lf = System.lineSeparator()
         assertEquals(
                 "[ \"0\"| 3| \"abc\"| [ \"1\"| true ]| {$lf  \"__cirJsonId__\"=\"2\";$lf  \"f\"=false;$lf  \"f2\"=null$lf} ]",
@@ -373,7 +373,7 @@ class PrettyPrinterTest : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        return generator.streamWriteOutputTarget!!.toString()
+        return generator.streamWriteOutputTarget()!!.toString()
     }
 
     private class CountPrinter : MinimalPrettyPrinter() {

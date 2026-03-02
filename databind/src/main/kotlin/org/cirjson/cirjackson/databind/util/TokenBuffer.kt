@@ -521,8 +521,7 @@ open class TokenBuffer : CirJsonGenerator {
      *******************************************************************************************************************
      */
 
-    override val streamWriteContext: TokenStreamContext
-        get() = myTokenWriteContext
+    override fun streamWriteContext(): TokenStreamContext = myTokenWriteContext
 
     override fun currentValue(): Any? {
         return myTokenWriteContext.currentValue()
@@ -532,8 +531,7 @@ open class TokenBuffer : CirJsonGenerator {
         myTokenWriteContext.assignCurrentValue(value)
     }
 
-    override val objectWriteContext: ObjectWriteContext?
-        get() = myObjectWriteContext
+    override fun objectWriteContext(): ObjectWriteContext? = myObjectWriteContext
 
     /*
      *******************************************************************************************************************
@@ -585,11 +583,9 @@ open class TokenBuffer : CirJsonGenerator {
     override val isClosed: Boolean
         get() = myClosed
 
-    override val streamWriteOutputTarget: Any?
-        get() = null
+    override fun streamWriteOutputTarget(): Any? = null
 
-    override val streamWriteOutputBuffered: Int
-        get() = -1
+    override fun streamWriteOutputBuffered(): Int = -1
 
     /*
      *******************************************************************************************************************

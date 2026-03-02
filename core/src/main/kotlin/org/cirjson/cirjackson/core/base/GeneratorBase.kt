@@ -21,7 +21,7 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
     override var streamWriteFeatures: Int = streamWriteFeatures
         protected set
 
-    override val streamWriteConstraints: StreamWriteConstraints = ioContext.streamWriteConstraints
+    override fun streamWriteConstraints(): StreamWriteConstraints = ioContext.streamWriteConstraints
 
     /**
      * Flag that indicates whether generator is closed or not. Gets set when it is closed by an explicit call ([close]).
@@ -126,7 +126,7 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
         if (pojo == null) {
             writeNull()
         } else {
-            objectWriteContext.writeValue(this, pojo)
+            objectWriteContext().writeValue(this, pojo)
         }
 
         return this
@@ -137,7 +137,7 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
         if (rootNode == null) {
             writeNull()
         } else {
-            objectWriteContext.writeTree(this, rootNode)
+            objectWriteContext().writeTree(this, rootNode)
         }
 
         return this

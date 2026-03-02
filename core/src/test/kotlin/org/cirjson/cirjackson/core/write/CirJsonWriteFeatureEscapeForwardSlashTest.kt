@@ -41,7 +41,7 @@ class CirJsonWriteFeatureEscapeForwardSlashTest : TestBase() {
         val generator = createGenerator(factory, mode)
         forwardSlash(generator)
         assertEquals("{\"__cirJsonId__\":\"0\",\"url\":\"http://example.com\"}",
-                generator.streamWriteOutputTarget!!.toString())
+                generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test
@@ -57,7 +57,7 @@ class CirJsonWriteFeatureEscapeForwardSlashTest : TestBase() {
         val generator = createGenerator(factory, mode)
         forwardSlash(generator)
         assertEquals("{\"__cirJsonId__\":\"0\",\"url\":\"http:\\/\\/example.com\"}",
-                generator.streamWriteOutputTarget!!.toString())
+                generator.streamWriteOutputTarget()!!.toString())
     }
 
     private fun forwardSlash(generator: CirJsonGenerator) {

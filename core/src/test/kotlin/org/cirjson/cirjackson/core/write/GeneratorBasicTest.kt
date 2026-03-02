@@ -40,7 +40,7 @@ class GeneratorBasicTest : TestBase() {
 
         generator.flush()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
         assertEquals(input, parser.text)
@@ -74,7 +74,7 @@ class GeneratorBasicTest : TestBase() {
         }
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
 
         if (parserMode == MODE_DATA_INPUT && !pad) {
             doc += ' '
@@ -113,7 +113,7 @@ class GeneratorBasicTest : TestBase() {
         }
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
 
         if (parserMode == MODE_DATA_INPUT && !pad) {
             doc += ' '
@@ -148,7 +148,7 @@ class GeneratorBasicTest : TestBase() {
         }
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
 
         if (parserMode == MODE_DATA_INPUT && !pad) {
             doc += ' '
@@ -181,7 +181,7 @@ class GeneratorBasicTest : TestBase() {
         }
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
 
         if (parserMode == MODE_DATA_INPUT && !pad) {
             doc += ' '
@@ -210,7 +210,7 @@ class GeneratorBasicTest : TestBase() {
         generator.writeNumber(-13L)
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
 
         if (parserMode == MODE_DATA_INPUT) {
             doc += ' '
@@ -236,67 +236,67 @@ class GeneratorBasicTest : TestBase() {
 
     private fun outputContext(mode: Int) {
         val generator = createGenerator(factory, mode)
-        assertTrue(generator.streamWriteContext.isInRoot)
+        assertTrue(generator.streamWriteContext().isInRoot)
 
         generator.writeStartObject()
-        assertTrue(generator.streamWriteContext.isInObject)
+        assertTrue(generator.streamWriteContext().isInObject)
         generator.writeObjectId(Any())
 
         generator.writeName("a")
-        assertEquals("a", generator.streamWriteContext.currentName)
+        assertEquals("a", generator.streamWriteContext().currentName)
 
         generator.writeStartArray()
-        assertTrue(generator.streamWriteContext.isInArray)
+        assertTrue(generator.streamWriteContext().isInArray)
         generator.writeArrayId(Any())
 
         generator.writeStartObject()
-        assertTrue(generator.streamWriteContext.isInObject)
+        assertTrue(generator.streamWriteContext().isInObject)
         generator.writeObjectId(Any())
 
         generator.writeName("b")
-        assertEquals("b", generator.streamWriteContext.currentName)
+        assertEquals("b", generator.streamWriteContext().currentName)
         generator.writeNumber(123)
-        assertEquals("b", generator.streamWriteContext.currentName)
+        assertEquals("b", generator.streamWriteContext().currentName)
 
         generator.writeName("c")
-        assertEquals("c", generator.streamWriteContext.currentName)
+        assertEquals("c", generator.streamWriteContext().currentName)
         generator.writeNumber(5)
-        assertEquals("c", generator.streamWriteContext.currentName)
+        assertEquals("c", generator.streamWriteContext().currentName)
 
         generator.writeName("d")
-        assertEquals("d", generator.streamWriteContext.currentName)
+        assertEquals("d", generator.streamWriteContext().currentName)
 
         generator.writeStartArray()
-        var context = generator.streamWriteContext
+        var context = generator.streamWriteContext()
         assertTrue(context.isInArray)
         assertEquals(0, context.currentIndex)
         assertEquals(0, context.entryCount)
         generator.writeArrayId(Any())
 
         generator.writeBoolean(true)
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertTrue(context.isInArray)
         assertEquals(1, context.currentIndex)
         assertEquals(2, context.entryCount)
         generator.writeArrayId(Any())
 
         generator.writeNumber(3)
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertTrue(context.isInArray)
         assertEquals(3, context.currentIndex)
         assertEquals(4, context.entryCount)
 
         generator.writeEndArray()
-        assertTrue(generator.streamWriteContext.isInObject)
+        assertTrue(generator.streamWriteContext().isInObject)
 
         generator.writeEndObject()
-        assertTrue(generator.streamWriteContext.isInArray)
+        assertTrue(generator.streamWriteContext().isInArray)
 
         generator.writeEndArray()
-        assertTrue(generator.streamWriteContext.isInObject)
+        assertTrue(generator.streamWriteContext().isInObject)
 
         generator.writeEndObject()
-        assertTrue(generator.streamWriteContext.isInRoot)
+        assertTrue(generator.streamWriteContext().isInRoot)
         generator.close()
     }
 
@@ -304,12 +304,12 @@ class GeneratorBasicTest : TestBase() {
     fun testOutputTarget() {
         val output = ByteArrayOutputStream()
         var generator = factory.createGenerator(ObjectWriteContext.empty(), output)
-        assertSame(output, generator.streamWriteOutputTarget)
+        assertSame(output, generator.streamWriteOutputTarget())
         generator.close()
 
         val writer = StringWriter()
         generator = factory.createGenerator(ObjectWriteContext.empty(), writer)
-        assertSame(writer, generator.streamWriteOutputTarget)
+        assertSame(writer, generator.streamWriteOutputTarget())
         generator.close()
     }
 
@@ -325,13 +325,13 @@ class GeneratorBasicTest : TestBase() {
         generator.writeStartArray()
         generator.writeArrayId(Any())
         generator.writeNumber(1234)
-        assertEquals(9, generator.streamWriteOutputBuffered)
+        assertEquals(9, generator.streamWriteOutputBuffered())
         generator.flush()
-        assertEquals(0, generator.streamWriteOutputBuffered)
+        assertEquals(0, generator.streamWriteOutputBuffered())
         generator.writeEndArray()
-        assertEquals(1, generator.streamWriteOutputBuffered)
+        assertEquals(1, generator.streamWriteOutputBuffered())
         generator.close()
-        assertEquals(0, generator.streamWriteOutputBuffered)
+        assertEquals(0, generator.streamWriteOutputBuffered())
     }
 
 }

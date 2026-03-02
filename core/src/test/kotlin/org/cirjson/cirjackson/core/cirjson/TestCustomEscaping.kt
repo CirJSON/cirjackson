@@ -30,7 +30,7 @@ class TestCustomEscaping : TestBase() {
         writeString(generator, value, stringAsChars)
         generator.writeEndArray()
         generator.close()
-        var actual = generator.streamWriteOutputTarget!!.toString()
+        var actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("[\"0\",${quote(value)}]", actual)
 
         factory = factory.rebuild().enable(CirJsonWriteFeature.ESCAPE_NON_ASCII).build()
@@ -40,7 +40,7 @@ class TestCustomEscaping : TestBase() {
         writeString(generator, "$value\\", stringAsChars)
         generator.writeEndArray()
         generator.close()
-        actual = generator.streamWriteOutputTarget!!.toString()
+        actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("[\"0\",${quote("chars: [\\u00A0]-[\\u1234]\\\\")}]", actual)
 
         factory = factory.rebuild().enable(CirJsonWriteFeature.ESCAPE_NON_ASCII).build()
@@ -51,7 +51,7 @@ class TestCustomEscaping : TestBase() {
         generator.writeBoolean(true)
         generator.writeEndObject()
         generator.close()
-        actual = generator.streamWriteOutputTarget!!.toString()
+        actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("{\"__cirJsonId__\":\"0\",${quote("fun:\\u0088:\\u3456\\\\")}:true}", actual)
     }
 
@@ -77,7 +77,7 @@ class TestCustomEscaping : TestBase() {
         generator.writeEndObject()
         generator.close()
         val expected = "{\"__cirJsonI${customString}__\":\"0\",${quote(stringOut)}:${quote(stringOut)}}"
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals(expected, actual)
     }
 

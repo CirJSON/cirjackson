@@ -22,7 +22,7 @@ class LargeNumberWriteTest : TestBase() {
                 createGenerator(factory, generatorMode).use { generator ->
                     writeLargeInteger(generator)
 
-                    val doc = generator.streamWriteOutputTarget!!.toString()
+                    val doc = generator.streamWriteOutputTarget()!!.toString()
                     createParser(noLimitFactory, parserMode, doc).use { parser ->
                         verifyLargeInteger(parser)
                     }
@@ -38,7 +38,7 @@ class LargeNumberWriteTest : TestBase() {
                 createGenerator(factory, generatorMode).use { generator ->
                     writeLargeDecimal(generator)
 
-                    val doc = generator.streamWriteOutputTarget!!.toString()
+                    val doc = generator.streamWriteOutputTarget()!!.toString()
                     createParser(noLimitFactory, parserMode, doc).use { parser ->
                         verifyLargeDecimal(parser)
                     }

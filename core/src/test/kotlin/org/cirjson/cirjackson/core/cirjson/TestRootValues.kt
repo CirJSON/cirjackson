@@ -115,7 +115,7 @@ class TestRootValues : TestBase() {
         generator.writeString("abc")
         generator.writeBoolean(true)
         generator.close()
-        assertEquals("123 \"abc\" true", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("123 \"abc\" true", generator.streamWriteOutputTarget()!!.toString())
     }
 
     private class MockInputStream(private val myReads: Array<ByteArray>) : InputStream() {

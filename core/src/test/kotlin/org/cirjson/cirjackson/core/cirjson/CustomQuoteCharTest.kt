@@ -29,12 +29,12 @@ class CustomQuoteCharTest : TestBase() {
 
     private fun basicApostrophe(mode: Int) {
         var generator = createGenerator(factory, mode)
-        var output = generator.streamWriteOutputTarget!!
+        var output = generator.streamWriteOutputTarget()!!
         writeObject(generator, "question", "answer")
         assertEquals("{'__cirJsonId__':'0','question':'answer'}", output.toString())
 
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         writeArray(generator, "hello world")
         assertEquals("['0','hello world']", output.toString())
     }
@@ -48,12 +48,12 @@ class CustomQuoteCharTest : TestBase() {
 
     private fun apostropheQuoting(mode: Int) {
         var generator = createGenerator(factory, mode)
-        var output = generator.streamWriteOutputTarget!!
+        var output = generator.streamWriteOutputTarget()!!
         writeObject(generator, "object's key", "It's \"fun\"")
         assertEquals("{'__cirJsonId__':'0','object\\'s key':'It\\'s \\\"fun\\\"'}", output.toString())
 
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
         writeArray(generator, "It's a sin")
         assertEquals("['0','It\\'s a sin']", output.toString())
     }

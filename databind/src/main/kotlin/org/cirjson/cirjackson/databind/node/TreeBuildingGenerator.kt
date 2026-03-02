@@ -56,8 +56,7 @@ open class TreeBuildingGenerator protected constructor(protected val myObjectWri
      *******************************************************************************************************************
      */
 
-    override val streamWriteContext: TokenStreamContext
-        get() = myTokenWriteContext
+    override fun streamWriteContext(): TokenStreamContext = myTokenWriteContext
 
     override fun currentValue(): Any? {
         return myTokenWriteContext.currentValue()
@@ -67,8 +66,7 @@ open class TreeBuildingGenerator protected constructor(protected val myObjectWri
         myTokenWriteContext.assignCurrentValue(value)
     }
 
-    override val objectWriteContext: ObjectWriteContext?
-        get() = myObjectWriteContext
+    override fun objectWriteContext(): ObjectWriteContext? = myObjectWriteContext
 
     /*
      *******************************************************************************************************************
@@ -111,11 +109,9 @@ open class TreeBuildingGenerator protected constructor(protected val myObjectWri
     override val isClosed: Boolean
         get() = false
 
-    override val streamWriteOutputTarget: Any?
-        get() = null
+    override fun streamWriteOutputTarget(): Any? = null
 
-    override val streamWriteOutputBuffered: Int
-        get() = -1
+    override fun streamWriteOutputBuffered(): Int = -1
 
     /*
      *******************************************************************************************************************

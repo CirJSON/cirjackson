@@ -30,7 +30,7 @@ class Base64BinaryParsingTest : TestBase() {
                 generator.writeBinary(variant, input, 0, length)
                 generator.close()
 
-                val parser = createParser(factory, parserMode, generator.streamWriteOutputTarget!!.toString())
+                val parser = createParser(factory, parserMode, generator.streamWriteOutputTarget()!!.toString())
                 assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
 
                 if (length and 1 == 0) {
@@ -78,7 +78,7 @@ class Base64BinaryParsingTest : TestBase() {
             generator.writeEndObject()
             generator.close()
 
-            val parser = createParser(factory, parserMode, generator.streamWriteOutputTarget!!.toString())
+            val parser = createParser(factory, parserMode, generator.streamWriteOutputTarget()!!.toString())
             assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
             assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
             assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -169,7 +169,7 @@ class Base64BinaryParsingTest : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
 
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())

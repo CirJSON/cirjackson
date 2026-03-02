@@ -150,7 +150,7 @@ class TestCharEscaping : TestBase() {
         val generator = createGenerator(factory, mode)
         generator.writeString(charArrayOf('\u0000'), 0, 1)
         generator.close()
-        assertEquals("\"\\u0000\"", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("\"\\u0000\"", generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test
@@ -195,7 +195,7 @@ class TestCharEscaping : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals("[\"0\",\"$expEncoded\"]", actual)
     }
 

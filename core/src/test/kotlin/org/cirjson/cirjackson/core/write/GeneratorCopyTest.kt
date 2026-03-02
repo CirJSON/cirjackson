@@ -34,7 +34,7 @@ class GeneratorCopyTest : TestBase() {
         generator.close()
 
         assertEquals("\"text\\non two lines\" true false 2.0 null 1234567890123",
-                generator.streamWriteOutputTarget!!.toString())
+                generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test
@@ -64,7 +64,7 @@ class GeneratorCopyTest : TestBase() {
         generator.close()
 
         assertEquals("123 [\"root\",1,null,[\"2\",false,1234567890124]]",
-                generator.streamWriteOutputTarget!!.toString())
+                generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test
@@ -89,7 +89,7 @@ class GeneratorCopyTest : TestBase() {
         generator.close()
         assertEquals(
                 "{\"__cirJsonId__\":\"root\",\"a\":1,\"b\":[\"b\",{\"__cirJsonId__\":\"b\\/0\",\"c\":null,\"d\":0.25}]}",
-                generator.streamWriteOutputTarget!!.toString())
+                generator.streamWriteOutputTarget()!!.toString())
 
         doc = "{\"__cirJsonId__\":\"root\",\"a\":1,\"b\":null}"
         parser = createParser(factory, parserMode, doc)
@@ -105,7 +105,7 @@ class GeneratorCopyTest : TestBase() {
 
         parser.close()
         generator.close()
-        assertEquals("{\"__cirJsonId__\":\"0\",\"a\":1}", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("{\"__cirJsonId__\":\"0\",\"a\":1}", generator.streamWriteOutputTarget()!!.toString())
     }
 
 }

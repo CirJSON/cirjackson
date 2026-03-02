@@ -116,7 +116,7 @@ object InternalNodeSerializer {
                     }
                 }
 
-                if (generator.streamWriteContext.isInArray) {
+                if (generator.streamWriteContext().isInArray) {
                     generator.writeEndArray()
                 } else {
                     generator.writeEndObject()

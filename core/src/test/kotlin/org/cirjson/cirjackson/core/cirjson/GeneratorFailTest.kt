@@ -25,7 +25,7 @@ class GeneratorFailTest : TestBase() {
         try {
             generator.writeName("b")
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let two consecutive ${generator::class.java.name}.writeName() succeed: output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "Cannot write a property name, expecting a value")
@@ -47,7 +47,7 @@ class GeneratorFailTest : TestBase() {
         try {
             generator.writeString("a")
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let ${generator::class.java.name}.writeString() be used in place of 'writeName()': output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "Cannot write a String")
@@ -67,7 +67,7 @@ class GeneratorFailTest : TestBase() {
         try {
             generator.writeName("a")
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let ${generator::class.java.name}.writeName() be used in root context: output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "Cannot write a property name")

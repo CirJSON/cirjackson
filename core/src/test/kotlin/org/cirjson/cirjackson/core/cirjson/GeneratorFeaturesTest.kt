@@ -43,7 +43,7 @@ class GeneratorFeaturesTest : TestBase() {
         generator.close()
 
         val expected = if (quoted) "{\"__cirJsonId__\":\"0\",\"foo\":1}" else "{__cirJsonId__:\"0\",foo:1}"
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals(expected, actual)
     }
 
@@ -76,7 +76,7 @@ class GeneratorFeaturesTest : TestBase() {
         } else {
             "{\"__cirJsonId__\":\"0\",\"double\":NaN,\"float\":NaN}"
         }
-        val actual = generator.streamWriteOutputTarget!!.toString()
+        val actual = generator.streamWriteOutputTarget()!!.toString()
         assertEquals(expected, actual)
     }
 
@@ -111,7 +111,7 @@ class GeneratorFeaturesTest : TestBase() {
         generator.writeEndArray()
         generator.close()
 
-        return generator.streamWriteOutputTarget!!.toString()
+        return generator.streamWriteOutputTarget()!!.toString()
     }
 
     @Test
@@ -124,7 +124,7 @@ class GeneratorFeaturesTest : TestBase() {
     private fun bigDecimalAsPlain(mode: Int) {
         var factory = CirJsonFactory()
         var generator = createGenerator(factory, mode)
-        var output = generator.streamWriteOutputTarget!!
+        var output = generator.streamWriteOutputTarget()!!
 
         generator.writeNumber(BIG_DECIMAL)
         generator.close()
@@ -132,7 +132,7 @@ class GeneratorFeaturesTest : TestBase() {
 
         factory = factory.rebuild().enable(StreamWriteFeature.WRITE_BIG_DECIMAL_AS_PLAIN).build()
         generator = createGenerator(factory, mode)
-        output = generator.streamWriteOutputTarget!!
+        output = generator.streamWriteOutputTarget()!!
 
         generator.writeNumber(BIG_DECIMAL)
         generator.close()
@@ -152,7 +152,7 @@ class GeneratorFeaturesTest : TestBase() {
         val generator = createGenerator(factory, mode)
         generator.writeNumber(BIG_DECIMAL)
         generator.close()
-        assertEquals(quote("100"), generator.streamWriteOutputTarget!!.toString())
+        assertEquals(quote("100"), generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test

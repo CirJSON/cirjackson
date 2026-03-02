@@ -65,8 +65,7 @@ open class FilteringGeneratorDelegate(delegate: CirJsonGenerator, filter: TokenF
      *******************************************************************************************************************
      */
 
-    override val streamWriteContext: TokenStreamContext
-        get() = filterContext!!
+    override fun streamWriteContext(): TokenStreamContext = filterContext!!
 
     override fun assignCurrentValue(value: Any?) {
         super.assignCurrentValue(value)

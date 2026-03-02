@@ -150,7 +150,7 @@ class DelegatesTest : TestBase() {
 
         delegate.writeStartArray()
 
-        assertEquals(1, delegate.streamWriteOutputBuffered)
+        assertEquals(1, delegate.streamWriteOutputBuffered())
 
         delegate.writeArrayId(intArrayOf())
 
@@ -183,7 +183,7 @@ class DelegatesTest : TestBase() {
         assertTrue(delegate.isClosed)
         assertTrue(generator.isClosed)
 
-        val output = delegate.streamWriteOutputTarget!!
+        val output = delegate.streamWriteOutputTarget()!!
         assertEquals("[\"0\",13,1,0.5,137,null,false,\"foo\",{\"__cirJsonId__\":\"1\"},[\"2\"]]", output.toString())
 
         generator.close()
@@ -210,7 +210,7 @@ class DelegatesTest : TestBase() {
         delegate.writeArray(arrayOf("Aa", "Bb", "Cc"), 1, 2)
 
         delegate.close()
-        val output = delegate.streamWriteOutputTarget!!
+        val output = delegate.streamWriteOutputTarget()!!
         assertEquals("[\"0\",[\"1\",1,2,3],[\"2\",123456],[\"3\",0.25,0.5],[\"4\",\"Bb\",\"Cc\"]]", output.toString())
 
         generator.close()
@@ -240,7 +240,7 @@ class DelegatesTest : TestBase() {
         delegate.writeRaw("  ")
 
         delegate.close()
-        val output = delegate.streamWriteOutputTarget!!
+        val output = delegate.streamWriteOutputTarget()!!
         assertEquals("[\"0\",1,12,0.25,0.5,/*foo*/  ]", output.toString())
 
         generator.close()
@@ -272,7 +272,7 @@ class DelegatesTest : TestBase() {
         parser.nextToken()
         delegate.copyCurrentStructure(parser)
         delegate.flush()
-        val actual = delegate.streamWriteOutputTarget!!.toString()
+        val actual = delegate.streamWriteOutputTarget()!!.toString()
         assertEquals(
                 "[\"0\",{\"__cirJsonId__-test\":true,\"__cirJsonId__\":\"1\",\"a-test\":true,\"a\":[\"2\",1,2,{\"__cirJsonId__-test\":true,\"__cirJsonId__\":\"3\",\"b-test\":true,\"b\":3}],\"c-test\":true,\"c\":\"d\"},{\"__cirJsonId__-test\":true,\"__cirJsonId__\":\"4\",\"e-test\":true,\"e\":false},null]",
                 actual)

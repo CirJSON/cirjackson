@@ -21,7 +21,7 @@ class ArrayWriteTest : TestBase() {
     private fun emptyArrayWrite(generatorMode: Int, parserMode: Int) {
         var generator = createGenerator(factory, generatorMode)
 
-        var context = generator.streamWriteContext
+        var context = generator.streamWriteContext()
         assertTrue(context.isInRoot)
         assertFalse(context.isInArray)
         assertFalse(context.isInObject)
@@ -29,7 +29,7 @@ class ArrayWriteTest : TestBase() {
         assertEquals(0, context.currentIndex)
 
         generator.writeStartArray()
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertFalse(context.isInRoot)
         assertTrue(context.isInArray)
         assertFalse(context.isInObject)
@@ -39,7 +39,7 @@ class ArrayWriteTest : TestBase() {
         generator.writeArrayId(Any())
 
         generator.writeEndArray()
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertTrue(context.isInRoot)
         assertFalse(context.isInArray)
         assertFalse(context.isInObject)
@@ -47,7 +47,7 @@ class ArrayWriteTest : TestBase() {
         assertEquals(0, context.currentIndex)
 
         generator.close()
-        var doc = generator.streamWriteOutputTarget!!.toString()
+        var doc = generator.streamWriteOutputTarget()!!.toString()
         var parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -63,7 +63,7 @@ class ArrayWriteTest : TestBase() {
         generator.writeEndArray()
         generator.writeEndArray()
         generator.close()
-        doc = generator.streamWriteOutputTarget!!.toString()
+        doc = generator.streamWriteOutputTarget()!!.toString()
         parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -115,7 +115,7 @@ class ArrayWriteTest : TestBase() {
         generator.writeString("foobar")
         generator.writeEndArray()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())

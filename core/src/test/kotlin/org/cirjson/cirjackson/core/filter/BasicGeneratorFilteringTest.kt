@@ -44,7 +44,7 @@ class BasicGeneratorFilteringTest : TestBase() {
         val filter = NameMatchFilter("value")
         val generator = FilteringGeneratorDelegate(createGenerator(writer), filter,
                 TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, false)
-        assertSame(writer, generator.streamWriteOutputTarget)
+        assertSame(writer, generator.streamWriteOutputTarget())
         assertNotNull(generator.filterContext)
         assertSame(filter, generator.filter)
         val doc =
@@ -59,7 +59,7 @@ class BasicGeneratorFilteringTest : TestBase() {
         val filter = NameMatchFilter("value")
         val generator = FilteringGeneratorDelegate(createGenerator(writer), filter,
                 TokenFilter.Inclusion.INCLUDE_ALL_AND_PATH, false)
-        assertSame(writer, generator.streamWriteOutputTarget)
+        assertSame(writer, generator.streamWriteOutputTarget())
         assertNotNull(generator.filterContext)
         assertSame(filter, generator.filter)
         val doc =

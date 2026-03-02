@@ -451,43 +451,43 @@ class CirJsonPointerTest : TestBase() {
     }
 
     private fun viaGenerator(generator: CirJsonGenerator) {
-        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        assertSame(EMPTY_POINTER, generator.streamWriteContext().pathAsPointer())
 
         generator.writeStartArray()
-        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        assertSame(EMPTY_POINTER, generator.streamWriteContext().pathAsPointer())
         generator.writeArrayId(listOf<String>())
-        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        assertSame(EMPTY_POINTER, generator.streamWriteContext().pathAsPointer())
         generator.writeBoolean(true)
-        assertEquals("/0", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/0", generator.streamWriteContext().pathAsPointer().toString())
 
         generator.writeStartObject()
-        assertEquals("/1", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeObjectId(Any())
-        assertEquals("/1/__cirJsonId__", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/__cirJsonId__", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeName("x")
-        assertEquals("/1/x", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/x", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeString("foo")
-        assertEquals("/1/x", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/x", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeName("stats")
-        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/stats", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeStartObject()
-        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/stats", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeObjectId(Any())
-        assertEquals("/1/stats/__cirJsonId__", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/stats/__cirJsonId__", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeName("rate")
-        assertEquals("/1/stats/rate", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/stats/rate", generator.streamWriteContext().pathAsPointer().toString())
         generator.writeNumber(13)
         generator.writeEndObject()
-        assertEquals("/1/stats", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1/stats", generator.streamWriteContext().pathAsPointer().toString())
 
         generator.writeEndObject()
-        assertEquals("/1", generator.streamWriteContext.pathAsPointer().toString())
+        assertEquals("/1", generator.streamWriteContext().pathAsPointer().toString())
 
         generator.writeEndArray()
-        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer())
+        assertSame(EMPTY_POINTER, generator.streamWriteContext().pathAsPointer())
 
         generator.close()
-        (generator.streamWriteOutputTarget as AutoCloseable).close()
+        (generator.streamWriteOutputTarget() as AutoCloseable).close()
     }
 
     @Test
@@ -571,46 +571,46 @@ class CirJsonPointerTest : TestBase() {
     }
 
     private fun generatorWithRoot(generator: CirJsonGenerator) {
-        assertSame(EMPTY_POINTER, generator.streamWriteContext.pathAsPointer(true))
+        assertSame(EMPTY_POINTER, generator.streamWriteContext().pathAsPointer(true))
 
         generator.writeStartArray()
-        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeArrayId(listOf<String>())
-        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeBoolean(true)
-        assertEquals("/0/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/0", generator.streamWriteContext().pathAsPointer(true).toString())
 
         generator.writeStartObject()
-        assertEquals("/0/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/1", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeObjectId(Any())
-        assertEquals("/0/1/__cirJsonId__", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/1/__cirJsonId__", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeName("x")
-        assertEquals("/0/1/x", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/1/x", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeString("foo")
-        assertEquals("/0/1/x", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/1/x", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeEndObject()
-        assertEquals("/0/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0/1", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeEndArray()
-        assertEquals("/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/0", generator.streamWriteContext().pathAsPointer(true).toString())
 
         generator.writeBoolean(true)
-        assertEquals("/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/1", generator.streamWriteContext().pathAsPointer(true).toString())
 
         generator.writeStartArray()
-        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeArrayId(listOf<String>())
-        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeString("foo")
-        assertEquals("/2/0", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2/0", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeString("bar")
-        assertEquals("/2/1", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2/1", generator.streamWriteContext().pathAsPointer(true).toString())
         generator.writeEndArray()
-        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2", generator.streamWriteContext().pathAsPointer(true).toString())
 
-        assertEquals("/2", generator.streamWriteContext.pathAsPointer(true).toString())
+        assertEquals("/2", generator.streamWriteContext().pathAsPointer(true).toString())
 
         generator.close()
-        (generator.streamWriteOutputTarget as AutoCloseable).close()
+        (generator.streamWriteOutputTarget() as AutoCloseable).close()
     }
 
     @Test

@@ -56,20 +56,20 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     /**
      * Get the constraints to apply when performing streaming writes.
      */
-    open val streamWriteConstraints = StreamWriteConstraints.defaults()
+    open fun streamWriteConstraints() = StreamWriteConstraints.defaults()
 
     /**
      * Accessor for context object that provides information about low-level logical position withing output token
      * stream.
      */
-    abstract val streamWriteContext: TokenStreamContext
+    abstract fun streamWriteContext(): TokenStreamContext
 
     /**
      * Accessor for context object provided by higher-level databinding functionality (or, in some cases, simple
      * placeholder of the same) that allows some level of interaction including ability to trigger serialization of
      * Object values through generator instance.
      */
-    abstract val objectWriteContext: ObjectWriteContext?
+    abstract fun objectWriteContext(): ObjectWriteContext?
 
     /**
      * Accessor that can be used to get access to object that is used as target for generated output; this is usually
@@ -84,7 +84,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      * In general use of this accessor should be considered as "last effort", i.e. only used if no other mechanism is
      * applicable.
      */
-    abstract val streamWriteOutputTarget: Any?
+    abstract fun streamWriteOutputTarget(): Any?
 
     /**
      * Accessor for verifying amount of content that is buffered by generator but not yet flushed to the underlying
@@ -96,7 +96,7 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
      *
      * Default CirJSON-backed implementations do use matching units.
      */
-    abstract val streamWriteOutputBuffered: Int
+    abstract fun streamWriteOutputBuffered(): Int
 
     /**
      * Helper method, usually equivalent to:

@@ -32,7 +32,7 @@ class ObjectWriteTest : TestBase() {
     private fun emptyObjectWrite(factory: CirJsonFactory, generatorMode: Int, parserMode: Int) {
         val generator = createGenerator(factory, generatorMode)
 
-        var context = generator.streamWriteContext
+        var context = generator.streamWriteContext()
         assertTrue(context.isInRoot)
         assertFalse(context.isInArray)
         assertFalse(context.isInObject)
@@ -40,7 +40,7 @@ class ObjectWriteTest : TestBase() {
         assertEquals(0, context.currentIndex)
 
         generator.writeStartObject()
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertFalse(context.isInRoot)
         assertFalse(context.isInArray)
         assertTrue(context.isInObject)
@@ -48,7 +48,7 @@ class ObjectWriteTest : TestBase() {
         assertEquals(0, context.currentIndex)
 
         generator.writeObjectId(Any())
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertFalse(context.isInRoot)
         assertFalse(context.isInArray)
         assertTrue(context.isInObject)
@@ -56,7 +56,7 @@ class ObjectWriteTest : TestBase() {
         assertEquals(0, context.currentIndex)
 
         generator.writeEndObject()
-        context = generator.streamWriteContext
+        context = generator.streamWriteContext()
         assertTrue(context.isInRoot)
         assertFalse(context.isInArray)
         assertFalse(context.isInObject)
@@ -65,7 +65,7 @@ class ObjectWriteTest : TestBase() {
 
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
@@ -122,7 +122,7 @@ class ObjectWriteTest : TestBase() {
         generator.writeString("yee-haw")
         generator.writeEndObject()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
@@ -186,7 +186,7 @@ class ObjectWriteTest : TestBase() {
         generator.writeEndObject()
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())
@@ -292,7 +292,7 @@ class ObjectWriteTest : TestBase() {
         generator.writeEndObject()
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_OBJECT, parser.nextToken())
         assertToken(CirJsonToken.CIRJSON_ID_PROPERTY_NAME, parser.nextToken())

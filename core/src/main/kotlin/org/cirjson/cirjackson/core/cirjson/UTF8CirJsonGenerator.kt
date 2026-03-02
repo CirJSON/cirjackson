@@ -87,11 +87,9 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      *******************************************************************************************************************
      */
 
-    override val streamWriteOutputTarget: Any?
-        get() = myOutputStream
+    override fun streamWriteOutputTarget(): Any? = myOutputStream
 
-    override val streamWriteOutputBuffered: Int
-        get() = myOutputTail
+    override fun streamWriteOutputBuffered(): Int = myOutputTail
 
     /*
      *******************************************************************************************************************
@@ -106,7 +104,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             return this
         }
 
-        val status = streamWriteContext.writeName(name)
+        val status = streamWriteContext().writeName(name)
 
         if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
             return reportError("Cannot write a property name, expecting a value")
@@ -163,7 +161,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             return this
         }
 
-        val status = streamWriteContext.writeName(name.value)
+        val status = streamWriteContext().writeName(name.value)
 
         if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
             return reportError("Cannot write a property name, expecting a value")
@@ -224,8 +222,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartArray(): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
-        streamWriteContext = streamWriteContext.createChildArrayContext(null)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildArrayContext(null)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartArray(this)
@@ -243,8 +241,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
-        streamWriteContext = streamWriteContext.createChildArrayContext(currentValue)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildArrayContext(currentValue)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartArray(this)
@@ -262,8 +260,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartArray(currentValue: Any?, size: Int): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_ARRAY)
-        streamWriteContext = streamWriteContext.createChildArrayContext(currentValue)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildArrayContext(currentValue)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartArray(this)
@@ -286,12 +284,12 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeEndArray(): CirJsonGenerator {
-        if (!streamWriteContext.isInArray) {
-            return reportError("Current context not Array but ${streamWriteContext.typeDescription}")
+        if (!streamWriteContext().isInArray) {
+            return reportError("Current context not Array but ${streamWriteContext().typeDescription}")
         }
 
         if (myConfigurationPrettyPrinter != null) {
-            myConfigurationPrettyPrinter.writeEndArray(this, streamWriteContext.entryCount)
+            myConfigurationPrettyPrinter.writeEndArray(this, streamWriteContext().entryCount)
         } else {
             if (myOutputTail >= myOutputEnd) {
                 flushBuffer()
@@ -300,7 +298,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             myOutputBuffer[myOutputTail++] = BYTE_R_BRACKET
         }
 
-        streamWriteContext = streamWriteContext.clearAndGetParent()!!
+        streamWriteContext() = streamWriteContext().clearAndGetParent()!!
 
         return this
     }
@@ -308,8 +306,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartObject(): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
-        streamWriteContext = streamWriteContext.createChildObjectContext(null)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildObjectContext(null)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartObject(this)
@@ -327,8 +325,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
-        streamWriteContext = streamWriteContext.createChildObjectContext(currentValue)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildObjectContext(currentValue)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartObject(this)
@@ -346,8 +344,8 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
     @Throws(CirJacksonException::class)
     override fun writeStartObject(currentValue: Any?, size: Int): CirJsonGenerator {
         verifyValueWrite(TYPE_MESSAGE_START_OBJECT)
-        streamWriteContext = streamWriteContext.createChildObjectContext(currentValue)
-        streamWriteConstraints.validateNestingDepth(streamWriteContext.nestingDepth)
+        streamWriteContext() = streamWriteContext().createChildObjectContext(currentValue)
+        streamWriteConstraints().validateNestingDepth(streamWriteContext().nestingDepth)
 
         if (myConfigurationPrettyPrinter != null) {
             myConfigurationPrettyPrinter.writeStartObject(this)
@@ -371,12 +369,12 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     override fun writeEndObject(): CirJsonGenerator {
-        if (!streamWriteContext.isInObject) {
-            return reportError("Current context not Object but ${streamWriteContext.typeDescription}")
+        if (!streamWriteContext().isInObject) {
+            return reportError("Current context not Object but ${streamWriteContext().typeDescription}")
         }
 
         if (myConfigurationPrettyPrinter != null) {
-            myConfigurationPrettyPrinter.writeEndObject(this, streamWriteContext.entryCount)
+            myConfigurationPrettyPrinter.writeEndObject(this, streamWriteContext().entryCount)
         } else {
             if (myOutputTail >= myOutputEnd) {
                 flushBuffer()
@@ -385,7 +383,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
             myOutputBuffer[myOutputTail++] = BYTE_R_CURLY
         }
 
-        streamWriteContext = streamWriteContext.clearAndGetParent()!!
+        streamWriteContext() = streamWriteContext().clearAndGetParent()!!
 
         return this
     }
@@ -395,7 +393,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: String) {
-        val status = streamWriteContext.writeName(name)
+        val status = streamWriteContext().writeName(name)
 
         if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
             return reportError("Cannot write a property name, expecting a value")
@@ -448,7 +446,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
      */
     @Throws(CirJacksonException::class)
     protected fun writePrettyPrinterName(name: SerializableString) {
-        val status = streamWriteContext.writeName(name.value)
+        val status = streamWriteContext().writeName(name.value)
 
         if (status == CirJsonWriteContext.STATUS_EXPECT_VALUE) {
             return reportError("Cannot write a property name, expecting a value")
@@ -1211,7 +1209,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
 
     @Throws(CirJacksonException::class)
     final override fun verifyValueWrite(typeMessage: String) {
-        val status = streamWriteContext.writeValue()
+        val status = streamWriteContext().writeValue()
 
         if (myConfigurationPrettyPrinter != null) {
             verifyPrettyValueWrite(typeMessage, status)
@@ -1277,7 +1275,7 @@ open class UTF8CirJsonGenerator(objectWriteContext: ObjectWriteContext, ioContex
         try {
             if (myOutputBuffer !== FLUSHED_OUTPUT_BUFFER && isEnabled(StreamWriteFeature.AUTO_CLOSE_CONTENT)) {
                 while (true) {
-                    val context = streamWriteContext
+                    val context = streamWriteContext()
 
                     if (context.isInArray) {
                         writeEndArray()

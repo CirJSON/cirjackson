@@ -57,7 +57,7 @@ class ArrayGenerationTest : TestBase() {
         generator.writeArray(values, pre, elements)
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
 
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
@@ -118,7 +118,7 @@ class ArrayGenerationTest : TestBase() {
         generator.writeArray(values, pre, elements)
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
 
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
@@ -179,7 +179,7 @@ class ArrayGenerationTest : TestBase() {
         generator.writeArray(values, pre, elements)
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
 
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
@@ -239,7 +239,7 @@ class ArrayGenerationTest : TestBase() {
         generator.writeArray(values, pre, elements)
         generator.close()
 
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
 
         val parser = createParser(factory, parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())

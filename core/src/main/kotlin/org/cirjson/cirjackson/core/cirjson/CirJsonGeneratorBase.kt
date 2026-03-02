@@ -74,10 +74,9 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
     protected val myConfigurationWriteHexUppercase =
             CirJsonWriteFeature.WRITE_HEX_UPPER_CASE.isEnabledIn(formatWriteFeatures)
 
-    override var streamWriteContext: CirJsonWriteContext = CirJsonWriteContext.createRootContext(
+    override fun streamWriteContext(): CirJsonWriteContext = CirJsonWriteContext.createRootContext(
             DuplicateDetector.rootDetector(this)
                     .takeIf { StreamWriteFeature.STRICT_DUPLICATE_DETECTION.isEnabledIn(streamWriteFeatures) })
-        protected set
 
     init {
         @Suppress("LeakingThis")
@@ -114,11 +113,11 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
      */
 
     override fun currentValue(): Any? {
-        return streamWriteContext.currentValue()
+        return streamWriteContext().currentValue()
     }
 
     override fun assignCurrentValue(value: Any?) {
-        streamWriteContext.assignCurrentValue(value)
+        streamWriteContext().assignCurrentValue(value)
     }
 
     /*
@@ -173,9 +172,9 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
             }
 
             CirJsonWriteContext.STATUS_OK_AS_IS -> {
-                if (streamWriteContext.isInArray) {
+                if (streamWriteContext().isInArray) {
                     myConfigurationPrettyPrinter!!.beforeArrayValues(this)
-                } else if (streamWriteContext.isInObject) {
+                } else if (streamWriteContext().isInObject) {
                     myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
                 }
             }
@@ -193,7 +192,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
     @Throws(CirJacksonException::class)
     protected fun <T> reportCannotWriteValueExpectName(typeMessage: String): T {
         throw constructWriteException(
-                "Cannot $typeMessage, expecting a property name (context: ${streamWriteContext.typeDescription})")
+                "Cannot $typeMessage, expecting a property name (context: ${streamWriteContext().typeDescription})")
     }
 
     companion object {

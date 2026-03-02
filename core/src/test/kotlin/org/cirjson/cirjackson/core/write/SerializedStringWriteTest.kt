@@ -30,7 +30,7 @@ class SerializedStringWriteTest : TestBase() {
     private fun simpleNames(generatorMode: Int, parserMode: Int) {
         val generator = createGenerator(factory, generatorMode)
         writeSimpleNames(generator)
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         verifySimpleNames(parser)
     }
@@ -106,7 +106,7 @@ class SerializedStringWriteTest : TestBase() {
     private fun simpleValues(generatorMode: Int, parserMode: Int) {
         val generator = createGenerator(factory, generatorMode)
         writeSimpleValues(generator)
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(factory, parserMode, doc)
         verifySimpleValues(parser)
     }

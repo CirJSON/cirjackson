@@ -26,7 +26,7 @@ class GeneratorFailFromReaderTest : TestBase() {
             val reader = StringReader("a")
             generator.writeString(reader, -1)
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let ${generator::class.java.name}.writeString() be used in place of 'writeName()': output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "cannot write a String")
@@ -51,7 +51,7 @@ class GeneratorFailFromReaderTest : TestBase() {
             generator.writeName("a")
             generator.writeString(reader, string.length + 1)
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let ${generator::class.java.name}.writeString(): output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "Didn't read enough from reader")
@@ -74,7 +74,7 @@ class GeneratorFailFromReaderTest : TestBase() {
             generator.writeName("a")
             generator.writeString(null, -1)
             generator.flush()
-            val res = generator.streamWriteOutputTarget!!.toString()
+            val res = generator.streamWriteOutputTarget()!!.toString()
             fail("Should not have let ${generator::class.java.name}.writeString(): output = $res")
         } catch (e: StreamWriteException) {
             verifyException(e, "null reader")

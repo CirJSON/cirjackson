@@ -30,7 +30,7 @@ class AsyncBinaryParseTest : AsyncTestBase() {
         val generator = createGenerator(factory, generatorMode)
         generator.writeBinary(binary)
         generator.close()
-        val smile = generator.streamWriteOutputTarget!!.toString().toByteArray()
+        val smile = generator.streamWriteOutputTarget()!!.toString().toByteArray()
 
         var parser = createAsync(factory, asyncMode, readSize, smile, offset)
 
@@ -68,7 +68,7 @@ class AsyncBinaryParseTest : AsyncTestBase() {
         generator.writeNumber(1)
         generator.writeEndArray()
         generator.close()
-        val smile = generator.streamWriteOutputTarget!!.toString().toByteArray()
+        val smile = generator.streamWriteOutputTarget()!!.toString().toByteArray()
 
         var parser = createAsync(factory, asyncMode, readSize, smile, offset)
 
@@ -118,7 +118,7 @@ class AsyncBinaryParseTest : AsyncTestBase() {
         generator.writeNumber(1)
         generator.writeEndObject()
         generator.close()
-        val smile = generator.streamWriteOutputTarget!!.toString().toByteArray()
+        val smile = generator.streamWriteOutputTarget()!!.toString().toByteArray()
 
         var parser = createAsync(factory, asyncMode, readSize, smile, offset)
 

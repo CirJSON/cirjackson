@@ -37,7 +37,7 @@ class StringGenerationTest : StringGenerationTestBase() {
 
         generator.writeEndArray()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -76,7 +76,7 @@ class StringGenerationTest : StringGenerationTestBase() {
 
         generator.writeEndArray()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -115,7 +115,7 @@ class StringGenerationTest : StringGenerationTestBase() {
 
         generator.writeEndArray()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString().toByteArray()
+        val doc = generator.streamWriteOutputTarget()!!.toString().toByteArray()
         val parser = createParser(parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())
@@ -193,7 +193,7 @@ class StringGenerationTest : StringGenerationTestBase() {
 
         generator.writeEndArray()
         generator.close()
-        val doc = generator.streamWriteOutputTarget!!.toString()
+        val doc = generator.streamWriteOutputTarget()!!.toString()
         val parser = createParser(parserMode, doc)
         assertToken(CirJsonToken.START_ARRAY, parser.nextToken())
         assertToken(CirJsonToken.VALUE_STRING, parser.nextToken())

@@ -69,13 +69,13 @@ class GeneratorCloseTest : TestBase() {
         generator.writeStartArray()
         generator.writeArrayId(Any())
         generator.close()
-        assertEquals("[\"0\"]", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("[\"0\"]", generator.streamWriteOutputTarget()!!.toString())
 
         generator = createGenerator(factory, mode)
         generator.writeStartObject()
         generator.writeObjectId(Any())
         generator.close()
-        assertEquals("{\"__cirJsonId__\":\"0\"}", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("{\"__cirJsonId__\":\"0\"}", generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test
@@ -93,13 +93,13 @@ class GeneratorCloseTest : TestBase() {
         generator.writeStartArray()
         generator.writeArrayId(Any())
         generator.close()
-        assertEquals("[\"0\"", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("[\"0\"", generator.streamWriteOutputTarget()!!.toString())
 
         generator = createGenerator(factory, mode)
         generator.writeStartObject()
         generator.writeObjectId(Any())
         generator.close()
-        assertEquals("{\"__cirJsonId__\":\"0\"", generator.streamWriteOutputTarget!!.toString())
+        assertEquals("{\"__cirJsonId__\":\"0\"", generator.streamWriteOutputTarget()!!.toString())
     }
 
     @Test

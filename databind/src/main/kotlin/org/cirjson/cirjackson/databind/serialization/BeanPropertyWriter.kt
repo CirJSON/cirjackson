@@ -695,7 +695,7 @@ open class BeanPropertyWriter : PropertyWriter {
         }
 
         if (myNullSerializer != null) {
-            if (!generator.streamWriteContext.isInArray) {
+            if (!generator.streamWriteContext().isInArray) {
                 generator.writeName(myName!!)
             }
 
