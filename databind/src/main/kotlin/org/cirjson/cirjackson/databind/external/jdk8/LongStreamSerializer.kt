@@ -4,17 +4,17 @@ import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.serialization.standard.StandardSerializer
-import java.util.stream.DoubleStream
+import java.util.stream.LongStream
 
 /**
- * [DoubleStream] serializer.
+ * [LongStream] serializer.
  * 
- * Unfortunately, there is no common ancestor between number base stream, so we need to define each in a specific class.
+ * Unfortunately, there is no common ancestor between number base stream, so we need to define each in a specific class
  */
-class DoubleStreamSerializer private constructor() : StandardSerializer<DoubleStream>(DoubleStream::class) {
+open class LongStreamSerializer private constructor() : StandardSerializer<LongStream>(LongStream::class) {
 
     @Throws(CirJacksonException::class)
-    override fun serialize(value: DoubleStream, generator: CirJsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(value: LongStream, generator: CirJsonGenerator, serializers: SerializerProvider) {
         try {
             value.use { stream ->
                 generator.writeStartArray(stream)
@@ -28,7 +28,7 @@ class DoubleStreamSerializer private constructor() : StandardSerializer<DoubleSt
 
     companion object {
 
-        val INSTANCE = DoubleStreamSerializer()
+        val INSTANCE = LongStreamSerializer()
 
     }
 

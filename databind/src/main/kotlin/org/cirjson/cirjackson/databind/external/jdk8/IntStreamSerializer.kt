@@ -9,7 +9,7 @@ import java.util.stream.IntStream
 /**
  * [IntStream] serializer.
  * 
- * Unfortunately there to common ancestor between number base stream, so we need to define each in a specific class.
+ * Unfortunately, there is no common ancestor between number base stream, so we need to define each in a specific class.
  */
 class IntStreamSerializer private constructor() : StandardSerializer<IntStream>(IntStream::class) {
 
