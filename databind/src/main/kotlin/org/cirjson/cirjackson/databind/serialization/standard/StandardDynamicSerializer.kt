@@ -51,8 +51,7 @@ abstract class StandardDynamicSerializer<T : Any> : StandardSerializer<T> {
     }
 
     @Suppress("UNCHECKED_CAST")
-    protected constructor(source: StandardDynamicSerializer<*>, property: BeanProperty?) : super(
-            source as StandardDynamicSerializer<T>) {
+    protected constructor(source: StandardDynamicSerializer<*>, property: BeanProperty?) : super(source) {
         myProperty = property
         myValueTypeSerializer = source.myValueTypeSerializer
         myValueSerializer = source.myValueSerializer
@@ -60,8 +59,7 @@ abstract class StandardDynamicSerializer<T : Any> : StandardSerializer<T> {
 
     @Suppress("UNCHECKED_CAST")
     protected constructor(source: StandardDynamicSerializer<*>, property: BeanProperty?,
-            valueTypeSerializer: TypeSerializer?, valueSerializer: ValueSerializer<*>?) : super(
-            source as StandardDynamicSerializer<T>) {
+            valueTypeSerializer: TypeSerializer?, valueSerializer: ValueSerializer<*>?) : super(source) {
         myProperty = property
         myValueTypeSerializer = valueTypeSerializer
         myValueSerializer = valueSerializer as? ValueSerializer<Any>?

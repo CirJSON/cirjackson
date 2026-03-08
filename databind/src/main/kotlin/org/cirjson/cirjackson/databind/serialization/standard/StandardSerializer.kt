@@ -46,7 +46,7 @@ abstract class StandardSerializer<T : Any> : ValueSerializer<T>, CirJsonFormatVi
         myHandledType = type.rawClass
     }
 
-    protected constructor(source: StandardSerializer<T>) : super() {
+    protected constructor(source: StandardSerializer<*>) : super() {
         myHandledType = source.myHandledType
     }
 

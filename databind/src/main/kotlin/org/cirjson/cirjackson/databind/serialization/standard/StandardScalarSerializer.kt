@@ -17,7 +17,7 @@ abstract class StandardScalarSerializer<T : Any> : StandardSerializer<T> {
      *
      * @param source Original instance to copy settings from
      */
-    protected constructor(source: StandardScalarSerializer<T>) : super(source)
+    protected constructor(source: StandardScalarSerializer<*>) : super(source)
 
     /**
      * Default implementation will write type prefix, call regular serialization method (since assumption is that value
