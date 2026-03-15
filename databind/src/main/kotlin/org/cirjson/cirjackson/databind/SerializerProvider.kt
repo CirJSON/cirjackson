@@ -718,7 +718,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * Method called to find a serializer to use for `null` values for given declared type. Note that type is completely
      * based on declared type, since `null` in Kotlin have no type and thus runtime type cannot be determined.
      */
-    open fun findNullKeySerializer(serializationType: KotlinType, property: BeanProperty): ValueSerializer<Any> {
+    open fun findNullKeySerializer(serializationType: KotlinType, property: BeanProperty?): ValueSerializer<Any> {
         return mySerializerFactory.defaultNullValueSerializer
     }
 
@@ -735,7 +735,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * serialization for properties of certain type or name. This gives method full granularity to basically override
      * `null` handling for any specific property or class of properties.
      */
-    open fun findNullValueSerializer(property: BeanProperty): ValueSerializer<Any> {
+    open fun findNullValueSerializer(property: BeanProperty?): ValueSerializer<Any> {
         return myNullValueSerializer
     }
 

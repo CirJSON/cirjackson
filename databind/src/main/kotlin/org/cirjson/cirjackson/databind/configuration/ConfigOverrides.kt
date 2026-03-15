@@ -60,7 +60,7 @@ open class ConfigOverrides protected constructor(
      *******************************************************************************************************************
      */
 
-    open fun findOverride(type: KClass<*>): ConfigOverride? {
+    open fun findOverride(type: KClass<*>?): ConfigOverride? {
         return myOverrides?.get(type)
     }
 

@@ -444,7 +444,7 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
      *******************************************************************************************************************
      */
 
-    final override fun getConfigOverride(type: KClass<*>): ConfigOverride {
+    final override fun getConfigOverride(type: KClass<*>?): ConfigOverride {
         return myConfigOverrides.findOverride(type) ?: ConfigOverride.empty()
     }
 
@@ -455,12 +455,12 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
     final override val defaultPropertyInclusion: CirJsonInclude.Value?
         get() = myConfigOverrides.defaultInclusion
 
-    final override fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value? {
+    final override fun getDefaultPropertyInclusion(baseType: KClass<*>?): CirJsonInclude.Value? {
         val value = getConfigOverride(baseType).include
         return defaultPropertyInclusion?.withOverrides(value) ?: value
     }
 
-    final override fun getDefaultInclusion(baseType: KClass<*>, propertyType: KClass<*>): CirJsonInclude.Value? {
+    final override fun getDefaultInclusion(baseType: KClass<*>?, propertyType: KClass<*>): CirJsonInclude.Value? {
         val value = getConfigOverride(baseType).include
         return getDefaultPropertyInclusion(baseType)?.withOverrides(value) ?: value
     }

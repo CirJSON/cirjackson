@@ -105,7 +105,7 @@ interface BeanProperty : FullyNamed {
      * ```
      * but that also considers global default settings for inclusion
      */
-    fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>): CirJsonInclude.Value?
+    fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>?): CirJsonInclude.Value?
 
     /**
      * Method for accessing the set of possible alternate names that are accepted during deserialization.
@@ -177,7 +177,7 @@ interface BeanProperty : FullyNamed {
             return baseValue.withOverrides(value)
         }
 
-        override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>): CirJsonInclude.Value? {
+        override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>?): CirJsonInclude.Value? {
             val baseValue = config.getDefaultInclusion(baseType, type.rawClass)
             val introspector = config.annotationIntrospector ?: return baseValue
 
@@ -240,7 +240,7 @@ interface BeanProperty : FullyNamed {
             return CirJsonFormat.Value.EMPTY
         }
 
-        override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>): CirJsonInclude.Value? {
+        override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>?): CirJsonInclude.Value? {
             return null
         }
 

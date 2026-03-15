@@ -44,7 +44,7 @@ abstract class ConcreteBeanPropertyBase protected constructor(metadata: Property
         return v1.withOverrides(v2)
     }
 
-    override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>): CirJsonInclude.Value? {
+    override fun findPropertyInclusion(config: MapperConfig<*>, baseType: KClass<*>?): CirJsonInclude.Value? {
         val introspector = config.annotationIntrospector
         val member = member ?: return config.getDefaultPropertyInclusion(baseType)
         val v0 = config.getDefaultInclusion(baseType, member.rawType)

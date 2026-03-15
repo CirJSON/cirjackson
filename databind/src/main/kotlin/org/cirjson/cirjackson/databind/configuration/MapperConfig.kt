@@ -217,7 +217,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      *
      * @return Override object to use for the type, never `null` (but may be empty)
      */
-    abstract fun getConfigOverride(type: KClass<*>): ConfigOverride
+    abstract fun getConfigOverride(type: KClass<*>?): ConfigOverride
 
     /**
      * Accessor for default property inclusion to use for serialization, used unless overridden by per-type or
@@ -231,7 +231,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      *
      * NOTE: if no override found, defaults to value returned by [defaultPropertyInclusion].
      */
-    abstract fun getDefaultPropertyInclusion(baseType: KClass<*>): CirJsonInclude.Value?
+    abstract fun getDefaultPropertyInclusion(baseType: KClass<*>?): CirJsonInclude.Value?
 
     /**
      * Accessor for default property inclusion to use for serialization, considering possible per-type override for
@@ -254,7 +254,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      *
      * @param propertyType Type of the property to look up inclusion setting for.
      */
-    abstract fun getDefaultInclusion(baseType: KClass<*>, propertyType: KClass<*>): CirJsonInclude.Value?
+    abstract fun getDefaultInclusion(baseType: KClass<*>?, propertyType: KClass<*>): CirJsonInclude.Value?
 
     /**
      * Accessor for default property inclusion to use for serialization, considering possible per-type override for
