@@ -1115,8 +1115,8 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
         throw DatabindException.from(generator, message)
     }
 
-    override fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
-            extraDescription: String): DatabindException {
+    override fun invalidTypeIdException(baseType: KotlinType?, typeId: String?,
+            extraDescription: String?): DatabindException {
         val message = "Could not resolve type id '$typeId' as a subtype of ${baseType.typeDescription}"
         return InvalidTypeIdException.from(null, colonConcat(message, extraDescription), baseType, typeId)
     }

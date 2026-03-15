@@ -260,8 +260,8 @@ abstract class DatabindContext {
      * Note that most of the time this method should NOT be called directly: instead, method `handleUnknownTypeId()`
      * should be called which will call this method if necessary.
      */
-    protected abstract fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
-            extraDescription: String): DatabindException
+    protected abstract fun invalidTypeIdException(baseType: KotlinType?, typeId: String?,
+            extraDescription: String?): DatabindException
 
     abstract val typeFactory: TypeFactory
 

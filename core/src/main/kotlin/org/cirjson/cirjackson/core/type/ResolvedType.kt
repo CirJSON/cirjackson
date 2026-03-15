@@ -48,10 +48,10 @@ abstract class ResolvedType {
      */
 
     /**
-     * Accessor that can be used to find out if the type directly declares generic parameters (for its direct
-     * super-class and/or super-interfaces).
+     * Method that can be used to find out if the type directly declares generic parameters (for its direct superclass
+     * and/or superinterfaces).
      */
-    abstract val hasGenericTypes: Boolean
+    abstract fun hasGenericTypes(): Boolean
 
     /**
      * Accessor for key type for this type, assuming type has such a concept (only Map types do)

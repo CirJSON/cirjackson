@@ -1423,7 +1423,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * available.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportInputMismatch(targetType: KClass<*>, message: String?): T {
+    open fun <T> reportInputMismatch(targetType: KClass<*>?, message: String?): T {
         throw MismatchedInputException.from(parser, targetType, message)
     }
 
@@ -1432,7 +1432,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * available.
      */
     @Throws(DatabindException::class)
-    open fun <T> reportInputMismatch(targetType: KotlinType, message: String?): T {
+    open fun <T> reportInputMismatch(targetType: KotlinType?, message: String?): T {
         throw MismatchedInputException.from(parser, targetType, message)
     }
 
@@ -1628,10 +1628,15 @@ abstract class DeserializationContext protected constructor(protected val myStre
                 "Cannot construct instance of ${instantiatedClass.name}: $message", constructType(instantiatedClass)!!)
     }
 
-    override fun invalidTypeIdException(baseType: KotlinType, typeId: String?,
-            extraDescription: String): DatabindException {
+    override fun invalidTypeIdException(baseType: KotlinType?, typeId: String?,
+            extraDescription: String?): DatabindException {
         val message = "Could not resolve type id '$typeId' as a subtype of ${baseType.typeDescription}"
         return InvalidTypeIdException.from(myParser, colonConcat(message, extraDescription), baseType, typeId)
+    }
+
+    internal fun invalidTypeIdExceptionInternal(baseType: KotlinType?, typeId: String?,
+            extraDescription: String?): DatabindException {
+        return this.invalidTypeIdException(baseType, typeId, extraDescription)
     }
 
     open fun missingTypeIdException(baseType: KotlinType, extraDescription: String): DatabindException {

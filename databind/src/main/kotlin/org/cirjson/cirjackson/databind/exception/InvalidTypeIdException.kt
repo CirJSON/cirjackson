@@ -10,12 +10,12 @@ import org.cirjson.cirjackson.databind.KotlinType
  *
  * @property typeId Type id that failed to be resolved to a subtype; `null` in cases where no type id was located.
  */
-class InvalidTypeIdException(parser: CirJsonParser?, message: String, val baseType: KotlinType, val typeId: String?) :
+class InvalidTypeIdException(parser: CirJsonParser?, message: String, val baseType: KotlinType?, val typeId: String?) :
         MismatchedInputException(parser, message) {
 
     companion object {
 
-        fun from(parser: CirJsonParser?, message: String, baseType: KotlinType,
+        fun from(parser: CirJsonParser?, message: String, baseType: KotlinType?,
                 typeId: String?): InvalidTypeIdException {
             return InvalidTypeIdException(parser, message, baseType, typeId)
         }

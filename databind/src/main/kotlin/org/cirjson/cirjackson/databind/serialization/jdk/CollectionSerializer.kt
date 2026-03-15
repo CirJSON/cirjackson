@@ -105,7 +105,7 @@ open class CollectionSerializer : AsArraySerializerBase<Collection<*>> {
                 var serializer = serializers.serializerFor(elementClass)
 
                 if (serializer == null) {
-                    serializer = if (myElementType.hasGenericTypes) {
+                    serializer = if (myElementType.hasGenericTypes()) {
                         findAndAddDynamic(context, context.constructSpecializedType(myElementType, elementClass))
                     } else {
                         findAndAddDynamic(context, elementClass)

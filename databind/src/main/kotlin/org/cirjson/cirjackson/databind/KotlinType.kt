@@ -301,14 +301,21 @@ abstract class KotlinType : ResolvedType, Type {
         get() = false
 
     /**
-     * Convenience accessor, shorthand for `rawClass == Object::class.java` and used to figure if we basically have
-     * "untyped" type object.
+     * Convenience accessor, shorthand for `rawClass == Object::class || myClass == Any::class` and used to figure if we
+     * basically have "untyped" type object.
      */
     val isJavaLangObject: Boolean
-        get() = myClass == Object::class.java
+        get() = myClass == Object::class || myClass == Any::class
 
-    override val hasGenericTypes: Boolean
-        get() = containedTypeCount() > 0
+    /*
+     *******************************************************************************************************************
+     * Public API, type parameter access; passthrough
+     *******************************************************************************************************************
+     */
+
+    override fun hasGenericTypes(): Boolean {
+        return containedTypeCount() > 0
+    }
 
     override val keyType: KotlinType?
         get() = null

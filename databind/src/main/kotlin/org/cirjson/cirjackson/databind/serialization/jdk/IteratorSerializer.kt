@@ -102,7 +102,7 @@ open class IteratorSerializer : AsArraySerializerBase<Iterator<*>> {
             val elementClass = element::class
 
             val serializer =
-                    myDynamicValueSerializers.serializerFor(elementClass) ?: if (myElementType.hasGenericTypes) {
+                    myDynamicValueSerializers.serializerFor(elementClass) ?: if (myElementType.hasGenericTypes()) {
                         findAndAddDynamic(context, context.constructSpecializedType(myElementType, elementClass))
                     } else {
                         findAndAddDynamic(context, elementClass)

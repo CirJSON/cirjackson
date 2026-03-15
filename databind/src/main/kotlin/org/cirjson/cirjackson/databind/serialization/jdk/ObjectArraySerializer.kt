@@ -197,7 +197,7 @@ open class ObjectArraySerializer : ArraySerializerBase<Array<Any?>> {
 
                 val elementClass = element::class
                 val serializer = myDynamicValueSerializers.serializerFor(elementClass)
-                        ?: myElementType.takeIf { it.hasGenericTypes }?.let {
+                        ?: myElementType.takeIf { it.hasGenericTypes() }?.let {
                             findAndAddDynamic(context, context.constructSpecializedType(myElementType, elementClass))
                         } ?: findAndAddDynamic(context, elementClass)
                 serializer.serialize(element, generator, context)

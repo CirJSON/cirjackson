@@ -100,7 +100,7 @@ class IndexedListSerializer : AsArraySerializerBase<Any> {
                 val elementClass = element::class
 
                 val serializer =
-                        myDynamicValueSerializers.serializerFor(elementClass) ?: if (myElementType.hasGenericTypes) {
+                        myDynamicValueSerializers.serializerFor(elementClass) ?: if (myElementType.hasGenericTypes()) {
                             findAndAddDynamic(context, context.constructSpecializedType(myElementType, elementClass))
                         } else {
                             findAndAddDynamic(context, elementClass)
@@ -168,7 +168,7 @@ class IndexedListSerializer : AsArraySerializerBase<Any> {
                 var serializer = serializers.serializerFor(elementClass)
 
                 if (serializer == null) {
-                    serializer = if (myElementType.hasGenericTypes) {
+                    serializer = if (myElementType.hasGenericTypes()) {
                         findAndAddDynamic(context, context.constructSpecializedType(myElementType, elementClass))
                     } else {
                         findAndAddDynamic(context, elementClass)

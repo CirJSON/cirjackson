@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.core.type
 
 import org.cirjson.cirjackson.core.TestBase
+import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -20,10 +21,10 @@ class ResolvedTypeTest : TestBase() {
         override val referencedType: ResolvedType?
             get() = if (isSelfReferencedType) this else null
 
-        override val rawClass: Class<*>
-            get() = javaClass
+        override val rawClass: KClass<*>
+            get() = this::class
 
-        override fun hasRawClass(clazz: Class<*>): Boolean {
+        override fun hasRawClass(clazz: KClass<*>): Boolean {
             return false
         }
 
@@ -57,8 +58,12 @@ class ResolvedTypeTest : TestBase() {
         override val isCollectionLikeType: Boolean
             get() = false
 
-        override val hasGenericTypes: Boolean
+        override val isMapLikeType: Boolean
             get() = false
+
+        override fun hasGenericTypes(): Boolean {
+            return false
+        }
 
         override val keyType: ResolvedType?
             get() = null
@@ -72,6 +77,10 @@ class ResolvedTypeTest : TestBase() {
 
         override fun containedType(index: Int): ResolvedType? {
             return null
+        }
+
+        override fun toCanonical(): String {
+            return ""
         }
 
     }

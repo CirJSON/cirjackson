@@ -89,8 +89,7 @@ class ArrayType private constructor(private val myComponentType: KotlinType, bin
 
     override val isConcrete: Boolean = true
 
-    override val hasGenericTypes: Boolean
-        get() = myComponentType.hasGenericTypes
+    override fun hasGenericTypes(): Boolean = myComponentType.hasGenericTypes()
 
     /*
      *******************************************************************************************************************

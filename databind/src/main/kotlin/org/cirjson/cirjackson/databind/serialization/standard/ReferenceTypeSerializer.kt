@@ -348,7 +348,7 @@ abstract class ReferenceTypeSerializer<T : Any> : StandardDynamicSerializer<T> {
             return serializer
         }
 
-        serializer = if (myReferredType.hasGenericTypes) {
+        serializer = if (myReferredType.hasGenericTypes()) {
             val fullType = context.constructSpecializedType(myReferredType, rawType)
             context.findPrimaryPropertySerializer(fullType, myProperty)
         } else {

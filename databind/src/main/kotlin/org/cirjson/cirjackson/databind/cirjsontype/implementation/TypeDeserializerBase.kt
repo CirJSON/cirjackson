@@ -121,11 +121,11 @@ abstract class TypeDeserializerBase : TypeDeserializer {
             }
         } else {
             if (myBaseType != null && myBaseType::class == type::class) {
-                if (!type.hasGenericTypes) {
+                if (!type.hasGenericTypes()) {
                     try {
                         type = context.constructSpecializedType(myBaseType, type.rawClass)
                     } catch (e: IllegalArgumentException) {
-                        throw context.invalidTypeIdException(myBaseType, typeId, e.message!!)
+                        throw context.invalidTypeIdExceptionInternal(myBaseType, typeId, e.message!!)
                     }
                 }
             }
@@ -133,7 +133,7 @@ abstract class TypeDeserializerBase : TypeDeserializer {
             deserializer = context.findContextualValueDeserializer(type, myProperty)
         }
 
-        myDeserializers[typeId] = deserializer!!
+        myDeserializers[typeId] = deserializer
         return deserializer
     }
 
