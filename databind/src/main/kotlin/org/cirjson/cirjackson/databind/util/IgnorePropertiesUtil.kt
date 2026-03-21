@@ -67,7 +67,7 @@ object IgnorePropertiesUtil {
 
         private val myToIgnore = toIgnore ?: emptySet()
 
-        fun shouldIgnore(propertyName: Any): Boolean {
+        fun shouldIgnore(propertyName: Any?): Boolean {
             return (myToInclude?.contains(propertyName) ?: false) || propertyName in myToIgnore
         }
 
