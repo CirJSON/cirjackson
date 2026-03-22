@@ -24,7 +24,7 @@ abstract class StaticListSerializerBase<T : Collection<*>> : StandardSerializer<
         myUnwrapSingle = null
     }
 
-    protected constructor(source: StaticListSerializerBase<*>, unwrapSingle: Boolean) : super(source) {
+    protected constructor(source: StaticListSerializerBase<*>, unwrapSingle: Boolean?) : super(source) {
         myUnwrapSingle = unwrapSingle
     }
 
