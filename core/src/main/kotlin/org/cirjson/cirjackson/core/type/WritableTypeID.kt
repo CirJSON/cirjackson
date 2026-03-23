@@ -27,7 +27,7 @@ import kotlin.reflect.KClass
  * used instead of actual class of [forValue] in cases where we do not want to use the "real" type but something more
  * generic, usually to work around specific problem with implementation type, or its deserializer.
  */
-open class WritableTypeID private constructor(val forValue: Any?, val valueShape: CirJsonToken, var id: Any?,
+open class WritableTypeID private constructor(var forValue: Any?, val valueShape: CirJsonToken, var id: Any?,
         var forValueType: KClass<*>?) {
 
     /**
