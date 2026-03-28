@@ -13,7 +13,7 @@ abstract class BeanSerializerBase : StandardSerializer<Any> {
      *******************************************************************************************************************
      */
 
-    protected constructor(type: KotlinType, builder: BeanSerializerBuilder, properties: Array<BeanPropertyWriter>,
+    protected constructor(type: KotlinType, builder: BeanSerializerBuilder?, properties: Array<BeanPropertyWriter>,
             filteredProperties: Array<BeanPropertyWriter>?) : super(type) {
     }
 
