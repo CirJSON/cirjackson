@@ -39,7 +39,7 @@ open class BeanSerializerBuilder {
     /**
      * Optional array of filtered property writers; if `null`, no view-based filtering is performed.
      */
-    protected var myFilteredProperties: Array<BeanPropertyWriter>? = null
+    protected var myFilteredProperties: Array<BeanPropertyWriter?>? = null
 
     /**
      * Writer used for "any getter" properties, if any.
@@ -117,7 +117,7 @@ open class BeanSerializerBuilder {
      * Number and order of properties here MUST match that of "regular" properties set earlier using [properties]; if
      * not, an [IllegalArgumentException] will be thrown.
      */
-    open var filteredProperties: Array<BeanPropertyWriter>?
+    open var filteredProperties: Array<BeanPropertyWriter?>?
         get() = myFilteredProperties
         set(value) {
             if (value != null && myProperties.size != value.size) {

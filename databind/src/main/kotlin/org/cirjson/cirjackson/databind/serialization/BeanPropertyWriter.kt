@@ -478,7 +478,7 @@ open class BeanPropertyWriter : PropertyWriter {
     open val serializer: ValueSerializer<Any>?
         get() = mySerializer
 
-    open val mySerializationType: KotlinType?
+    open val serializationType: KotlinType?
         get() = myConfigSerializationType
 
     open val views: Array<KClass<*>>?

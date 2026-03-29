@@ -276,8 +276,9 @@ abstract class ValueSerializer<T : Any> : CirJsonFormatVisitable {
     open val delegatee: ValueSerializer<*>?
         get() = null
 
-    open val properties: Iterator<PropertyWriter>
-        get() = emptyIterator()
+    open fun properties(): Iterator<PropertyWriter> {
+        return emptyIterator()
+    }
 
     /*
      *******************************************************************************************************************

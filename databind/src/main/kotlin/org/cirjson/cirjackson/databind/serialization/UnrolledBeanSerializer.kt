@@ -5,6 +5,8 @@ import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.SerializerProvider
 import org.cirjson.cirjackson.databind.serialization.bean.BeanSerializerBase
+import org.cirjson.cirjackson.databind.serialization.implementation.ObjectIdWriter
+import org.cirjson.cirjackson.databind.util.NameTransformer
 
 open class UnrolledBeanSerializer : BeanSerializerBase {
 
@@ -15,7 +17,38 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      */
 
     constructor(type: KotlinType, builder: BeanSerializerBuilder?, properties: Array<BeanPropertyWriter>,
-            filteredProperties: Array<BeanPropertyWriter>?) : super(type, builder, properties, filteredProperties) {
+            filteredProperties: Array<BeanPropertyWriter?>?) : super(type, builder, properties, filteredProperties) {
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle: factory methods, fluent factories
+     *******************************************************************************************************************
+     */
+
+    override fun withObjectIdWriter(objectIdWriter: ObjectIdWriter?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun asArraySerializer(): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun withFilterId(filterId: Any?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun withProperties(properties: Array<BeanPropertyWriter>,
+            filteredProperties: Array<BeanPropertyWriter?>?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
+        TODO("Not yet implemented")
     }
 
     /*
@@ -32,7 +65,7 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
     companion object {
 
         fun tryConstruct(type: KotlinType, builder: BeanSerializerBuilder, properties: Array<BeanPropertyWriter>,
-                filteredProperties: Array<BeanPropertyWriter>?): UnrolledBeanSerializer? {
+                filteredProperties: Array<BeanPropertyWriter?>?): UnrolledBeanSerializer? {
             TODO("Not yet implemented")
         }
 
