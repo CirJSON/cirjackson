@@ -1,20 +1,26 @@
-package org.cirjson.cirjackson.databind.serialization
+package org.cirjson.cirjackson.databind.serialization.bean
 
 import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
+import org.cirjson.cirjackson.core.CirJsonToken
 import org.cirjson.cirjackson.databind.DatabindException
-import org.cirjson.cirjackson.databind.KotlinType
+import org.cirjson.cirjackson.databind.SerializationFeature
 import org.cirjson.cirjackson.databind.SerializerProvider
-import org.cirjson.cirjackson.databind.ValueSerializer
-import org.cirjson.cirjackson.databind.annotation.CirJacksonStandardImplementation
-import org.cirjson.cirjackson.databind.serialization.bean.BeanAsArraySerializer
-import org.cirjson.cirjackson.databind.serialization.bean.BeanSerializerBase
-import org.cirjson.cirjackson.databind.serialization.bean.UnwrappingBeanSerializer
+import org.cirjson.cirjackson.databind.cirjsontype.TypeSerializer
+import org.cirjson.cirjackson.databind.serialization.BeanPropertyWriter
 import org.cirjson.cirjackson.databind.serialization.implementation.ObjectIdWriter
 import org.cirjson.cirjackson.databind.util.NameTransformer
 
-@CirJacksonStandardImplementation
-open class UnrolledBeanSerializer : BeanSerializerBase {
+/**
+ * Specialization of [BeanAsArraySerializer], optimized for handling small number of properties where calls to property
+ * handlers can be "unrolled" by eliminated looping. This can help optimize execution significantly for some backends.
+ */
+open class UnrolledBeanAsArraySerializer : BeanSerializerBase {
+
+    /**
+     * Serializer that would produce CirJSON Object version; used in cases where array output cannot be used.
+     */
+    protected val myDefaultSerializer: BeanSerializerBase
 
     protected val myPropertyCount: Int
 
@@ -36,26 +42,15 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      *******************************************************************************************************************
      */
 
-    /**
-     * @param builder Builder object that contains collected information that may be needed for serializer
-     *
-     * @param properties Property writers used for actual serialization
-     */
-    constructor(type: KotlinType, builder: BeanSerializerBuilder?, properties: Array<BeanPropertyWriter>,
-            filteredProperties: Array<BeanPropertyWriter?>?) : super(type, builder, properties, filteredProperties) {
+    constructor(source: BeanSerializerBase) : super(source, null as ObjectIdWriter?) {
+        myDefaultSerializer = source
         myPropertyCount = myProperties.size
         calculateUnrolled()
     }
 
-    protected constructor(source: UnrolledBeanSerializer, toIgnore: Set<String>?, toInclude: Set<String>?) : super(
-            source,
+    protected constructor(source: BeanSerializerBase, toIgnore: Set<String>?, toInclude: Set<String>?) : super(source,
             toIgnore, toInclude) {
-        myPropertyCount = myProperties.size
-        calculateUnrolled()
-    }
-
-    protected constructor(source: UnrolledBeanSerializer, properties: Array<BeanPropertyWriter>,
-            filteredProperties: Array<BeanPropertyWriter?>?) : super(source, properties, filteredProperties) {
+        myDefaultSerializer = source
         myPropertyCount = myProperties.size
         calculateUnrolled()
     }
@@ -80,35 +75,27 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      */
 
     override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
-        return UnwrappingBeanSerializer(this, unwrapper)
+        return myDefaultSerializer.unwrappingSerializer(unwrapper)
     }
 
     override fun withObjectIdWriter(objectIdWriter: ObjectIdWriter?): BeanSerializerBase {
-        return BeanSerializer.construct(this, objectIdWriter, myPropertyFilterId)
+        return myDefaultSerializer.withObjectIdWriter(objectIdWriter)
     }
 
     override fun withFilterId(filterId: Any?): BeanSerializerBase {
-        return BeanSerializer.construct(this, myObjectIdWriter, filterId)
+        return BeanAsArraySerializer.construct(myDefaultSerializer, myObjectIdWriter, filterId)
     }
 
-    override fun withIgnoredProperties(ignoredProperties: Set<String>?): ValueSerializer<*>? {
-        return BeanSerializer.construct(this, ignoredProperties, null)
-    }
-
-    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
-        return UnrolledBeanSerializer(this, toIgnore, toInclude)
+    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): UnrolledBeanAsArraySerializer {
+        return UnrolledBeanAsArraySerializer(this, toIgnore, toInclude)
     }
 
     override fun withProperties(properties: Array<BeanPropertyWriter>,
             filteredProperties: Array<BeanPropertyWriter?>?): BeanSerializerBase {
-        return UnrolledBeanSerializer(this, properties, filteredProperties)
+        return this
     }
 
     override fun asArraySerializer(): BeanSerializerBase {
-        if (canCreateArraySerializer()) {
-            return BeanAsArraySerializer.construct(this)
-        }
-
         return this
     }
 
@@ -123,16 +110,29 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      *******************************************************************************************************************
      */
 
+    /**
+     * Main serialization method that will delegate actual output to configured [BeanPropertyWriter] instances.
+     */
     @Throws(CirJacksonException::class)
     override fun serialize(value: Any, generator: CirJsonGenerator, serializers: SerializerProvider) {
-        if (myFilteredProperties != null && serializers.activeView != null) {
-            generator.writeStartObject(value)
-            serializePropertiesMaybeView(value, generator, serializers, myFilteredProperties)
-            generator.writeEndObject()
+        if (serializers.isEnabled(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED) &&
+                hasSingleElement()) {
+            serializeNonFiltered(value, generator, serializers)
             return
         }
 
+        generator.writeStartArray(value, myPropertyCount)
         serializeNonFiltered(value, generator, serializers)
+        generator.writeEndArray()
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun serializeWithType(value: Any, generator: CirJsonGenerator, serializers: SerializerProvider,
+            typeSerializer: TypeSerializer) {
+        val typeIdDefinition = typeIdDefinition(typeSerializer, value, CirJsonToken.START_ARRAY)
+        typeSerializer.writeTypePrefix(generator, serializers, typeIdDefinition)
+        serializeNonFiltered(value, generator, serializers)
+        typeSerializer.writeTypeSuffix(generator, serializers, typeIdDefinition)
     }
 
     /*
@@ -141,10 +141,12 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      *******************************************************************************************************************
      */
 
+    private fun hasSingleElement(): Boolean {
+        return myPropertyCount == 1
+    }
+
     @Throws(CirJacksonException::class)
     protected fun serializeNonFiltered(value: Any, generator: CirJsonGenerator, context: SerializerProvider) {
-        generator.writeStartObject(value)
-
         var property: BeanPropertyWriter? = null
 
         try {
@@ -172,15 +174,11 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
                 myProperty6!!.also { property = it }.serializeAsElement(value, generator, context)
             }
         } catch (e: Exception) {
-            val name = property?.name ?: "[anySetter]"
-            wrapAndThrow(context, e, value, name)
+            wrapAndThrow(context, e, value, property!!.name)
         } catch (e: StackOverflowError) {
-            val name = property?.name ?: "[anySetter]"
             throw DatabindException.from(generator, "Infinite recursion (StackOverflowError)", e)
-                    .prependPath(value, name)
+                    .prependPath(value, property!!.name)
         }
-
-        generator.writeEndObject()
     }
 
     companion object {
@@ -191,13 +189,12 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
          * Factory method that will construct optimized instance if all the constraints are obeyed; or, if not, return
          * `null` to indicate that instance cannot be created.
          */
-        fun tryConstruct(type: KotlinType, builder: BeanSerializerBuilder, properties: Array<BeanPropertyWriter>,
-                filteredProperties: Array<BeanPropertyWriter?>?): UnrolledBeanSerializer? {
-            if (properties.size > MAX_COUNT || builder.filterId != null) {
+        fun tryConstruct(source: BeanSerializerBase): UnrolledBeanAsArraySerializer? {
+            if (source.propertyCount() > MAX_COUNT || source.filterId != null || source.hasViewProperties()) {
                 return null
             }
 
-            return UnrolledBeanSerializer(type, builder, properties, filteredProperties)
+            return UnrolledBeanAsArraySerializer(source)
         }
 
     }
