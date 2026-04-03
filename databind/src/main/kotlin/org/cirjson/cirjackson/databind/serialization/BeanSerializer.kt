@@ -27,19 +27,19 @@ open class BeanSerializer : BeanSerializerBase {
      *******************************************************************************************************************
      */
 
+    override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
     override fun withObjectIdWriter(objectIdWriter: ObjectIdWriter?): BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
-    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
-        TODO("Not yet implemented")
-    }
-
-    override fun asArraySerializer(): BeanSerializerBase {
-        TODO("Not yet implemented")
-    }
-
     override fun withFilterId(filterId: Any?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
@@ -48,7 +48,11 @@ open class BeanSerializer : BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
-    override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
+    override fun withIgnoredProperties(ignoredProperties: Set<String>?): ValueSerializer<*>? {
+        TODO("Not yet implemented")
+    }
+
+    override fun asArraySerializer(): BeanSerializerBase {
         TODO("Not yet implemented")
     }
 

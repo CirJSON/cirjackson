@@ -4,6 +4,7 @@ import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonGenerator
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.SerializerProvider
+import org.cirjson.cirjackson.databind.ValueSerializer
 import org.cirjson.cirjackson.databind.serialization.bean.BeanSerializerBase
 import org.cirjson.cirjackson.databind.serialization.implementation.ObjectIdWriter
 import org.cirjson.cirjackson.databind.util.NameTransformer
@@ -26,19 +27,23 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
      *******************************************************************************************************************
      */
 
+    override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
     override fun withObjectIdWriter(objectIdWriter: ObjectIdWriter?): BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
-    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
-        TODO("Not yet implemented")
-    }
-
-    override fun asArraySerializer(): BeanSerializerBase {
-        TODO("Not yet implemented")
-    }
-
     override fun withFilterId(filterId: Any?): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun withIgnoredProperties(ignoredProperties: Set<String>?): ValueSerializer<*>? {
+        TODO("Not yet implemented")
+    }
+
+    override fun withByNameInclusion(toIgnore: Set<String>?, toInclude: Set<String>?): BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
@@ -47,7 +52,11 @@ open class UnrolledBeanSerializer : BeanSerializerBase {
         TODO("Not yet implemented")
     }
 
-    override fun unwrappingSerializer(unwrapper: NameTransformer): BeanSerializerBase {
+    override fun asArraySerializer(): BeanSerializerBase {
+        TODO("Not yet implemented")
+    }
+
+    override fun resolve(provider: SerializerProvider) {
         TODO("Not yet implemented")
     }
 
