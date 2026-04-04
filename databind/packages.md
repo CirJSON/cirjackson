@@ -103,6 +103,10 @@ Contains concrete [org.cirjson.cirjackson.databind.CirJsonNode] implementations 
 These classes are public, since concrete type will be needed for most operations that modify node trees. For read-only
 access, concrete types are usually not needed.
 
+# Package org.cirjson.cirjackson.databind.serialization.implementation
+
+Contains implementation classes of serialization part of data binding.
+
 # Package org.cirjson.cirjackson.databind.type
 
 Package that contains concrete implementations of [org.cirjson.cirjackson.databind.KotlinType], as well as the factory
