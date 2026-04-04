@@ -10,7 +10,13 @@ import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
 import org.cirjson.cirjackson.databind.serialization.VirtualBeanPropertyWriter
 import org.cirjson.cirjackson.databind.util.Annotations
 
+/**
+ * [VirtualBeanPropertyWriter] implementation used for [org.cirjson.cirjackson.databind.annotation.CirJsonAppend], to
+ * serialize properties backed-by dynamically assignable attribute values.
+ */
 open class AttributePropertyWriter : VirtualBeanPropertyWriter {
+
+    protected val myAttributeName: String
 
     /*
      *******************************************************************************************************************
@@ -19,13 +25,25 @@ open class AttributePropertyWriter : VirtualBeanPropertyWriter {
      */
 
     protected constructor(attributeName: String, propertyDefinition: BeanPropertyDefinition,
-            contextAnnotations: Annotations, declaredType: KotlinType, inclusion: CirJsonInclude.Value) : super(
+            contextAnnotations: Annotations?, declaredType: KotlinType?) : this(attributeName, propertyDefinition,
+            contextAnnotations, declaredType, propertyDefinition.findInclusion())
+
+    protected constructor(attributeName: String, propertyDefinition: BeanPropertyDefinition,
+            contextAnnotations: Annotations?, declaredType: KotlinType?, inclusion: CirJsonInclude.Value?) : super(
             propertyDefinition, contextAnnotations, declaredType, null, null, null, inclusion, null) {
+        myAttributeName = attributeName
     }
 
+    protected constructor(base: AttributePropertyWriter) : super(base) {
+        myAttributeName = base.myAttributeName
+    }
+
+    /**
+     * Since this method should typically not be called on this subtype, default implementation simply throws an [IllegalStateException].
+     */
     override fun withConfig(config: MapperConfig<*>, declaringClass: AnnotatedClass,
             propertyDefinition: BeanPropertyDefinition, type: KotlinType): VirtualBeanPropertyWriter {
-        TODO("Not yet implemented")
+        throw IllegalStateException("Should not be called on this type")
     }
 
     /*
@@ -35,14 +53,14 @@ open class AttributePropertyWriter : VirtualBeanPropertyWriter {
      */
 
     override fun value(bean: Any, generator: CirJsonGenerator, provider: SerializerProvider): Any? {
-        TODO("Not yet implemented")
+        return provider.getAttribute(bean)
     }
 
     companion object {
 
         fun construct(attributeName: String, propertyDefinition: BeanPropertyDefinition,
-                contextAnnotations: Annotations, declaredType: KotlinType): AttributePropertyWriter {
-            TODO("Not yet implemented")
+                contextAnnotations: Annotations?, declaredType: KotlinType?): AttributePropertyWriter {
+            return AttributePropertyWriter(attributeName, propertyDefinition, contextAnnotations, declaredType)
         }
 
     }
