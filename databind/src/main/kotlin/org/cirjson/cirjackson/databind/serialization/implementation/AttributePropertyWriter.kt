@@ -10,16 +10,18 @@ import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
 import org.cirjson.cirjackson.databind.serialization.VirtualBeanPropertyWriter
 import org.cirjson.cirjackson.databind.util.Annotations
 
-open class AttributePropertyWriter(protected val myAttributeName: String, propertyDefinition: BeanPropertyDefinition,
-        contextAnnotations: Annotations, declaredType: KotlinType, inclusion: CirJsonInclude.Value) :
-        VirtualBeanPropertyWriter(propertyDefinition, contextAnnotations, declaredType, null, null, null, inclusion,
-                null) {
+open class AttributePropertyWriter : VirtualBeanPropertyWriter {
 
     /*
      *******************************************************************************************************************
      * Lifecycle
      *******************************************************************************************************************
      */
+
+    protected constructor(attributeName: String, propertyDefinition: BeanPropertyDefinition,
+            contextAnnotations: Annotations, declaredType: KotlinType, inclusion: CirJsonInclude.Value) : super(
+            propertyDefinition, contextAnnotations, declaredType, null, null, null, inclusion, null) {
+    }
 
     override fun withConfig(config: MapperConfig<*>, declaringClass: AnnotatedClass,
             propertyDefinition: BeanPropertyDefinition, type: KotlinType): VirtualBeanPropertyWriter {
