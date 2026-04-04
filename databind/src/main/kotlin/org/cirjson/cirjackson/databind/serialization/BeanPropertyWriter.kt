@@ -12,6 +12,7 @@ import org.cirjson.cirjackson.databind.introspection.AnnotatedField
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMethod
 import org.cirjson.cirjackson.databind.introspection.BeanPropertyDefinition
+import org.cirjson.cirjackson.databind.node.ObjectNode
 import org.cirjson.cirjackson.databind.serialization.bean.BeanSerializerBase
 import org.cirjson.cirjackson.databind.serialization.bean.UnwrappingBeanPropertyWriter
 import org.cirjson.cirjackson.databind.serialization.implementation.PropertySerializerMap
@@ -389,6 +390,10 @@ open class BeanPropertyWriter : PropertyWriter {
 
     override val member: AnnotatedMember?
         get() = myMember
+
+    protected open fun depositSchemaProperty(propertiesNode: ObjectNode, schemaNode: CirJsonNode?) {
+        propertiesNode.set(name, schemaNode)
+    }
 
     /*
      *******************************************************************************************************************

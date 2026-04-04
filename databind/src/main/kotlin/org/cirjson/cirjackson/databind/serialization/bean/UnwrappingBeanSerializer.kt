@@ -157,4 +157,13 @@ open class UnwrappingBeanSerializer : BeanSerializerBase {
         return "UnwrappingBeanSerializer for ${handledType()!!.qualifiedName}"
     }
 
+    /*
+     *******************************************************************************************************************
+     * Internal access
+     *******************************************************************************************************************
+     */
+
+    internal val nameTransformerUsed: NameTransformer
+        get() = myNameTransformer
+
 }
