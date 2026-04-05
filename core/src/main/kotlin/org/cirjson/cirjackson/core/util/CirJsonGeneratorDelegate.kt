@@ -67,8 +67,8 @@ open class CirJsonGeneratorDelegate(delegate: CirJsonGenerator, isDelegateHandli
     override val isAbleOmitProperties: Boolean
         get() = delegate.isAbleOmitProperties
 
-    override val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
-        get() = delegate.streamWriteCapabilities
+    override fun streamWriteCapabilities(): CirJacksonFeatureSet<StreamWriteCapability> =
+            delegate.streamWriteCapabilities()
 
     /*
      *******************************************************************************************************************

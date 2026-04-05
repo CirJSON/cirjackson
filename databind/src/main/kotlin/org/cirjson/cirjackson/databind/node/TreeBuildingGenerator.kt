@@ -89,8 +89,7 @@ open class TreeBuildingGenerator protected constructor(protected val myObjectWri
     override val streamWriteFeatures: Int
         get() = myStreamWriteFeatures
 
-    override val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
-        get() = BOGUS_WRITE_CAPABILITIES
+    override fun streamWriteCapabilities(): CirJacksonFeatureSet<StreamWriteCapability> = BOGUS_WRITE_CAPABILITIES
 
     /*
      *******************************************************************************************************************

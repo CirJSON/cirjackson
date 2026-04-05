@@ -103,8 +103,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
         return feature.isEnabledIn(formatWriteFeatures)
     }
 
-    override val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
-        get() = DEFAULT_WRITE_CAPABILITIES
+    override fun streamWriteCapabilities(): CirJacksonFeatureSet<StreamWriteCapability> = DEFAULT_WRITE_CAPABILITIES
 
     /*
      *******************************************************************************************************************

@@ -220,10 +220,10 @@ abstract class CirJsonGenerator protected constructor() : Closeable, Flushable, 
     open val isAbleOmitProperties = true
 
     /**
-     * Accessor for getting metadata on capabilities of this generator, based on underlying data format being read
+     * Method for getting metadata on capabilities of this generator, based on underlying data format being read
      * (directly or indirectly).
      */
-    abstract val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
+    abstract fun streamWriteCapabilities(): CirJacksonFeatureSet<StreamWriteCapability>
 
     /*
      *******************************************************************************************************************

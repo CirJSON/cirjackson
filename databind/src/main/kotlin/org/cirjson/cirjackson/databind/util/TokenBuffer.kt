@@ -563,8 +563,7 @@ open class TokenBuffer : CirJsonGenerator {
      *******************************************************************************************************************
      */
 
-    override val streamWriteCapabilities: CirJacksonFeatureSet<StreamWriteCapability>
-        get() = BOGUS_WRITE_CAPABILITIES
+    override fun streamWriteCapabilities(): CirJacksonFeatureSet<StreamWriteCapability> = BOGUS_WRITE_CAPABILITIES
 
     /*
      *******************************************************************************************************************
