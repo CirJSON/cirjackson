@@ -33,4 +33,10 @@ class StringSerializer : StandardScalarSerializer<Any>(String::class as KClass<*
         generator.writeString(value as String)
     }
 
+    companion object {
+
+        val INSTANCE = StringSerializer()
+
+    }
+
 }

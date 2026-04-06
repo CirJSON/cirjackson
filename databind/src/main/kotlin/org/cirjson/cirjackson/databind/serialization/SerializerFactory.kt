@@ -47,7 +47,7 @@ abstract class SerializerFactory {
      */
     abstract val defaultNullKeySerializer: ValueSerializer<Any>
 
-    abstract val defaultNullValueSerializer: ValueSerializer<Any>
+    abstract val defaultNullValueSerializer: ValueSerializer<Any>?
 
     /*
      *******************************************************************************************************************

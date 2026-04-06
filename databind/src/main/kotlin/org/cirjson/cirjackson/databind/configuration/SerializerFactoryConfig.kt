@@ -55,14 +55,16 @@ class SerializerFactoryConfig private constructor(allAdditionalSerializers: Arra
                 nullValueSerializer)
     }
 
-    fun withNullKeySerializer(serializer: ValueSerializer<Any>): SerializerFactoryConfig {
-        return SerializerFactoryConfig(myAdditionalSerializers, myAdditionalKeySerializers, myModifiers, serializer,
-                nullValueSerializer)
+    @Suppress("UNCHECKED_CAST")
+    fun withNullKeySerializer(serializer: ValueSerializer<*>): SerializerFactoryConfig {
+        return SerializerFactoryConfig(myAdditionalSerializers, myAdditionalKeySerializers, myModifiers,
+                serializer as ValueSerializer<Any>, nullValueSerializer)
     }
 
-    fun withNullValueSerializer(serializer: ValueSerializer<Any>): SerializerFactoryConfig {
+    @Suppress("UNCHECKED_CAST")
+    fun withNullValueSerializer(serializer: ValueSerializer<*>): SerializerFactoryConfig {
         return SerializerFactoryConfig(myAdditionalSerializers, myAdditionalKeySerializers, myModifiers,
-                nullKeySerializer, serializer)
+                nullKeySerializer, serializer as ValueSerializer<Any>)
     }
 
     companion object {
