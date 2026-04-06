@@ -45,4 +45,16 @@ open class ToEmptyObjectSerializer : StandardSerializer<Any> {
         visitor.expectObjectFormat(typeHint)
     }
 
+    companion object {
+
+        fun construct(raw: KClass<*>): ToEmptyObjectSerializer {
+            return ToEmptyObjectSerializer(raw)
+        }
+
+        fun construct(type: KotlinType): ToEmptyObjectSerializer {
+            return ToEmptyObjectSerializer(type)
+        }
+
+    }
+
 }

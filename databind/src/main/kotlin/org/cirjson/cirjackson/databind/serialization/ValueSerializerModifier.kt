@@ -113,7 +113,7 @@ abstract class ValueSerializerModifier {
      *
      * @return Serializer to use; either [serializer] that was passed in, or an instance that this method constructed.
      */
-    open fun modifyCollectionSerializer(config: SerializationConfig, valueType: ArrayType,
+    open fun modifyCollectionSerializer(config: SerializationConfig, valueType: CollectionType,
             beanDescription: BeanDescription, serializer: ValueSerializer<*>): ValueSerializer<*> {
         return serializer
     }
@@ -133,7 +133,7 @@ abstract class ValueSerializerModifier {
      *
      * @return Serializer to use; either [serializer] that was passed in, or an instance that this method constructed.
      */
-    open fun modifyCollectionLikeSerializer(config: SerializationConfig, valueType: ArrayType,
+    open fun modifyCollectionLikeSerializer(config: SerializationConfig, valueType: CollectionLikeType,
             beanDescription: BeanDescription, serializer: ValueSerializer<*>): ValueSerializer<*> {
         return serializer
     }
@@ -152,7 +152,7 @@ abstract class ValueSerializerModifier {
      *
      * @return Serializer to use; either [serializer] that was passed in, or an instance that this method constructed.
      */
-    open fun modifyMapSerializer(config: SerializationConfig, valueType: ArrayType, beanDescription: BeanDescription,
+    open fun modifyMapSerializer(config: SerializationConfig, valueType: MapType, beanDescription: BeanDescription,
             serializer: ValueSerializer<*>): ValueSerializer<*> {
         return serializer
     }
@@ -171,7 +171,7 @@ abstract class ValueSerializerModifier {
      *
      * @return Serializer to use; either [serializer] that was passed in, or an instance that this method constructed.
      */
-    open fun modifyMapLikeSerializer(config: SerializationConfig, valueType: ArrayType,
+    open fun modifyMapLikeSerializer(config: SerializationConfig, valueType: MapLikeType,
             beanDescription: BeanDescription, serializer: ValueSerializer<*>): ValueSerializer<*> {
         return serializer
     }

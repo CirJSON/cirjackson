@@ -43,8 +43,8 @@ interface Serializers {
      * [Serializers.Base.calculateEffectiveFormat]..
      */
     fun findReferenceSerializer(config: SerializationConfig, type: ReferenceType, beanDescription: BeanDescription,
-            formatOverrides: CirJsonFormat.Value?, contentTypeSerializer: TypeSerializer,
-            contentValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            formatOverrides: CirJsonFormat.Value?, contentTypeSerializer: TypeSerializer?,
+            contentValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called by serialization framework the first time a serializer is needed for the specified array type.
@@ -55,8 +55,8 @@ interface Serializers {
      * [Serializers.Base.calculateEffectiveFormat].
      */
     fun findArraySerializer(config: SerializationConfig, type: ArrayType, beanDescription: BeanDescription,
-            formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer,
-            elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer?,
+            elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called by serialization framework the first time a serializer is needed for the specified [Collection]
@@ -68,8 +68,8 @@ interface Serializers {
      * [Serializers.Base.calculateEffectiveFormat].
      */
     fun findCollectionSerializer(config: SerializationConfig, type: CollectionType, beanDescription: BeanDescription,
-            formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer,
-            elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer?,
+            elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called by serialization framework the first time a serializer is needed for the specified
@@ -82,7 +82,7 @@ interface Serializers {
      */
     fun findCollectionLikeSerializer(config: SerializationConfig, type: CollectionLikeType,
             beanDescription: BeanDescription, formatOverrides: CirJsonFormat.Value?,
-            elementTypeSerializer: TypeSerializer, elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            elementTypeSerializer: TypeSerializer?, elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called by serialization framework the first time a serializer is needed for the specified [Map] type.
@@ -93,8 +93,8 @@ interface Serializers {
      * [Serializers.Base.calculateEffectiveFormat].
      */
     fun findMapSerializer(config: SerializationConfig, type: MapType, beanDescription: BeanDescription,
-            formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>,
-            elementTypeSerializer: TypeSerializer, elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>?,
+            elementTypeSerializer: TypeSerializer?, elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called by serialization framework the first time a serializer is needed for the specified "Map-like" type
@@ -106,8 +106,8 @@ interface Serializers {
      * [Serializers.Base.calculateEffectiveFormat].
      */
     fun findMapLikeSerializer(config: SerializationConfig, type: MapLikeType, beanDescription: BeanDescription,
-            formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>,
-            elementTypeSerializer: TypeSerializer, elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>?
+            formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>?,
+            elementTypeSerializer: TypeSerializer?, elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>?
 
     /**
      * Method called in case that a given type or property is declared to use shape [CirJsonFormat.Shape.POJO] and is
@@ -130,42 +130,42 @@ interface Serializers {
 
         override fun findReferenceSerializer(config: SerializationConfig, type: ReferenceType,
                 beanDescription: BeanDescription, formatOverrides: CirJsonFormat.Value?,
-                contentTypeSerializer: TypeSerializer,
-                contentValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                contentTypeSerializer: TypeSerializer?,
+                contentValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 
         override fun findArraySerializer(config: SerializationConfig, type: ArrayType, beanDescription: BeanDescription,
-                formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer,
-                elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                formatOverrides: CirJsonFormat.Value?, elementTypeSerializer: TypeSerializer?,
+                elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 
         override fun findCollectionSerializer(config: SerializationConfig, type: CollectionType,
                 beanDescription: BeanDescription, formatOverrides: CirJsonFormat.Value?,
-                elementTypeSerializer: TypeSerializer,
-                elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                elementTypeSerializer: TypeSerializer?,
+                elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 
         override fun findCollectionLikeSerializer(config: SerializationConfig, type: CollectionLikeType,
                 beanDescription: BeanDescription, formatOverrides: CirJsonFormat.Value?,
-                elementTypeSerializer: TypeSerializer,
-                elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                elementTypeSerializer: TypeSerializer?,
+                elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 
         override fun findMapSerializer(config: SerializationConfig, type: MapType, beanDescription: BeanDescription,
-                formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>,
-                elementTypeSerializer: TypeSerializer,
-                elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                formatOverrides: CirJsonFormat.Value?, keySerializer: ValueSerializer<Any>?,
+                elementTypeSerializer: TypeSerializer?,
+                elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 
         override fun findMapLikeSerializer(config: SerializationConfig, type: MapLikeType,
                 beanDescription: BeanDescription, formatOverrides: CirJsonFormat.Value?,
-                keySerializer: ValueSerializer<Any>, elementTypeSerializer: TypeSerializer,
-                elementValueSerializer: ValueSerializer<Any>): ValueSerializer<*>? {
+                keySerializer: ValueSerializer<Any>?, elementTypeSerializer: TypeSerializer?,
+                elementValueSerializer: ValueSerializer<Any>?): ValueSerializer<*>? {
             return null
         }
 

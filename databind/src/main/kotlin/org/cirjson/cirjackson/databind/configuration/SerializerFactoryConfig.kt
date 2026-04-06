@@ -5,6 +5,7 @@ import org.cirjson.cirjackson.databind.serialization.Serializers
 import org.cirjson.cirjackson.databind.serialization.ValueSerializerModifier
 import org.cirjson.cirjackson.databind.serialization.implementation.FailingSerializer
 import org.cirjson.cirjackson.databind.util.ArrayBuilders
+import org.cirjson.cirjackson.databind.util.ArrayIterator
 
 /**
  * Configuration settings container class for [org.cirjson.cirjackson.databind.serialization.SerializerFactory]
@@ -65,6 +66,30 @@ class SerializerFactoryConfig private constructor(allAdditionalSerializers: Arra
     fun withNullValueSerializer(serializer: ValueSerializer<*>): SerializerFactoryConfig {
         return SerializerFactoryConfig(myAdditionalSerializers, myAdditionalKeySerializers, myModifiers,
                 nullKeySerializer, serializer as ValueSerializer<Any>)
+    }
+
+    fun hasSerializers(): Boolean {
+        return myAdditionalSerializers.isNotEmpty()
+    }
+
+    fun hasKeySerializers(): Boolean {
+        return myAdditionalKeySerializers.isNotEmpty()
+    }
+
+    fun hasSerializerModifiers(): Boolean {
+        return myModifiers.isNotEmpty()
+    }
+
+    fun serializers(): Iterable<Serializers> {
+        return ArrayIterator(myAdditionalSerializers)
+    }
+
+    fun keySerializer(): Iterable<Serializers> {
+        return ArrayIterator(myAdditionalKeySerializers)
+    }
+
+    fun serializerModifiers(): Iterable<ValueSerializerModifier> {
+        return ArrayIterator(myModifiers)
     }
 
     companion object {

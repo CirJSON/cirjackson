@@ -169,7 +169,7 @@ open class BasicBeanDescription : BeanDescription {
     override val objectIdInfo: ObjectIdInfo?
         get() = myObjectIdInfo
 
-    override fun findProperties(): List<BeanPropertyDefinition> {
+    override fun findProperties(): MutableList<BeanPropertyDefinition> {
         return properties()
     }
 

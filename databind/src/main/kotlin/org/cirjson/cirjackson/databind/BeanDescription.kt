@@ -69,7 +69,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
     /**
      * @return Ordered Map with logical property name as key, and matching getter method as value.
      */
-    abstract fun findProperties(): List<BeanPropertyDefinition>
+    abstract fun findProperties(): MutableList<BeanPropertyDefinition>
 
     abstract val ignoredPropertyNames: Set<String>
 

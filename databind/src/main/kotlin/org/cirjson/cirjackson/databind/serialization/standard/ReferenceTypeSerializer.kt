@@ -117,6 +117,11 @@ abstract class ReferenceTypeSerializer<T : Any> : StandardDynamicSerializer<T> {
     protected abstract fun withContentInclusion(suppressableValue: Any?,
             suppressNulls: Boolean): ReferenceTypeSerializer<T>
 
+    internal fun withContentInclusionInternal(suppressableValue: Any?,
+            suppressNulls: Boolean): ReferenceTypeSerializer<T> {
+        return withContentInclusion(suppressableValue, suppressNulls)
+    }
+
     /**
      * Method called to see if there is a value present or not. Note that value itself may still be `null`, even if
      * present, if referential type allows three states (absent, present-`null`, present-non-`null`); some only allow
