@@ -60,7 +60,7 @@ CirJackson core annotations package (because it cannot have any external depende
 
 # Package org.cirjson.cirjackson.databind.cirjsonFormatVisitors
 
-Classes used for exposing logical structure of POJOs as Jackson sees it, and exposed via
+Classes used for exposing logical structure of POJOs as CirJackson sees it, and exposed via
 [org.cirjson.cirjackson.databind.ObjectMapper.acceptCirJsonFormatVisitor] methods.
 
 The main entrypoint for code, then, is
@@ -125,7 +125,7 @@ Utility classes for Databind package.
 
 This package contains an implementation of a bounded [java.util.concurrent.ConcurrentMap] data structure.
 
-This package is intended only for use internally by Jackson libraries and has
+This package is intended only for use internally by CirJackson libraries and has
 missing features compared to the full http://code.google.com/p/concurrentlinkedhashmap/ implementation.
 
 The [org.cirjson.cirjackson.databind.util.internal.PrivateMaxEntriesMap] class supplies an efficient, scalable,
