@@ -181,6 +181,14 @@ open class PropertyBuilder(protected val myConfig: SerializationConfig,
         return beanPropertyWriter
     }
 
+    internal fun buildWriterInternal(context: SerializerProvider, propertyDefinition: BeanPropertyDefinition?,
+            declaredType: KotlinType, serializer: ValueSerializer<*>?, typeSerializer: TypeSerializer?,
+            contentTypeSerializer: TypeSerializer?, annotatedMember: AnnotatedMember,
+            defaultUseStaticTyping: Boolean): BeanPropertyWriter {
+        return buildWriter(context, propertyDefinition, declaredType, serializer, typeSerializer, contentTypeSerializer,
+                annotatedMember, defaultUseStaticTyping)
+    }
+
     /**
      * Overridable factory method for actual construction of [BeanPropertyWriter]; often needed if subclassing
      * [buildWriter] method.
