@@ -5,9 +5,9 @@ package org.cirjson.cirjackson.annotations
  */
 open class SimpleObjectIdResolver : ObjectIdResolver {
 
-    protected var myItems: MutableMap<ObjectIdGenerator.IDKey, Any>? = null
+    protected var myItems: MutableMap<ObjectIdGenerator.IDKey, Any?>? = null
 
-    override fun bindItem(id: ObjectIdGenerator.IDKey, pojo: Any) {
+    override fun bindItem(id: ObjectIdGenerator.IDKey, pojo: Any?) {
         if (myItems == null) {
             myItems = HashMap()
         } else {

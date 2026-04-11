@@ -14,7 +14,7 @@ interface ObjectIdResolver {
      *
      * @param pojo The POJO associated to that Identifier
      */
-    fun bindItem(id: ObjectIdGenerator.IDKey, pojo: Any)
+    fun bindItem(id: ObjectIdGenerator.IDKey, pojo: Any?)
 
     /**
      * Method called when deserialization encounters the given Object Identifier and requires the POJO associated with
