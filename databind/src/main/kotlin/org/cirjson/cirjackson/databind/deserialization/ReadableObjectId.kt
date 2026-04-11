@@ -2,5 +2,9 @@ package org.cirjson.cirjackson.databind.deserialization
 
 import org.cirjson.cirjackson.annotations.ObjectIdGenerator
 
-class ReadableObjectId(val key: ObjectIdGenerator.IDKey) {
+open class ReadableObjectId(protected val myKey: ObjectIdGenerator.IDKey) {
+
+    open val key: ObjectIdGenerator.IDKey
+        get() = myKey
+
 }
