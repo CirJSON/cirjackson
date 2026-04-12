@@ -13,4 +13,13 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
     protected constructor(valueType: KotlinType) {
     }
 
+    /*
+     *******************************************************************************************************************
+     * Extended API
+     *******************************************************************************************************************
+     */
+
+    override val valueInstantiator: ValueInstantiator?
+        get() = null
+
 }
