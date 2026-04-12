@@ -30,7 +30,9 @@ import org.cirjson.cirjackson.databind.type.*
 abstract class ValueDeserializerModifier {
 
     /**
-     * Method called by [BeanDeserializerFactory] when it has collected initial list of [BeanPropertyDefinitions][BeanPropertyDefinition], and done basic by-name and by-type filtering, but before constructing builder or actual property handlers; or arranging order.
+     * Method called by [BeanDeserializerFactory] when it has collected initial list of
+     * [BeanPropertyDefinitions][BeanPropertyDefinition], and done basic by-name and by-type filtering, but before
+     * constructing builder or actual property handlers; or arranging order.
      *
      * The most common changes to make at this point are to completely remove specified properties, or rename them:
      * other modifications are easier to make at later points.
