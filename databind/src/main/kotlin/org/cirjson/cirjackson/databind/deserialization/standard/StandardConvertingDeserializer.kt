@@ -6,7 +6,7 @@ import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.ValueDeserializer
 import org.cirjson.cirjackson.databind.util.Converter
 
-open class StandardConvertingDeserializer<T> : StandardDeserializer<T> {
+open class StandardConvertingDeserializer<T : Any> : StandardDeserializer<T> {
 
     /*
      *******************************************************************************************************************

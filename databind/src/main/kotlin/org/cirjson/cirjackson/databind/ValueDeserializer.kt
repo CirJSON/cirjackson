@@ -32,7 +32,7 @@ import kotlin.reflect.KClass
  * 
  * Resolution of deserializers occurs before contextualization.
  */
-abstract class ValueDeserializer<T> : NullValueProvider {
+abstract class ValueDeserializer<T : Any> : NullValueProvider {
 
     /*
      *******************************************************************************************************************

@@ -5,7 +5,7 @@ import org.cirjson.cirjackson.databind.ValueDeserializer
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiator
 import kotlin.reflect.KClass
 
-abstract class StandardDeserializer<T> : ValueDeserializer<T>, ValueInstantiator.Gettable {
+abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstantiator.Gettable {
 
     protected constructor(valueClass: KClass<*>) {
     }
