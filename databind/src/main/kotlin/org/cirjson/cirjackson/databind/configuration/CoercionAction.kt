@@ -11,23 +11,23 @@ enum class CoercionAction {
     /**
      * Action to fail the coercion attempt with exception
      */
-    Fail,
+    FAIL,
 
     /**
      * Action to attempt coercion (which may lead to failure)
      */
-    TryConvert,
+    TRY_CONVERT,
 
     /**
      * Action to convert to `null` value
      */
-    AsNull,
+    AS_NULL,
 
     /**
      * Action to convert to "empty" value for type, whatever that is: for primitive types and their wrappers this is
      * "default" value (for example, for `int` that would be `0`); for [Collections][Collection] empty collection; for
      * POJOs instance configured with default constructor and so on.
      */
-    AsEmpty
+    AS_EMPTY
 
 }

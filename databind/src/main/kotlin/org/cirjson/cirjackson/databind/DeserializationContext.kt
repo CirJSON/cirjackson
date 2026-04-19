@@ -454,7 +454,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
     /**
      * More specialized accessor called in case of input being a blank String (one consisting of only white space
      * characters with length of at least one). Will basically first determine if "blank as empty" is allowed: if not,
-     * returns `actionIfBlankNotAllowed`, otherwise returns action for [CoercionInputShape.EmptyString].
+     * returns `actionIfBlankNotAllowed`, otherwise returns action for [CoercionInputShape.EMPTY_STRING].
      *
      * @param targetType Logical target type of coercion
      * 

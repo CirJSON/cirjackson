@@ -28,7 +28,7 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
      *******************************************************************************************************************
      */
 
-    constructor() : this(CoercionAction.TryConvert, MutableCoercionConfig(), null, null)
+    constructor() : this(CoercionAction.TRY_CONVERT, MutableCoercionConfig(), null, null)
 
     /**
      * Method called to create a non-shared copy of configuration settings, to be used by another
@@ -130,28 +130,28 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
         }
 
         when (inputShape) {
-            CoercionInputShape.EmptyArray -> {
+            CoercionInputShape.EMPTY_ARRAY -> {
                 return if (config.isEnabled(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT)) {
-                    CoercionAction.AsNull
+                    CoercionAction.AS_NULL
                 } else {
-                    CoercionAction.Fail
+                    CoercionAction.FAIL
                 }
             }
 
-            CoercionInputShape.Float -> {
+            CoercionInputShape.FLOAT -> {
                 if (targetType == LogicalType.INTEGER) {
                     return if (config.isEnabled(DeserializationFeature.ACCEPT_FLOAT_AS_INT)) {
-                        CoercionAction.TryConvert
+                        CoercionAction.TRY_CONVERT
                     } else {
-                        CoercionAction.Fail
+                        CoercionAction.FAIL
                     }
                 }
             }
 
-            CoercionInputShape.Integer -> {
+            CoercionInputShape.INTEGER -> {
                 if (targetType == LogicalType.ENUM) {
                     if (config.isEnabled(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS)) {
-                        return CoercionAction.Fail
+                        return CoercionAction.FAIL
                     }
                 }
             }
@@ -162,29 +162,29 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
         val baseScalar = isScalarType(targetType)
 
         if (baseScalar && config.isEnabled(MapperFeature.ALLOW_COERCION_OF_SCALARS) &&
-                (targetType != LogicalType.FLOAT || inputShape != CoercionInputShape.Integer)) {
-            return CoercionAction.Fail
+                (targetType != LogicalType.FLOAT || inputShape != CoercionInputShape.INTEGER)) {
+            return CoercionAction.FAIL
         }
 
-        if (inputShape != CoercionInputShape.EmptyString) {
+        if (inputShape != CoercionInputShape.EMPTY_STRING) {
             return myDefaultAction
         }
 
         if (targetType == LogicalType.OTHER_SCALAR) {
-            return CoercionAction.TryConvert
+            return CoercionAction.TRY_CONVERT
         }
 
         if (baseScalar || config.isEnabled(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)) {
-            return CoercionAction.AsNull
+            return CoercionAction.AS_NULL
         }
 
-        return CoercionAction.Fail
+        return CoercionAction.FAIL
     }
 
     /**
      * More specialized accessor called in case of input being a blank String (one consisting of only white space
      * characters with length of at least one). Will basically first determine if "blank as empty" is allowed: if not,
-     * returns `actionIfBlankNotAllowed`, otherwise returns action for [CoercionInputShape.EmptyString].
+     * returns `actionIfBlankNotAllowed`, otherwise returns action for [CoercionInputShape.EMPTY_STRING].
      *
      * @param config Currently active deserialization configuration
      *
@@ -206,7 +206,7 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
 
             if (coercionConfig != null) {
                 acceptBlankAsEmpty = coercionConfig.acceptBlankAsEmpty
-                action = coercionConfig.findAction(CoercionInputShape.EmptyString)
+                action = coercionConfig.findAction(CoercionInputShape.EMPTY_STRING)
             }
         }
 
@@ -219,7 +219,7 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
                 }
 
                 if (action == null) {
-                    action = coercionConfig.findAction(CoercionInputShape.EmptyString)
+                    action = coercionConfig.findAction(CoercionInputShape.EMPTY_STRING)
                 }
             }
         }
@@ -229,7 +229,7 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
         }
 
         if (action == null) {
-            action = myDefaultCoercions.findAction(CoercionInputShape.EmptyString)
+            action = myDefaultCoercions.findAction(CoercionInputShape.EMPTY_STRING)
         }
 
         if (acceptBlankAsEmpty == false) {
@@ -241,11 +241,11 @@ open class CoercionConfigs protected constructor(protected var myDefaultAction: 
         }
 
         if (isScalarType(targetType)) {
-            return CoercionAction.AsNull
+            return CoercionAction.AS_NULL
         }
 
         if (config.isEnabled(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)) {
-            return CoercionAction.AsNull
+            return CoercionAction.AS_NULL
         }
 
         return actionIfBlankNotAllowed
