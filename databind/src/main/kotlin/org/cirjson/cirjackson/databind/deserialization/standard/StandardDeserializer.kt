@@ -2,11 +2,9 @@ package org.cirjson.cirjackson.databind.deserialization.standard
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat
 import org.cirjson.cirjackson.annotations.Nulls
-import org.cirjson.cirjackson.core.CirJacksonException
-import org.cirjson.cirjackson.core.CirJsonParser
-import org.cirjson.cirjackson.core.CirJsonToken
-import org.cirjson.cirjackson.core.CirJsonTokenId
+import org.cirjson.cirjackson.core.*
 import org.cirjson.cirjackson.core.exception.CirJacksonIOException
+import org.cirjson.cirjackson.core.exception.InputCoercionException
 import org.cirjson.cirjackson.core.io.NumberInput
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
@@ -15,6 +13,7 @@ import org.cirjson.cirjackson.databind.configuration.CoercionInputShape
 import org.cirjson.cirjackson.databind.deserialization.NullValueProvider
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiator
 import org.cirjson.cirjackson.databind.type.LogicalType
+import org.cirjson.cirjackson.databind.util.exceptionMessage
 import org.cirjson.cirjackson.databind.util.isCirJacksonStandardImplementation
 import java.io.IOException
 import java.util.*
@@ -383,7 +382,45 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
     @Throws(CirJacksonException::class)
     protected fun parseBoolean(parser: CirJsonParser, context: DeserializationContext,
             targetType: KClass<*>): Boolean? {
-        TODO("Not yet implemented")
+        var text = when (parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> parser.text!!
+            CirJsonTokenId.ID_NUMBER_INT -> return coerceBooleanFromInt(parser, context, targetType)
+            CirJsonTokenId.ID_TRUE -> return true
+            CirJsonTokenId.ID_FALSE -> return false
+            CirJsonTokenId.ID_NULL -> return null
+            CirJsonTokenId.ID_START_OBJECT -> context.extractScalarFromObject(parser, this, targetType)
+            CirJsonTokenId.ID_START_ARRAY -> return deserializeFromArray(parser, context) as Boolean?
+            else -> return context.handleUnexpectedToken(context.constructType(targetType)!!, parser) as Boolean?
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.BOOLEAN, targetType)
+
+        if (action == CoercionAction.AS_NULL) {
+            return null
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return false
+        }
+
+        text = text.trim()
+        val length = text.length
+
+        if (length == 4) {
+            if (isTrue(text)) {
+                return true
+            }
+        } else if (length == 5) {
+            if (isFalse(text)) {
+                return false
+            }
+        }
+
+        if (checkTextualNull(context, text)) {
+            return null
+        }
+
+        return context.handleWeirdStringValue(targetType, text, "only \"true\" or \"false\" recognized") as Boolean?
     }
 
     /**
@@ -393,56 +430,330 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseBytePrimitive(parser: CirJsonParser, context: DeserializationContext): Byte {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Byte::class)) {
+                    CoercionAction.AS_NULL -> 0.toByte()
+                    CoercionAction.AS_EMPTY -> 0.toByte()
+                    else -> parser.byteValue
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.byteValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0.toByte()
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Byte::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Byte
+                    }
+
+                    val parsed = parseBytePrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Byte::class)!!, parser)!! as Byte
+                }
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Byte::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.toByte()
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0.toByte()
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.toByte()
+        }
+
+        parser.streamReadConstraints().validateIntegerLength(text.length)
+
+        val value = try {
+            NumberInput.parseInt(text)
+        } catch (_: IllegalArgumentException) {
+            return context.handleWeirdStringValue(myValueClass, text, "not a valid `Byte` value") as Byte
+        }
+
+        if (byteOverflow(value)) {
+            return context.handleWeirdStringValue(myValueClass, text,
+                    "overflow, value cannot be represented as 8-bit value") as Byte
+        }
+
+        return value.toByte()
     }
 
     /**
      * @param parser Underlying parser
-     * 
+     *
      * @param context Deserialization context for accessing configuration
      */
     @Throws(CirJacksonException::class)
     protected fun parseShortPrimitive(parser: CirJsonParser, context: DeserializationContext): Short {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Short::class)) {
+                    CoercionAction.AS_NULL -> 0.toShort()
+                    CoercionAction.AS_EMPTY -> 0.toShort()
+                    else -> parser.shortValue
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.shortValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0.toShort()
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Short::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Short
+                    }
+
+                    val parsed = parseShortPrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Short::class)!!, parser)!! as Short
+                }
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Short::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.toShort()
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0.toShort()
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.toShort()
+        }
+
+        parser.streamReadConstraints().validateIntegerLength(text.length)
+
+        val value = try {
+            NumberInput.parseInt(text)
+        } catch (_: IllegalArgumentException) {
+            return context.handleWeirdStringValue(myValueClass, text, "not a valid `Short` value") as Short
+        }
+
+        if (byteOverflow(value)) {
+            return context.handleWeirdStringValue(myValueClass, text,
+                    "overflow, value cannot be represented as 16-bit value") as Short
+        }
+
+        return value.toShort()
     }
 
     /**
      * @param parser Underlying parser
-     * 
+     *
      * @param context Deserialization context for accessing configuration
      */
     @Throws(CirJacksonException::class)
     protected fun parseIntPrimitive(parser: CirJsonParser, context: DeserializationContext): Int {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Int::class)) {
+                    CoercionAction.AS_NULL -> 0
+                    CoercionAction.AS_EMPTY -> 0
+                    else -> parser.valueAsInt
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.intValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Int::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Int
+                    }
+
+                    val parsed = parseIntPrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Int::class)!!, parser)!! as Int
+                }
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Int::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0
+        }
+
+        return parseIntPrimitive(parser, context, text)
     }
 
     /**
      * @param parser Underlying parser
-     * 
+     *
      * @param context Deserialization context for accessing configuration
      */
     @Throws(CirJacksonException::class)
     protected fun parseIntPrimitive(parser: CirJsonParser, context: DeserializationContext, text: String): Int {
-        TODO("Not yet implemented")
+        return try {
+            if (text.length <= 9) {
+                return NumberInput.parseInt(text)
+            }
+
+            parser.streamReadConstraints().validateIntegerLength(text.length)
+            val long = NumberInput.parseLong(text)
+
+            if (intOverflow(long)) {
+                val value = context.handleWeirdStringValue(Int::class, text,
+                        "Overflow: numeric value ($text) out of range of int (${Int.MIN_VALUE} -${Int.MAX_VALUE})") as Number?
+                nonNullNumber(value).toInt()
+            } else {
+                long.toInt()
+            }
+        } catch (_: IllegalArgumentException) {
+            val value = context.handleWeirdStringValue(Int::class, text, "not a valid `Int` value") as Number?
+            nonNullNumber(value).toInt()
+        }
     }
 
     /**
      * Helper method called for cases where non-primitive, int-based value is to be deserialized: result of this method
      * will be [Int], although actual target type may be something different.
-     * 
+     *
      * Note: does NOT dynamically access "empty value" or "`null` value" of deserializer since those values could be of
      * type other than [Int].
      *
      * @param parser Underlying parser
-     * 
+     *
      * @param context Deserialization context for accessing configuration
-     * 
+     *
      * @param targetType Actual type that is being deserialized, may be same as [handledType] but could be
      * `AtomicInteger` for example. Used for coercion config access.
      */
     @Throws(CirJacksonException::class)
     protected fun parseInt(parser: CirJsonParser, context: DeserializationContext, targetType: KClass<*>): Int? {
-        TODO("Not yet implemented")
+        var text = when (parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Int::class)) {
+                    CoercionAction.AS_NULL -> getNullValue(context) as Int?
+                    CoercionAction.AS_EMPTY -> getEmptyValue(context) as Int?
+                    else -> parser.valueAsInt
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.intValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                return getNullValue(context) as Int?
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Int::class)
+            }
+
+            CirJsonTokenId.ID_START_ARRAY -> {
+                return deserializeFromArray(parser, context) as Int?
+            }
+
+            else -> {
+                return context.handleUnexpectedToken(context.constructType(Int::class)!!, parser) as Int?
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Int::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            return getNullValue(context) as Int?
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return getEmptyValue(context) as Int?
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            return getNullValue(context) as Int?
+        }
+
+        return parseInt(parser, context, text)
     }
 
     /**
@@ -452,7 +763,23 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseInt(parser: CirJsonParser, context: DeserializationContext, text: String): Int? {
-        TODO("Not yet implemented")
+        return try {
+            if (text.length <= 9) {
+                return NumberInput.parseInt(text)
+            }
+
+            parser.streamReadConstraints().validateIntegerLength(text.length)
+            val long = NumberInput.parseLong(text)
+
+            if (intOverflow(long)) {
+                context.handleWeirdStringValue(Int::class, text,
+                        "Overflow: numeric value ($text) out of range of int (${Int.MIN_VALUE} -${Int.MAX_VALUE})") as Int?
+            } else {
+                long.toInt()
+            }
+        } catch (_: IllegalArgumentException) {
+            context.handleWeirdStringValue(Int::class, text, "not a valid `Int?` value") as Int?
+        }
     }
 
     /**
@@ -462,7 +789,67 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseLongPrimitive(parser: CirJsonParser, context: DeserializationContext): Long {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Long::class)) {
+                    CoercionAction.AS_NULL -> 0L
+                    CoercionAction.AS_EMPTY -> 0L
+                    else -> parser.valueAsLong
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.longValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0L
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Long::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Long
+                    }
+
+                    val parsed = parseLongPrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Int::class)!!, parser)!! as Long
+                }
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Long::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0L
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0L
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0L
+        }
+
+        return parseLongPrimitive(parser, context, text)
     }
 
     /**
@@ -472,7 +859,14 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseLongPrimitive(parser: CirJsonParser, context: DeserializationContext, text: String): Long {
-        TODO("Not yet implemented")
+        parser.streamReadConstraints().validateIntegerLength(text.length)
+
+        return try {
+            NumberInput.parseLong(text)
+        } catch (_: IllegalArgumentException) {
+            val value = context.handleWeirdStringValue(Int::class, text, "not a valid `Long` value") as Number?
+            nonNullNumber(value).toLong()
+        }
     }
 
     /**
@@ -491,7 +885,57 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseLong(parser: CirJsonParser, context: DeserializationContext, targetType: KClass<*>): Long? {
-        TODO("Not yet implemented")
+        var text = when (parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return when (checkFloatToIntCoercion(parser, context, Long::class)) {
+                    CoercionAction.AS_NULL -> getNullValue(context) as Long?
+                    CoercionAction.AS_EMPTY -> getEmptyValue(context) as Long?
+                    else -> parser.valueAsLong
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return parser.longValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                return getNullValue(context) as Long?
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Long::class)
+            }
+
+            CirJsonTokenId.ID_START_ARRAY -> {
+                return deserializeFromArray(parser, context) as Long?
+            }
+
+            else -> {
+                return context.handleUnexpectedToken(context.constructType(Long::class)!!, parser) as Long?
+            }
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Long::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            return getNullValue(context) as Long?
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return getEmptyValue(context) as Long?
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            return getNullValue(context) as Long?
+        }
+
+        return parseLong(context, text)
     }
 
     /**
@@ -499,7 +943,13 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseLong(context: DeserializationContext, text: String): Long? {
-        TODO("Not yet implemented")
+        context.parser!!.streamReadConstraints().validateIntegerLength(text.length)
+
+        return try {
+            NumberInput.parseLong(text)
+        } catch (_: IllegalArgumentException) {
+            context.handleWeirdStringValue(Long::class, text, "not a valid `Long?` value") as Long?
+        }
     }
 
     /**
@@ -509,7 +959,73 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseFloatPrimitive(parser: CirJsonParser, context: DeserializationContext): Float {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return when (checkFloatToIntCoercion(parser, context, Float::class)) {
+                    CoercionAction.AS_NULL -> 0.0f
+                    CoercionAction.AS_EMPTY -> 0.0f
+                    else -> parser.floatValue
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return parser.floatValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0.0f
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Float::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Float
+                    }
+
+                    val parsed = parseFloatPrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Float::class)!!, parser)!! as Float
+                }
+            }
+        }
+
+        val nan = checkFloatSpecialValue(text)
+
+        if (nan != null) {
+            return nan
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Float::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.0f
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0.0f
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.0f
+        }
+
+        return parseFloatPrimitive(parser, context, text)
     }
 
     /**
@@ -519,7 +1035,19 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseFloatPrimitive(parser: CirJsonParser, context: DeserializationContext, text: String): Float {
-        TODO("Not yet implemented")
+        if (!NumberInput.looksLikeValidNumber(text)) {
+            val value = context.handleWeirdStringValue(Float::class, text, "not a valid `Float` value") as Number?
+            return nonNullNumber(value).toFloat()
+        }
+
+        parser.streamReadConstraints().validateFloatingPointLength(text.length)
+
+        return try {
+            NumberInput.parseFloat(text, parser.isEnabled(StreamReadFeature.USE_FAST_DOUBLE_PARSER))
+        } catch (_: IllegalArgumentException) {
+            val value = context.handleWeirdStringValue(Float::class, text, "not a valid `Float` value") as Number?
+            return nonNullNumber(value).toFloat()
+        }
     }
 
     /**
@@ -531,7 +1059,16 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * @return One of [Float] constants referring to special value decoded, if value matched; `null` otherwise.
      */
     protected open fun checkFloatSpecialValue(text: String): Float? {
-        TODO("Not yet implemented")
+        if (text.isEmpty()) {
+            return null
+        }
+
+        return when (text[0]) {
+            'I' -> Float.POSITIVE_INFINITY.takeIf { isPositiveInfinity(text) }
+            'N' -> Float.NaN.takeIf { isNaN(text) }
+            '-' -> Float.NEGATIVE_INFINITY.takeIf { isNegativeInfinity(text) }
+            else -> null
+        }
     }
 
     /**
@@ -541,7 +1078,73 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseDoublePrimitive(parser: CirJsonParser, context: DeserializationContext): Double {
-        TODO("Not yet implemented")
+        var text = when (val tokenId = parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                return when (checkFloatToIntCoercion(parser, context, Double::class)) {
+                    CoercionAction.AS_NULL -> 0.0
+                    CoercionAction.AS_EMPTY -> 0.0
+                    else -> parser.doubleValue
+                }
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                return parser.doubleValue
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                verifyNullForPrimitive(context)
+                return 0.0
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, Double::class)
+            }
+
+            else -> {
+                return if (tokenId == CirJsonTokenId.ID_START_ARRAY &&
+                        context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)) {
+                    if (parser.nextToken() == CirJsonToken.START_ARRAY) {
+                        return handleNestedArrayForSingle(parser, context) as Double
+                    }
+
+                    val parsed = parseDoublePrimitive(parser, context)
+                    verifyEndArrayForSingle(parser, context)
+                    parsed
+                } else {
+                    context.handleUnexpectedToken(context.constructType(Double::class)!!, parser)!! as Double
+                }
+            }
+        }
+
+        val nan = checkDoubleSpecialValue(text)
+
+        if (nan != null) {
+            return nan
+        }
+
+        val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Double::class)
+
+        if (action == CoercionAction.AS_NULL) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.0
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return 0.0
+        }
+
+        text = text.trim()
+
+        if (hasTextualNull(text)) {
+            verifyNullForPrimitiveCoercion(context, text)
+            return 0.0
+        }
+
+        return parseDoublePrimitive(parser, context, text)
     }
 
     /**
@@ -551,7 +1154,12 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected fun parseDoublePrimitive(parser: CirJsonParser, context: DeserializationContext, text: String): Double {
-        TODO("Not yet implemented")
+        return try {
+            parseDouble(text, parser.isEnabled(StreamReadFeature.USE_FAST_DOUBLE_PARSER))
+        } catch (_: IllegalArgumentException) {
+            val value = context.handleWeirdStringValue(Double::class, text, "not a valid `Double` value") as Number?
+            return nonNullNumber(value).toDouble()
+        }
     }
 
     /**
@@ -563,7 +1171,16 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * @return One of [Double] constants referring to special value decoded, if value matched; `null` otherwise.
      */
     protected open fun checkDoubleSpecialValue(text: String): Double? {
-        TODO("Not yet implemented")
+        if (text.isEmpty()) {
+            return null
+        }
+
+        return when (text[0]) {
+            'I' -> Double.POSITIVE_INFINITY.takeIf { isPositiveInfinity(text) }
+            'N' -> Double.NaN.takeIf { isNaN(text) }
+            '-' -> Double.NEGATIVE_INFINITY.takeIf { isNegativeInfinity(text) }
+            else -> null
+        }
     }
 
     /**
@@ -573,7 +1190,41 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected open fun parseDate(parser: CirJsonParser, context: DeserializationContext): Date? {
-        TODO("Not yet implemented")
+        val text = when (parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                parser.text!!
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                val timestamp = try {
+                    parser.longValue
+                } catch (_: InputCoercionException) {
+                    val value = context.handleWeirdNumberValue(myValueClass, parser.numberValue,
+                            "not a valid 64-bit `Long` for creating `java.util.Date`") as Number
+                    value.toLong()
+                }
+
+                return Date(timestamp)
+            }
+
+            CirJsonTokenId.ID_NULL -> {
+                return getNullValue(context) as Date?
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                context.extractScalarFromObject(parser, this, myValueClass)
+            }
+
+            CirJsonTokenId.ID_START_ARRAY -> {
+                return parseDateFromArray(parser, context)
+            }
+
+            else -> {
+                return context.handleUnexpectedToken(getValueType(context), parser) as Date?
+            }
+        }
+
+        return parseDate(text.trim(), context)
     }
 
     /**
@@ -583,7 +1234,33 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected open fun parseDateFromArray(parser: CirJsonParser, context: DeserializationContext): Date? {
-        TODO("Not yet implemented")
+        val action = findCoercionFromEmptyArray(context)
+        val unwrap = context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
+
+        if (!unwrap && action == CoercionAction.FAIL) {
+            return context.handleUnexpectedToken(getValueType(context), CirJsonToken.START_ARRAY, parser, null) as Date?
+        }
+
+        val token = parser.nextToken()
+
+        return if (token == CirJsonToken.END_ARRAY) {
+            when (action) {
+                CoercionAction.AS_EMPTY -> getEmptyValue(context) as Date?
+                CoercionAction.AS_NULL, CoercionAction.TRY_CONVERT -> getNullValue(context) as Date?
+                else -> context.handleUnexpectedToken(getValueType(context), CirJsonToken.START_ARRAY, parser,
+                        null) as Date?
+            }
+        } else if (unwrap) {
+            if (token == CirJsonToken.START_ARRAY) {
+                handleNestedArrayForSingle(parser, context) as Date?
+            } else {
+                val parsed = parseDate(parser, context)
+                verifyEndArrayForSingle(parser, context)
+                parsed
+            }
+        } else {
+            context.handleUnexpectedToken(getValueType(context), CirJsonToken.START_ARRAY, parser, null) as Date?
+        }
     }
 
     /**
@@ -591,7 +1268,24 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected open fun parseDate(value: String, context: DeserializationContext): Date? {
-        TODO("Not yet implemented")
+        return try {
+            if (value.isEmpty()) {
+                val action = checkFromStringCoercion(context, value)
+
+                if (action == CoercionAction.AS_EMPTY) {
+                    Date(0L)
+                } else {
+                    null
+                }
+            } else if (hasTextualNull(value)) {
+                null
+            } else {
+                context.parseDate(value)
+            }
+        } catch (e: IllegalArgumentException) {
+            context.handleWeirdStringValue(myValueClass, value,
+                    "not a valid representation (error: ${e.exceptionMessage()})") as Date?
+        }
     }
 
     /**
@@ -610,7 +1304,61 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
     @Throws(CirJacksonException::class)
     protected fun parseString(parser: CirJsonParser, context: DeserializationContext,
             nullValueProvider: NullValueProvider): String? {
-        TODO("Not yet implemented")
+        val rawTargetType = String::class
+
+        val action = when (parser.currentTokenId()) {
+            CirJsonTokenId.ID_STRING -> {
+                return parser.text!!
+            }
+
+            CirJsonTokenId.ID_EMBEDDED_OBJECT -> {
+                val obj = parser.embeddedObject
+
+                return if (obj is ByteArray) {
+                    context.base64Variant.encode(obj, false)
+                } else {
+                    obj?.toString()
+                }
+            }
+
+            CirJsonTokenId.ID_START_OBJECT -> {
+                return context.extractScalarFromObject(parser, this, rawTargetType)
+            }
+
+            CirJsonTokenId.ID_NUMBER_INT -> {
+                checkIntToStringCoercion(parser, context, rawTargetType)
+            }
+
+            CirJsonTokenId.ID_NUMBER_FLOAT -> {
+                checkFloatToStringCoercion(parser, context, rawTargetType)
+            }
+
+            CirJsonTokenId.ID_TRUE, CirJsonTokenId.ID_FALSE -> {
+                checkBooleanToStringCoercion(parser, context, rawTargetType)
+            }
+
+            else -> {
+                CoercionAction.TRY_CONVERT
+            }
+        }
+
+        if (action == CoercionAction.AS_NULL) {
+            return nullValueProvider.getNullValue(context) as String?
+        }
+
+        if (action == CoercionAction.AS_EMPTY) {
+            return ""
+        }
+
+        if (parser.currentToken()!!.isScalarValue) {
+            val text = parser.valueAsString
+
+            if (text != null) {
+                return text
+            }
+        }
+
+        return context.handleUnexpectedToken(rawTargetType, parser) as String?
     }
 
     /**
@@ -618,19 +1366,19 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * coerced to `null` just like `null` token.
      */
     protected open fun hasTextualNull(value: String): Boolean {
-        TODO("Not yet implemented")
+        return "null" == value
     }
 
     protected fun isNegativeInfinity(text: String): Boolean {
-        TODO("Not yet implemented")
+        return "-Infinity" == text || "-INF" == text
     }
 
     protected fun isPositiveInfinity(text: String): Boolean {
-        TODO("Not yet implemented")
+        return "Infinity" == text || "INF" == text
     }
 
     protected fun isNaN(text: String): Boolean {
-        TODO("Not yet implemented")
+        return "NaN" == text
     }
 
     /*
