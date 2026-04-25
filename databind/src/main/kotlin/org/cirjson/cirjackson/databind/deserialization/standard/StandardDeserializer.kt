@@ -11,10 +11,14 @@ import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
 import org.cirjson.cirjackson.databind.configuration.CoercionAction
 import org.cirjson.cirjackson.databind.configuration.CoercionInputShape
 import org.cirjson.cirjackson.databind.deserialization.NullValueProvider
+import org.cirjson.cirjackson.databind.deserialization.SettableBeanProperty
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiator
+import org.cirjson.cirjackson.databind.deserialization.bean.BeanDeserializerBase
+import org.cirjson.cirjackson.databind.deserialization.implementation.NullsAsEmptyProvider
+import org.cirjson.cirjackson.databind.deserialization.implementation.NullsConstantProvider
+import org.cirjson.cirjackson.databind.deserialization.implementation.NullsFailProvider
 import org.cirjson.cirjackson.databind.type.LogicalType
-import org.cirjson.cirjackson.databind.util.exceptionMessage
-import org.cirjson.cirjackson.databind.util.isCirJacksonStandardImplementation
+import org.cirjson.cirjackson.databind.util.*
 import java.io.IOException
 import java.util.*
 import kotlin.reflect.KClass
@@ -475,7 +479,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Byte::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0.toByte()
         }
 
@@ -558,7 +562,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Short::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0.toShort()
         }
 
@@ -641,7 +645,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Int::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0
         }
 
@@ -834,7 +838,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Long::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0L
         }
 
@@ -965,7 +969,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
             }
 
             CirJsonTokenId.ID_NUMBER_INT -> {
-                return when (checkFloatToIntCoercion(parser, context, Float::class)) {
+                return when (checkIntToFloatCoercion(parser, context, Float::class)) {
                     CoercionAction.AS_NULL -> 0.0f
                     CoercionAction.AS_EMPTY -> 0.0f
                     else -> parser.floatValue
@@ -1010,7 +1014,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Float::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0.0f
         }
 
@@ -1084,7 +1088,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
             }
 
             CirJsonTokenId.ID_NUMBER_INT -> {
-                return when (checkFloatToIntCoercion(parser, context, Double::class)) {
+                return when (checkIntToFloatCoercion(parser, context, Double::class)) {
                     CoercionAction.AS_NULL -> 0.0
                     CoercionAction.AS_EMPTY -> 0.0
                     else -> parser.doubleValue
@@ -1129,7 +1133,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
         val action = checkFromStringCoercion(context, text, LogicalType.INTEGER, Double::class)
 
         if (action == CoercionAction.AS_NULL) {
-            verifyNullForPrimitiveCoercion(context, text)
+            verifyNullForPrimitive(context)
             return 0.0
         }
 
@@ -1389,61 +1393,106 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
 
     @Throws(CirJacksonException::class)
     protected open fun checkFromStringCoercion(context: DeserializationContext, value: String): CoercionAction {
-        TODO("Not yet implemented")
+        return checkFromStringCoercion(context, value, logicalType(), handledType())
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkFromStringCoercion(context: DeserializationContext, value: String,
             logicalType: LogicalType?, rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        return if (value.isEmpty()) {
+            val action = context.findCoercionAction(logicalType, rawTargetType, CoercionInputShape.EMPTY_STRING)
+            checkCoercionFail(context, action, rawTargetType, value, "empty String (\"\")")
+        } else if (isBlank(value)) {
+            val action = context.findCoercionFromBlankString(logicalType, rawTargetType, CoercionAction.FAIL)
+            checkCoercionFail(context, action, rawTargetType, value, "blank String (all whitespace)")
+        } else if (context.isEnabled(StreamReadCapability.UNTYPED_SCALARS)) {
+            CoercionAction.TRY_CONVERT
+        } else {
+            val action = context.findCoercionAction(logicalType, rawTargetType, CoercionInputShape.STRING)
+
+            if (action == CoercionAction.FAIL) {
+                return context.reportInputMismatch(this,
+                        "Cannot coerce String value (\"$value\") to ${coercedTypeDescription()} (but might if coercion using `CoercionConfig` was enabled)")
+            }
+
+            action
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkFloatToIntCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        val action = context.findCoercionAction(LogicalType.INTEGER, rawTargetType, CoercionInputShape.FLOAT)
+        return action.takeUnless { it == CoercionAction.FAIL } ?: checkCoercionFail(context, action, rawTargetType,
+                parser.numberValue, "Floating-point value (${parser.text})")
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkIntToStringCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        return checkToStringCoercion(parser, context, rawTargetType, parser.numberValue, CoercionInputShape.INTEGER)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkFloatToStringCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        return checkToStringCoercion(parser, context, rawTargetType, parser.numberValue, CoercionInputShape.FLOAT)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkBooleanToStringCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        return checkToStringCoercion(parser, context, rawTargetType, parser.booleanValue, CoercionInputShape.BOOLEAN)
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkToStringCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>, inputValue: Any, inputShape: CoercionInputShape): CoercionAction {
-        TODO("Not yet implemented")
+        val action = context.findCoercionAction(LogicalType.TEXTUAL, rawTargetType, inputShape)
+        return action.takeUnless { it == CoercionAction.FAIL } ?: checkCoercionFail(context, action, rawTargetType,
+                parser.numberValue, "${inputShape.name} value (${parser.text})")
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkIntToFloatCoercion(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): CoercionAction {
-        TODO("Not yet implemented")
+        val action = context.findCoercionAction(LogicalType.FLOAT, rawTargetType, CoercionInputShape.INTEGER)
+        return action.takeUnless { it == CoercionAction.FAIL } ?: checkCoercionFail(context, action, rawTargetType,
+                parser.numberValue, "Integer value (${parser.text})")
     }
 
     @Throws(CirJacksonException::class)
     protected open fun coerceBooleanFromInt(parser: CirJsonParser, context: DeserializationContext,
             rawTargetType: KClass<*>): Boolean? {
-        TODO("Not yet implemented")
+        val action = context.findCoercionAction(LogicalType.BOOLEAN, rawTargetType, CoercionInputShape.INTEGER)
+
+        return when (action) {
+            CoercionAction.FAIL -> {
+                checkCoercionFail(context, action, rawTargetType, parser.numberValue, "Integer value (${parser.text})")
+                false
+            }
+
+            CoercionAction.AS_NULL -> null
+
+            CoercionAction.AS_EMPTY -> false
+
+            else -> {
+                if (parser.numberType == CirJsonParser.NumberType.INT) {
+                    parser.intValue != 0
+                } else {
+                    "0" != parser.text
+                }
+            }
+        }
     }
 
     @Throws(CirJacksonException::class)
     protected open fun checkCoercionFail(context: DeserializationContext, action: CoercionAction, targetType: KClass<*>,
             inputValue: Any, inputDescription: String): CoercionAction {
-        TODO("Not yet implemented")
+        return action.takeUnless { it == CoercionAction.FAIL } ?: context.reportBadCoercion(this, targetType,
+                inputValue, "Cannot coerce $inputDescription to ${
+            coercedTypeDescription(targetType)
+        } (but could if coercion was enabled using `CoercionConfig`)")
     }
 
     /**
@@ -1451,7 +1500,15 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * is String value `"null"`, and if so, whether it is acceptable according to configuration or not.
      */
     protected open fun checkTextualNull(context: DeserializationContext, text: String): Boolean {
-        TODO("Not yet implemented")
+        return if (hasTextualNull(text)) {
+            if (!context.isEnabled(MapperFeature.ALLOW_COERCION_OF_SCALARS)) {
+                reportFailedNullCoerce(context, true, MapperFeature.ALLOW_COERCION_OF_SCALARS, "String \"null\"")
+            }
+
+            true
+        } else {
+            false
+        }
     }
 
     /*
@@ -1470,7 +1527,13 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected open fun coerceIntegral(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        return if (context.isEnabled(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)) {
+            parser.bigIntegerValue
+        } else if (context.isEnabled(DeserializationFeature.USE_LONG_FOR_INTS)) {
+            parser.longValue
+        } else {
+            parser.numberValue
+        }
     }
 
     /**
@@ -1480,7 +1543,10 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(DatabindException::class)
     protected fun verifyNullForPrimitive(context: DeserializationContext) {
-        TODO("Not yet implemented")
+        if (context.isEnabled(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)) {
+            return context.reportInputMismatch(this,
+                    "Cannot coerce `null` to ${coercedTypeDescription()} (disable `DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES` to allow)")
+        }
     }
 
     /**
@@ -1490,13 +1556,24 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(DatabindException::class)
     protected fun verifyNullForPrimitiveCoercion(context: DeserializationContext, string: String) {
-        TODO("Not yet implemented")
+        val (feature, enable) = if (!context.isEnabled(MapperFeature.ALLOW_COERCION_OF_SCALARS)) {
+            MapperFeature.ALLOW_COERCION_OF_SCALARS to true
+        } else if (context.isEnabled(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)) {
+            DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES to false
+        } else {
+            return
+        }
+
+        val stringDescription = string.takeUnless { it.isEmpty() }?.let { "String \"$it\"" } ?: "empty String (\"\")"
+        reportFailedNullCoerce(context, enable, feature, stringDescription)
     }
 
     @Throws(DatabindException::class)
     protected open fun reportFailedNullCoerce(context: DeserializationContext, state: Boolean, feature: Enum<*>,
             inputDescription: String): Nothing {
-        TODO("Not yet implemented")
+        val enableDescription = if (state) "enable" else "disable"
+        context.reportInputMismatch<Nothing>(this,
+                "Cannot coerce $inputDescription to Null value as ${coercedTypeDescription()} ($enableDescription `${feature.declaringJavaClass.simpleName}.${feature.name}` to allow)")
     }
 
     /**
@@ -1506,7 +1583,20 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * @return Message with backtick-enclosed name of type this deserializer supports
      */
     protected open fun coercedTypeDescription(): String {
-        TODO("Not yet implemented")
+        val type = valueType
+
+        val (structured, typeDescription) = if (!(type?.isPrimitive ?: true)) {
+            (type.isContainerType || type.isReferenceType) to type.typeDescription
+        } else {
+            val clazz = handledType()
+            clazz.isCollectionMapOrArray to clazz.classDescription
+        }
+
+        return if (structured) {
+            "element of $typeDescription"
+        } else {
+            "$typeDescription value"
+        }
     }
 
     /**
@@ -1516,7 +1606,13 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * @return Message with backtick-enclosed name of target type
      */
     protected open fun coercedTypeDescription(rawTargetType: KClass<*>): String {
-        TODO("Not yet implemented")
+        val typeDescription = rawTargetType.classDescription
+
+        return if (rawTargetType.isCollectionMapOrArray) {
+            "element of $typeDescription"
+        } else {
+            "$typeDescription value"
+        }
     }
 
     /*
@@ -1536,7 +1632,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     protected open fun findDeserializer(context: DeserializationContext, type: KotlinType,
             property: BeanProperty?): ValueDeserializer<Any> {
-        TODO("Not yet implemented")
+        return context.findContextualValueDeserializer(type, property)
     }
 
     /**
@@ -1546,7 +1642,33 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * Note that definition is quite loose as leading zeroes are allowed, in addition to plus sign (not just minus).
      */
     protected fun isIntNumber(text: String): Boolean {
-        TODO("Not yet implemented")
+        val length = text.length
+
+        if (length <= 0) {
+            return false
+        }
+
+        val startChar = text[0]
+
+        val start = if (startChar == '-' || startChar == '+') {
+            if (length == 1) {
+                return false
+            }
+
+            1
+        } else {
+            0
+        }
+
+        for (i in start..<length) {
+            val char = text[i]
+
+            if (char !in '0'..'9') {
+                return false
+            }
+        }
+
+        return true
     }
 
     /*
@@ -1563,7 +1685,15 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     protected open fun findConvertingContentDeserializer(context: DeserializationContext, property: BeanProperty?,
             existingDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        val introspector = context.annotationIntrospector ?: return existingDeserializer
+        property ?: return existingDeserializer
+        val member = property.member ?: return existingDeserializer
+        val converterDefinition =
+                introspector.findDeserializationContentConverter(context.config, member) ?: return existingDeserializer
+        val converter = context.converterInstance(member, converterDefinition)!!
+        val delegateType = converter.getInputType(context.typeFactory)
+        return StandardConvertingDeserializer(converter, delegateType,
+                existingDeserializer ?: context.findContextualValueDeserializer(delegateType, property))
     }
 
     /*
@@ -1580,7 +1710,8 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     protected open fun findFormatOverrides(context: DeserializationContext, property: BeanProperty?,
             typeForDefaults: KClass<*>): CirJsonFormat.Value {
-        TODO("Not yet implemented")
+        return property?.findPropertyFormat(context.config, typeForDefaults) ?: context.getDefaultPropertyFormat(
+                typeForDefaults)
     }
 
     /**
@@ -1592,16 +1723,17 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     protected open fun findFormatFeature(context: DeserializationContext, property: BeanProperty?,
             typeForDefaults: KClass<*>, feature: CirJsonFormat.Feature): Boolean? {
-        TODO("Not yet implemented")
+        val format = findFormatOverrides(context, property, typeForDefaults)
+        return format.getFeature(feature)
     }
 
     /**
      * Method called to find [NullValueProvider] for a primary property, using "value `nulls`" setting. If no provider
      * found (not defined, or is "skip"), will return `null`.
      */
-    protected open fun findValueNullProvider(context: DeserializationContext, property: BeanProperty?,
+    protected open fun findValueNullProvider(context: DeserializationContext, property: SettableBeanProperty?,
             propertyMetadata: PropertyMetadata): NullValueProvider? {
-        TODO("Not yet implemented")
+        return property?.let { findNullProvider(context, it, propertyMetadata.valueNulls, it.valueDeserializer) }
     }
 
     /**
@@ -1611,28 +1743,79 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     protected open fun findValueNullProvider(context: DeserializationContext, property: BeanProperty?,
             valueDeserializer: ValueDeserializer<*>): NullValueProvider {
-        TODO("Not yet implemented")
+        return when (val nulls = findContentNullStyle(context, property)!!) {
+            Nulls.SKIP -> {
+                NullsConstantProvider.skipper()
+            }
+
+            Nulls.FAIL -> {
+                property?.let { NullsFailProvider.constructForProperty(it, it.type.contentType) } ?: let {
+                    val type = context.constructType(valueDeserializer.handledType())!!
+                            .let { type -> type.takeIf { it.isContainerType }?.contentType ?: type }
+                    NullsFailProvider.constructForRootValue(type)
+                }
+            }
+
+            else -> {
+                findNullProvider(context, property, nulls, valueDeserializer) ?: valueDeserializer
+            }
+        }
     }
 
     protected open fun findContentNullStyle(context: DeserializationContext, property: BeanProperty?): Nulls? {
-        TODO("Not yet implemented")
+        return if (property == null) {
+            context.config.defaultNullHandling.contentNulls
+        } else {
+            property.metadata.contentNulls
+        }
     }
 
     protected fun findNullProvider(context: DeserializationContext, property: BeanProperty?, nulls: Nulls?,
             valueDeserializer: ValueDeserializer<*>?): NullValueProvider? {
-        TODO("Not yet implemented")
+        if (nulls == Nulls.FAIL) {
+            return property?.let { NullsFailProvider.constructForProperty(it) }
+                    ?: NullsFailProvider.constructForRootValue(
+                            context.constructType(valueDeserializer?.handledType() ?: Any::class))
+        }
+
+        if (nulls != Nulls.AS_EMPTY) {
+            return if (nulls == Nulls.SKIP) {
+                NullsConstantProvider.skipper()
+            } else {
+                null
+            }
+        }
+
+        valueDeserializer ?: return null
+
+        if (valueDeserializer is BeanDeserializerBase) {
+            val valueInstantiator = valueDeserializer.valueInstantiator!!
+
+            if (!valueInstantiator.canCreateUsingDefault()) {
+                val type = property?.type ?: valueDeserializer.valueType!!
+                return context.reportBadDefinition(type, "Cannot create empty instance of $type, no default Creator")
+            }
+        }
+
+        val accessPattern = valueDeserializer.emptyAccessPattern
+
+        return when (accessPattern) {
+            AccessPattern.ALWAYS_NULL -> NullsConstantProvider.nuller()
+            AccessPattern.CONSTANT -> NullsConstantProvider.forValue(valueDeserializer.getEmptyValue(context))
+            else -> NullsAsEmptyProvider(valueDeserializer)
+        }
     }
 
     protected open fun findCoercionFromEmptyString(context: DeserializationContext): CoercionAction {
-        TODO("Not yet implemented")
+        return context.findCoercionAction(logicalType(), handledType(), CoercionInputShape.EMPTY_STRING)
     }
 
     protected open fun findCoercionFromEmptyArray(context: DeserializationContext): CoercionAction {
-        TODO("Not yet implemented")
+        return context.findCoercionAction(logicalType(), handledType(), CoercionInputShape.EMPTY_ARRAY)
     }
 
     protected open fun findCoercionFromBlankString(context: DeserializationContext): CoercionAction {
-        TODO("Not yet implemented")
+        return context.findCoercionFromBlankString(logicalType(), handledType(), CoercionAction.FAIL)
     }
 
     /*
@@ -1658,12 +1841,17 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
     @Throws(CirJacksonException::class)
     protected open fun handleUnknownProperty(parser: CirJsonParser, context: DeserializationContext,
             instanceOrClass: Any?, propertyName: String) {
-        TODO("Not yet implemented")
+        if (context.handleUnknownProperty(parser, this, instanceOrClass ?: handledType(), propertyName)) {
+            return
+        }
+
+        parser.skipChildren()
     }
 
     @Throws(CirJacksonException::class)
     protected open fun handleMissingEndArrayForSingle(parser: CirJsonParser, context: DeserializationContext) {
-        TODO("Not yet implemented")
+        return context.reportWrongTokenException(this, CirJsonToken.END_ARRAY,
+                "Attempted to unwrap '${handledType().qualifiedName}' value from an array (with `DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS`) but it contains more than one value")
     }
 
     /**
@@ -1672,16 +1860,19 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
     @Throws(CirJacksonException::class)
     protected open fun handleNestedArrayForSingle(parser: CirJsonParser, context: DeserializationContext): Any {
-        TODO("Not yet implemented")
+        return context.handleUnexpectedToken(getValueType(context), parser.currentToken(), parser,
+                "Cannot deserialize value of type ${myValueClass.name} out of ${CirJsonToken.START_ARRAY} token: nested Arrays not allowed with `DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS`")!!
     }
 
     @Throws(CirJacksonException::class)
     protected open fun verifyEndArrayForSingle(parser: CirJsonParser, context: DeserializationContext) {
-        TODO("Not yet implemented")
+        if (parser.nextToken() != CirJsonToken.END_ARRAY) {
+            handleMissingEndArrayForSingle(parser, context)
+        }
     }
 
     protected open fun wrapIOFailure(context: DeserializationContext, e: IOException): CirJacksonIOException {
-        TODO("Not yet implemented")
+        return CirJacksonIOException.construct(e, context.parser)
     }
 
     /*
@@ -1691,19 +1882,19 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      */
 
     protected fun byteOverflow(value: Int): Boolean {
-        TODO("Not yet implemented")
+        return value !in Byte.MIN_VALUE..255
     }
 
     protected fun shortOverflow(value: Int): Boolean {
-        TODO("Not yet implemented")
+        return value !in Short.MIN_VALUE..Short.MAX_VALUE
     }
 
     protected fun intOverflow(value: Long): Boolean {
-        TODO("Not yet implemented")
+        return value !in Int.MIN_VALUE..Int.MAX_VALUE
     }
 
     protected open fun nonNullNumber(number: Number?): Number {
-        TODO("Not yet implemented")
+        return number ?: 0
     }
 
     companion object {

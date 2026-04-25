@@ -3,6 +3,7 @@ package org.cirjson.cirjackson.databind.deserialization
 import org.cirjson.cirjackson.databind.KotlinType
 import org.cirjson.cirjackson.databind.PropertyName
 import org.cirjson.cirjackson.databind.SerializerProvider
+import org.cirjson.cirjackson.databind.ValueDeserializer
 import org.cirjson.cirjackson.databind.cirjsonFormatVisitors.CirJsonObjectFormatVisitor
 import org.cirjson.cirjackson.databind.introspection.ConcreteBeanPropertyBase
 import kotlin.reflect.KClass
@@ -43,5 +44,16 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
     override fun depositSchemaProperty(objectVisitor: CirJsonObjectFormatVisitor, provider: SerializerProvider) {
         TODO("Not yet implemented")
     }
+
+    /*
+     *******************************************************************************************************************
+     * Accessors
+     *******************************************************************************************************************
+     */
+
+    open val valueDeserializer: ValueDeserializer<Any>?
+        get() {
+            TODO("Not yet implemented")
+        }
 
 }

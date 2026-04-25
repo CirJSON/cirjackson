@@ -485,7 +485,7 @@ fun <T : Any> KClass<T>.findConstructor(forceAccess: Boolean): Constructor<T>? {
  ***********************************************************************************************************************
  */
 
-fun String?.quotedOr(forNull: String): String {
+fun Any?.quotedOr(forNull: String): String {
     return this?.let { "\"$it\"" } ?: forNull
 }
 

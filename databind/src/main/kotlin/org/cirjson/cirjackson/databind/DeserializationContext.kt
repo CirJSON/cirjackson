@@ -1479,6 +1479,15 @@ abstract class DeserializationContext protected constructor(protected val myStre
         throw InvalidFormatException.from(parser, message, inputValue, targetType)
     }
 
+    /**
+     * Helper method used to indicate a problem with input in cases where specific input coercion was not allowed.
+     */
+    @Throws(DatabindException::class)
+    open fun <T> reportBadCoercion(source: ValueDeserializer<*>, targetType: KClass<*>, inputValue: Any,
+            message: String?): T {
+        throw InvalidFormatException.from(parser, message, inputValue, targetType)
+    }
+
     @Throws(DatabindException::class)
     open fun <T> reportTrailingTokens(targetType: KClass<*>, parser: CirJsonParser, trailingToken: CirJsonToken): T {
         throw MismatchedInputException.from(parser, targetType,
