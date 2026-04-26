@@ -1,8 +1,6 @@
 package org.cirjson.cirjackson.databind.external
 
-import org.cirjson.cirjackson.databind.KotlinType
-import org.cirjson.cirjackson.databind.SerializationConfig
-import org.cirjson.cirjackson.databind.ValueSerializer
+import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.serialization.jdk.JavaUtilDateSerializer
 import org.cirjson.cirjackson.databind.serialization.standard.ToStringSerializer
 import org.cirjson.cirjackson.databind.util.createInstance
@@ -28,6 +26,11 @@ open class OptionalHandlerFactory protected constructor() {
         it[CLASS_NAME_JAVA_SQL_TIME] = "org.cirjson.cirjackson.databind.external.sql.JavaSqlTimeSerializer"
         it[CLASS_NAME_JAVA_SQL_BLOB] = "org.cirjson.cirjackson.databind.external.sql.JavaSqlBlobSerializer"
         it[CLASS_NAME_JAVA_SQL_SERIAL_BLOB] = "org.cirjson.cirjackson.databind.external.sql.JavaSqlBlobSerializer"
+    }
+
+    protected val mySqlDeserializers: MutableMap<String, String> = HashMap<String, String>().also {
+        it[CLASS_NAME_JAVA_SQL_DATE] = "org.cirjson.cirjackson.databind.external.sql.JavaSqlDateDeserializer"
+        it[CLASS_NAME_JAVA_SQL_TIMESTAMP] = "org.cirjson.cirjackson.databind.external.sql.JavaSqlTimestampDeserializer"
     }
 
     /*
@@ -60,6 +63,45 @@ open class OptionalHandlerFactory protected constructor() {
         } else {
             null
         }
+    }
+
+    open fun findDeserializer(config: DeserializationConfig, type: KotlinType): ValueDeserializer<*>? {
+        val rawType = type.rawClass
+
+        if (isXofY(rawType, CLASS_DOM_NODE)) {
+            return DOMDeserializer.NodeDeserializer()
+        } else if (isXofY(rawType, CLASS_DOM_DOCUMENT)) {
+            return DOMDeserializer.DocumentDeserializer()
+        }
+
+        val className = rawType.qualifiedName!!
+        val deserializerName = mySqlDeserializers[className]
+
+        return if (deserializerName != null) {
+            instantiate(deserializerName, type) as ValueDeserializer<*>?
+        } else if (className.startsWith(PACKAGE_PREFIX_JAVAX_XML) ||
+                hasSuperclassStartingWith(rawType, PACKAGE_PREFIX_JAVAX_XML)) {
+            CoreXMLDeserializers.findBeanDeserializer(type)
+        } else {
+            null
+        }
+    }
+
+    open fun hasDeserializerFor(valueType: KClass<*>): Boolean {
+        if (isXofY(valueType, CLASS_DOM_NODE)) {
+            return true
+        } else if (isXofY(valueType, CLASS_DOM_DOCUMENT)) {
+            return true
+        }
+
+        val className = valueType.qualifiedName!!
+
+        if (className.startsWith(PACKAGE_PREFIX_JAVAX_XML) ||
+                hasSuperclassStartingWith(valueType, PACKAGE_PREFIX_JAVAX_XML)) {
+            return CoreXMLDeserializers.hasDeserializerFor(valueType)
+        }
+
+        return className in mySqlDeserializers
     }
 
     protected fun isXofY(valueType: KClass<*>, expectedType: KClass<*>?): Boolean {
