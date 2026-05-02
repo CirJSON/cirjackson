@@ -83,10 +83,28 @@ Package that contains standard implementations for [org.cirjson.cirjackson.datab
 Package that contains most of configuration-related classes; exception being a couple of most-commonly used
 configuration things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
 
+# Package org.cirjson.cirjackson.databind.external
+
+Contains extended support for "external" packages: things that may or may not be present in runtime environment, but
+that are commonly enough used so that explicit support can be added.
+
+Currently supported extensions include:
+
+* Support for Java 1.5 core XML datatypes: the reason these are considered "external" is that some platforms that claim
+  to be 1.5 conformant are only partially so (Google Android, GAE) and do not include these types.
+
+* Joda time. This package has superior date/time handling functionality, and is thus supported. However, to minimize
+  forced dependencies this support is added as extension so that Joda is not needed by Jackson itself: but if it is
+  present, its core types are supported to some degree
+
 # Package org.cirjson.cirjackson.databind.external.beans
 
 Package that contains two dynamically loaded annotations that were added in JDK7 but that Module system carved out of
 core into `java.beans`.
+
+# Package org.cirjson.cirjackson.databind.external.jdk8
+
+Package that contains handlers specific to datatypes introduced in Java 8.
 
 # Package org.cirjson.cirjackson.databind.introspect
 
