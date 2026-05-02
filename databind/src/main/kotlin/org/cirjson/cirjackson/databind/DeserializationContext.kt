@@ -348,7 +348,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
     val parser: CirJsonParser?
         get() = myParser
 
-    fun findInjectableValue(valueId: Any, forProperty: BeanProperty, beanInstance: Any): Any? {
+    fun findInjectableValue(valueId: Any, forProperty: BeanProperty, beanInstance: Any?): Any? {
         myInjectableValues ?: return reportBadDefinition(valueId::class,
                 "No 'injectableValues' configured, cannot inject value with id [$valueId]")
 

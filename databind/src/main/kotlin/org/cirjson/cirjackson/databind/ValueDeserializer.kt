@@ -191,7 +191,7 @@ abstract class ValueDeserializer<T : Any> : NullValueProvider {
      * [UnsupportedOperationException] (if operation does not make sense or is not allowed); or return this deserializer
      * as is.
      */
-    open fun replaceDelegate(deserializer: ValueDeserializer<*>): ValueDeserializer<*> {
+    open fun replaceDelegatee(deserializer: ValueDeserializer<*>): ValueDeserializer<*> {
         throw UnsupportedOperationException()
     }
 
@@ -245,7 +245,7 @@ abstract class ValueDeserializer<T : Any> : NullValueProvider {
      *
      * @return Deserializer this deserializer delegates calls to, if not `null`; `null` otherwise.
      */
-    open val delegate: ValueDeserializer<*>?
+    open val delegatee: ValueDeserializer<*>?
         get() = null
 
     /**

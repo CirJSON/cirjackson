@@ -56,4 +56,7 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
             TODO("Not yet implemented")
         }
 
+    open val injectableValueId: Any?
+        get() = null
+
 }

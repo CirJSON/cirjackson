@@ -2,6 +2,7 @@ package org.cirjson.cirjackson.databind.deserialization.implementation
 
 import org.cirjson.cirjackson.databind.DeserializationContext
 import org.cirjson.cirjackson.databind.deserialization.NullValueProvider
+import org.cirjson.cirjackson.databind.deserialization.implementation.NullsConstantProvider.Companion.skipper
 import org.cirjson.cirjackson.databind.util.AccessPattern
 
 /**
@@ -48,7 +49,7 @@ open class NullsConstantProvider protected constructor(protected val myNullValue
          * Utility method that can be used to check if given null value provider is "skipper", marker provider that
          * means that all input `nulls` should be skipped (ignored), instead of converted.
          */
-        fun isSkipper(provider: NullValueProvider): Boolean {
+        fun isSkipper(provider: NullValueProvider?): Boolean {
             return SKIPPER === provider
         }
 
@@ -56,7 +57,7 @@ open class NullsConstantProvider protected constructor(protected val myNullValue
          * Utility method that can be used to check if given null value provider is "nuller", no-operation provider that
          * will always simply return Kotlin `null` for any and all input `nulls`.
          */
-        fun isNuller(provider: NullValueProvider): Boolean {
+        fun isNuller(provider: NullValueProvider?): Boolean {
             return NULLER === provider
         }
 
