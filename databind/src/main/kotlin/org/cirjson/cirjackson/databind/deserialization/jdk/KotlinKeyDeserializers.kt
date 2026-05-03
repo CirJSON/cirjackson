@@ -1,4 +1,4 @@
-package org.cirjson.cirjackson.databind.deserialization.kotlin
+package org.cirjson.cirjackson.databind.deserialization.jdk
 
 import org.cirjson.cirjackson.databind.BeanDescription
 import org.cirjson.cirjackson.databind.DeserializationConfig

@@ -4,7 +4,7 @@ import org.cirjson.cirjackson.databind.deserialization.Deserializers
 import org.cirjson.cirjackson.databind.deserialization.KeyDeserializers
 import org.cirjson.cirjackson.databind.deserialization.ValueDeserializerModifier
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiators
-import org.cirjson.cirjackson.databind.deserialization.kotlin.KotlinKeyDeserializers
+import org.cirjson.cirjackson.databind.deserialization.jdk.KotlinKeyDeserializers
 import org.cirjson.cirjackson.databind.util.ArrayBuilders
 import org.cirjson.cirjackson.databind.util.ArrayIterator
 
