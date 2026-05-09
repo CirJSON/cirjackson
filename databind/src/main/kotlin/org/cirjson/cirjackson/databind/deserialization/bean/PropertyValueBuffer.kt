@@ -1,5 +1,6 @@
 package org.cirjson.cirjackson.databind.deserialization.bean
 
+import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonParser
 import org.cirjson.cirjackson.databind.DatabindException
 import org.cirjson.cirjackson.databind.DeserializationContext
@@ -8,7 +9,8 @@ import org.cirjson.cirjackson.databind.deserialization.SettableBeanProperty
 import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdReader
 
 open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected val myContext: DeserializationContext,
-        protected val myObjectIdReader: ObjectIdReader?, anyParamSetter: SettableAnyProperty?) {
+        protected val myParametersNeeded: Int, protected val myObjectIdReader: ObjectIdReader?,
+        anyParamSetter: SettableAnyProperty?) {
 
     /*
      *******************************************************************************************************************
@@ -19,6 +21,25 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
     @Throws(DatabindException::class)
     open fun getParameters(properties: Array<SettableBeanProperty>): Array<Any?> {
         TODO("Not yet implemented")
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle
+     *******************************************************************************************************************
+     */
+
+    @Throws(CirJacksonException::class)
+    open fun handleIdValue(context: DeserializationContext, bean: Any): Any {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun buffered(): PropertyValue? {
+        TODO("Not yet implemented")
+    }
+
+    internal fun bufferedInternal(): PropertyValue? {
+        return buffered()
     }
 
 }

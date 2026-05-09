@@ -12,12 +12,26 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
 
     /*
      *******************************************************************************************************************
+     * Configuration that is not yet immutable; generally assigned during initialization process but cannot be passed to
+     *  constructor.
+     *******************************************************************************************************************
+     */
+
+    protected var myPropertyIndex = -1
+
+    /*
+     *******************************************************************************************************************
      * Lifecycle (construct & configure)
      *******************************************************************************************************************
      */
 
     protected constructor(source: SettableBeanProperty) : super(source) {
     }
+
+    abstract fun withValueDeserializer(deserializer: ValueDeserializer<*>): SettableBeanProperty
+
+    open val isIgnorable: Boolean
+        get() = false
 
     /*
      *******************************************************************************************************************
@@ -51,12 +65,22 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
      *******************************************************************************************************************
      */
 
+    open fun hasValueDeserializer(): Boolean {
+        TODO("Not yet implemented")
+    }
+
     open val valueDeserializer: ValueDeserializer<Any>?
         get() {
             TODO("Not yet implemented")
         }
 
+    open val propertyIndex: Int
+        get() = myPropertyIndex
+
     open val injectableValueId: Any?
         get() = null
+
+    open val isInjectionOnly: Boolean
+        get() = false
 
 }
