@@ -25,9 +25,14 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
 
     /*
      *******************************************************************************************************************
-     * Lifecycle
+     * Other methods
      *******************************************************************************************************************
      */
+
+    @Throws(CirJacksonException::class)
+    open fun readIdProperty(propertyName: String): Boolean {
+        TODO("Not yet implemented")
+    }
 
     @Throws(CirJacksonException::class)
     open fun handleIdValue(context: DeserializationContext, bean: Any): Any {
@@ -35,6 +40,10 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
     }
 
     protected open fun buffered(): PropertyValue? {
+        TODO("Not yet implemented")
+    }
+
+    open fun assignParameter(property: SettableBeanProperty, value: Any?): Boolean {
         TODO("Not yet implemented")
     }
 
