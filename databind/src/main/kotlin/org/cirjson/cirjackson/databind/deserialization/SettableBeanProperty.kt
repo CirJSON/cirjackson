@@ -27,7 +27,7 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
     protected constructor(source: SettableBeanProperty) : super(source) {
     }
 
-    abstract fun withValueDeserializer(deserializer: ValueDeserializer<*>): SettableBeanProperty
+    abstract fun withValueDeserializer(deserializer: ValueDeserializer<*>?): SettableBeanProperty
 
     open val isIgnorable: Boolean
         get() = false
