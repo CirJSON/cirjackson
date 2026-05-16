@@ -327,7 +327,7 @@ fun Throwable.throwRootCauseIfCirJacksonException(): Throwable {
  * Method that will wrap the throwable as an [IllegalArgumentException] if it is a checked exception; otherwise (runtime
  * exception or error) throw as is
  */
-fun Throwable.throwAsIllegalArgumentException() {
+fun Throwable.throwAsIllegalArgumentException(): Nothing {
     throwAsIllegalArgumentException(exceptionMessage())
 }
 
@@ -336,7 +336,7 @@ fun Throwable.throwAsIllegalArgumentException() {
  * exception; otherwise (runtime exception or error) throw as is
  */
 @Suppress("ThrowableNotThrown")
-fun Throwable.throwAsIllegalArgumentException(message: String?) {
+fun Throwable.throwAsIllegalArgumentException(message: String?): Nothing {
     throwIfRuntimeException()
     throwIfError()
     throw IllegalArgumentException(message, this)
@@ -346,7 +346,7 @@ fun Throwable.throwAsIllegalArgumentException(message: String?) {
  * Method that will locate the innermost exception for given Throwable; and then wrap it as an
  * [IllegalArgumentException] if it is a checked exception; otherwise (runtime exception or error) throw as is
  */
-fun Throwable.unwrapAndThrowAsIllegalArgumentException() {
+fun Throwable.unwrapAndThrowAsIllegalArgumentException(): Nothing {
     rootCause.throwAsIllegalArgumentException()
 }
 
@@ -354,7 +354,7 @@ fun Throwable.unwrapAndThrowAsIllegalArgumentException() {
  * Method that will locate the innermost exception for given Throwable; and then wrap it as an
  * [IllegalArgumentException] if it is a checked exception; otherwise (runtime exception or error) throw as is
  */
-fun Throwable.unwrapAndThrowAsIllegalArgumentException(message: String?) {
+fun Throwable.unwrapAndThrowAsIllegalArgumentException(message: String?): Nothing {
     rootCause.throwAsIllegalArgumentException(message)
 }
 
@@ -450,8 +450,6 @@ fun <T : Any> KClass<T>.createInstance(canFixAccess: Boolean): T? {
         e.unwrapAndThrowAsIllegalArgumentException(
                 "Failed to instantiate class $qualifiedName, problem: ${e.exceptionMessage()}")
     }
-
-    return null
 }
 
 @Throws(IllegalArgumentException::class)
@@ -475,8 +473,6 @@ fun <T : Any> KClass<T>.findConstructor(forceAccess: Boolean): Constructor<T>? {
         e.unwrapAndThrowAsIllegalArgumentException(
                 "Failed to find default constructor of class $qualifiedName, problem: ${e.exceptionMessage()}")
     }
-
-    return null
 }
 
 /*

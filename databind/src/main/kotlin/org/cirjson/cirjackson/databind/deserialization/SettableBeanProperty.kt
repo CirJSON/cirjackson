@@ -203,7 +203,7 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
      * @return Newly constructed instance, if value deserializer differs from the one used for this instance; or 'this'
      * if not.
      */
-    abstract fun withValueDeserializer(deserializer: ValueDeserializer<*>?): SettableBeanProperty
+    abstract fun withValueDeserializer(deserializer: ValueDeserializer<*>): SettableBeanProperty
 
     /**
      * Fluent factory method for constructing and returning a new instance with specified property name. Note that this
@@ -214,7 +214,7 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
      * @return Newly constructed instance, if property name differs from the one used for this instance; or 'this' if
      * not.
      */
-    abstract fun withName(propertyName: PropertyName?): SettableBeanProperty
+    abstract fun withName(propertyName: PropertyName): SettableBeanProperty
 
     open fun withSimpleName(simpleName: String?): SettableBeanProperty {
         val name = myPropertyName.withSimpleName(simpleName).internSimpleName()
@@ -523,11 +523,11 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
             return withDelegate(myDelegate)
         }
 
-        override fun withValueDeserializer(deserializer: ValueDeserializer<*>?): SettableBeanProperty {
+        override fun withValueDeserializer(deserializer: ValueDeserializer<*>): SettableBeanProperty {
             return with(myDelegate.withValueDeserializer(deserializer))
         }
 
-        override fun withName(propertyName: PropertyName?): SettableBeanProperty {
+        override fun withName(propertyName: PropertyName): SettableBeanProperty {
             return with(myDelegate.withName(propertyName))
         }
 
