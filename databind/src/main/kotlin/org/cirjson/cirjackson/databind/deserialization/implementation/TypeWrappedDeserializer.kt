@@ -6,8 +6,8 @@ import org.cirjson.cirjackson.databind.DeserializationContext
 import org.cirjson.cirjackson.databind.ValueDeserializer
 import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
 
-class TypeWrappedDeserializer(private val myTypeDeserializer: TypeDeserializer,
-        private val myDeserializer: ValueDeserializer<Any>) : ValueDeserializer<Any>() {
+class TypeWrappedDeserializer(private val myTypeDeserializer: TypeDeserializer, deserializer: ValueDeserializer<*>) :
+        ValueDeserializer<Any>() {
 
     @Throws(CirJacksonException::class)
     override fun deserialize(parser: CirJsonParser, context: DeserializationContext): Any? {
