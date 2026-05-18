@@ -83,6 +83,13 @@ Package that contains standard implementations for [org.cirjson.cirjackson.datab
 Package that contains most of configuration-related classes; exception being a couple of most-commonly used
 configuration things (like Feature enumerations) that are at the main level (` org.cirjson.cirjackson.databind`).
 
+# Package org.cirjson.cirjackson.databind.deserialization.implementation
+
+Contains those implementation classes of deserialization part of data binding that are not considered part of public or
+semi-public interfaces. Use of these classes by non-core classes is discouraged, although occasionally, this may be
+necessary. Note that backwards-compatibility of these classes is not guaranteed between minor releases (but is between
+patch releases).
+
 # Package org.cirjson.cirjackson.databind.deserialization.standard
 
 Package that contains standard value and key deserializer base classes that CirJackson both uses for its own
