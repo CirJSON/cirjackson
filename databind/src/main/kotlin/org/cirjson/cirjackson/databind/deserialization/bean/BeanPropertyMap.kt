@@ -20,7 +20,7 @@ class BeanPropertyMap : Iterable<SettableBeanProperty> {
      *******************************************************************************************************************
      */
 
-    protected constructor(properties: Collection<SettableBeanProperty>, aliasDefinitions: Array<Array<PropertyName>?>?,
+    internal constructor(properties: Collection<SettableBeanProperty>, aliasDefinitions: Array<Array<PropertyName>?>?,
             locale: Locale, caseInsensitive: Boolean, assignIndexes: Boolean) {
         isCaseInsensitive = caseInsensitive
     }
