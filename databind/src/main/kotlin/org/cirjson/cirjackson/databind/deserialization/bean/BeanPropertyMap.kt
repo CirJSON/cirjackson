@@ -4,7 +4,7 @@ import org.cirjson.cirjackson.databind.PropertyName
 import org.cirjson.cirjackson.databind.deserialization.SettableBeanProperty
 import java.util.*
 
-open class BeanPropertyMap : Iterable<SettableBeanProperty> {
+class BeanPropertyMap : Iterable<SettableBeanProperty> {
 
     /*
      *******************************************************************************************************************
