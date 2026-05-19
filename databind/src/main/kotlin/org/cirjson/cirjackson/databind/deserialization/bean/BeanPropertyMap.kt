@@ -12,7 +12,7 @@ class BeanPropertyMap : Iterable<SettableBeanProperty> {
      *******************************************************************************************************************
      */
 
-    private val myCaseInsensitive: Boolean
+    val isCaseInsensitive: Boolean
 
     /*
      *******************************************************************************************************************
@@ -22,7 +22,7 @@ class BeanPropertyMap : Iterable<SettableBeanProperty> {
 
     protected constructor(properties: Collection<SettableBeanProperty>, aliasDefinitions: Array<Array<PropertyName>?>?,
             locale: Locale, caseInsensitive: Boolean, assignIndexes: Boolean) {
-        myCaseInsensitive = caseInsensitive
+        isCaseInsensitive = caseInsensitive
     }
 
     /*
@@ -30,9 +30,6 @@ class BeanPropertyMap : Iterable<SettableBeanProperty> {
      * Public API, simple accessors
      *******************************************************************************************************************
      */
-
-    open val isCaseInsensitive: Boolean
-        get() = myCaseInsensitive
 
     override fun iterator(): Iterator<SettableBeanProperty> {
         TODO("Not yet implemented")
