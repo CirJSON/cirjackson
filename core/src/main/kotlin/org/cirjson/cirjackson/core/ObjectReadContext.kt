@@ -27,7 +27,7 @@ interface ObjectReadContext {
 
     fun getFormatReadFeatures(defaults: Int): Int
 
-    val tokenStreamFactory: TokenStreamFactory
+    fun tokenStreamFactory(): TokenStreamFactory
 
     val streamReadConstraints: StreamReadConstraints
 
@@ -39,27 +39,27 @@ interface ObjectReadContext {
 
     @Throws(CirJacksonException::class)
     fun createParser(input: InputStream): CirJsonParser {
-        return tokenStreamFactory.createParser(this, input)
+        return tokenStreamFactory().createParser(this, input)
     }
 
     @Throws(CirJacksonException::class)
     fun createParser(reader: Reader): CirJsonParser {
-        return tokenStreamFactory.createParser(this, reader)
+        return tokenStreamFactory().createParser(this, reader)
     }
 
     @Throws(CirJacksonException::class)
     fun createParser(content: String): CirJsonParser {
-        return tokenStreamFactory.createParser(this, content)
+        return tokenStreamFactory().createParser(this, content)
     }
 
     @Throws(CirJacksonException::class)
     fun createParser(content: ByteArray): CirJsonParser {
-        return tokenStreamFactory.createParser(this, content)
+        return tokenStreamFactory().createParser(this, content)
     }
 
     @Throws(CirJacksonException::class)
     fun createParser(content: ByteArray, offset: Int, length: Int): CirJsonParser {
-        return tokenStreamFactory.createParser(this, content, offset, length)
+        return tokenStreamFactory().createParser(this, content, offset, length)
     }
 
     /*
@@ -122,8 +122,7 @@ interface ObjectReadContext {
             return defaults
         }
 
-        override val tokenStreamFactory: TokenStreamFactory
-            get() = reportUnsupportedOperation()
+        override fun tokenStreamFactory(): TokenStreamFactory = reportUnsupportedOperation()
 
         override val streamReadConstraints: StreamReadConstraints
             get() = StreamReadConstraints.defaults()

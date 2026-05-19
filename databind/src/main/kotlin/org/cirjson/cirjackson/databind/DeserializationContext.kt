@@ -208,8 +208,9 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    override val tokenStreamFactory: TokenStreamFactory
-        get() = myStreamFactory
+    override fun tokenStreamFactory(): TokenStreamFactory {
+        return myStreamFactory
+    }
 
     override val schema: FormatSchema?
         get() = mySchema
