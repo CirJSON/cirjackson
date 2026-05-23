@@ -76,7 +76,7 @@ abstract class TypeDeserializerBase : TypeDeserializer {
         return myBaseType!!.rawClass.qualifiedName!!
     }
 
-    override val propertyName: String?
+    override val propertyName: String
         get() = myTypePropertyName
 
     override val typeIdResolver: TypeIdResolver

@@ -36,7 +36,7 @@ abstract class TypeDeserializer {
     /**
      * Name of property that contains type information, if property-based inclusion is used.
      */
-    abstract val propertyName: String?
+    abstract val propertyName: String
 
     /**
      * Accessor for object that handles conversions between types and matching type ids.
