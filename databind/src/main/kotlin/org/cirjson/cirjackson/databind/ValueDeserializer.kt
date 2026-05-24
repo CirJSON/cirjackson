@@ -347,8 +347,9 @@ abstract class ValueDeserializer<T : Any> : NullValueProvider {
     }
 
     /**
-     * Method needed by [org.cirjson.cirjackson.databind.deserialization.BeanDeserializerFactory] to properly link
-     * managed- and back-reference pairs.
+     * Method needed by
+     * [BeanDeserializerFactory][org.cirjson.cirjackson.databind.deserialization.BeanDeserializerFactory] to properly
+     * link managed- and back-reference pairs.
      */
     open fun findBackReference(referenceName: String): SettableBeanProperty? {
         throw IllegalArgumentException(

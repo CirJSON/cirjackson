@@ -78,8 +78,8 @@ open class ObjectIdReader protected constructor(protected val myIdType: KotlinTy
          * initial information based on standard settings for the type for which deserializer is being built.
          */
         fun construct(idType: KotlinType, propertyName: PropertyName, generator: ObjectIdGenerator<*>,
-                resolver: ObjectIdResolver, deserializer: ValueDeserializer<*>,
-                idProperty: SettableBeanProperty?): ObjectIdReader {
+                deserializer: ValueDeserializer<*>, idProperty: SettableBeanProperty?,
+                resolver: ObjectIdResolver): ObjectIdReader {
             return ObjectIdReader(idType, propertyName, generator, resolver, deserializer, idProperty)
         }
 

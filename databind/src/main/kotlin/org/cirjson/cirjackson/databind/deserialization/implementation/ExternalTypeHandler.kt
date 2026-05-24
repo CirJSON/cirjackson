@@ -429,12 +429,12 @@ class ExternalTypeHandler {
             return myTypeDeserializer.typeIdResolver.idFromValueAndType(context, null, defaultType)
         }
 
-        companion object {
+    }
 
-            fun builder(beanType: KotlinType): Builder {
-                return Builder(beanType)
-            }
+    companion object {
 
+        fun builder(beanType: KotlinType): Builder {
+            return Builder(beanType)
         }
 
     }
