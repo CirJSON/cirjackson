@@ -75,7 +75,7 @@ open class ConfigOverrides protected constructor(
      *
      * @return Default format settings for type; never `null`.
      */
-    open fun findFormatDefaults(type: KClass<*>): CirJsonFormat.Value {
+    open fun findFormatDefaults(type: KClass<*>?): CirJsonFormat.Value {
         if (myOverrides != null) {
             val override = myOverrides!![type]
 

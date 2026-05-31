@@ -296,7 +296,7 @@ open class BasicBeanDescription : BeanDescription {
      *******************************************************************************************************************
      */
 
-    override fun findExpectedFormat(baseType: KClass<*>): CirJsonFormat.Value? {
+    override fun findExpectedFormat(baseType: KClass<*>?): CirJsonFormat.Value? {
         val v0 = myClassFormat ?: (myIntrospector.findFormat(myConfig, myClassInfo)
                 ?: CirJsonFormat.Value.EMPTY).also { myClassFormat = it }
         val v1 = myConfig.getDefaultPropertyFormat(baseType)

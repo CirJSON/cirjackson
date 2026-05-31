@@ -337,7 +337,7 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
         return myViewMatcher?.isVisibleForView(activeView) ?: true
     }
 
-    open fun hasView(): Boolean {
+    open fun hasViews(): Boolean {
         return myViewMatcher != null
     }
 
@@ -582,8 +582,8 @@ abstract class SettableBeanProperty : ConcreteBeanPropertyBase {
             return myDelegate.visibleInView(activeView)
         }
 
-        override fun hasView(): Boolean {
-            return myDelegate.hasView()
+        override fun hasViews(): Boolean {
+            return myDelegate.hasViews()
         }
 
         override val propertyIndex: Int

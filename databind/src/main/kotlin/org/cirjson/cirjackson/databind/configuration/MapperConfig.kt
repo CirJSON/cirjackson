@@ -280,7 +280,7 @@ abstract class MapperConfig<T : MapperConfig<T>> protected constructor(protected
      *
      * @return (non-`null`) Format settings to use, possibly `CirJsonFormat.Value.EMPTY`
      */
-    abstract fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value
+    abstract fun getDefaultPropertyFormat(baseType: KClass<*>?): CirJsonFormat.Value
 
     /**
      * Accessor for default property ignorals to use, if any, for given base type, based on config overrides settings

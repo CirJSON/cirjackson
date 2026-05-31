@@ -6,6 +6,7 @@ import org.cirjson.cirjackson.core.util.InternCache
 import org.cirjson.cirjackson.core.util.Named
 import org.cirjson.cirjackson.databind.DeserializationContext
 import org.cirjson.cirjackson.databind.PropertyName
+import org.cirjson.cirjackson.databind.configuration.MapperConfig
 import org.cirjson.cirjackson.databind.deserialization.SettableBeanProperty
 import org.cirjson.cirjackson.databind.util.IgnorePropertiesUtil
 import org.cirjson.cirjackson.databind.util.NameTransformer
@@ -359,9 +360,9 @@ class BeanPropertyMap : Iterable<SettableBeanProperty> {
 
     companion object {
 
-        fun construct(properties: Collection<SettableBeanProperty>, aliasDefinitions: Array<Array<PropertyName>?>?,
-                locale: Locale, caseInsensitive: Boolean, assignIndexes: Boolean): BeanPropertyMap {
-            return BeanPropertyMap(properties, aliasDefinitions, locale, caseInsensitive, assignIndexes)
+        fun construct(config: MapperConfig<*>, properties: Collection<SettableBeanProperty>,
+                aliasDefinitions: Array<Array<PropertyName>?>?, caseInsensitive: Boolean): BeanPropertyMap {
+            return BeanPropertyMap(properties, aliasDefinitions, config.locale, caseInsensitive, true)
         }
 
     }

@@ -184,7 +184,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      * Method for checking what is the expected format for POJO, as defined by possible annotations and possible
      * per-type config overrides, if any.
      */
-    abstract fun findExpectedFormat(baseType: KClass<*>): CirJsonFormat.Value?
+    abstract fun findExpectedFormat(baseType: KClass<*>?): CirJsonFormat.Value?
 
     /**
      * Method for finding [Converter] used for serializing instances of this class.

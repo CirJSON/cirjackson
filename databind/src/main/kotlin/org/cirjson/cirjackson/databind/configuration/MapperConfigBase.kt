@@ -465,7 +465,7 @@ abstract class MapperConfigBase<CFG : ConfigFeature, T : MapperConfigBase<CFG, T
         return getDefaultPropertyInclusion(baseType)?.withOverrides(value) ?: value
     }
 
-    final override fun getDefaultPropertyFormat(baseType: KClass<*>): CirJsonFormat.Value {
+    final override fun getDefaultPropertyFormat(baseType: KClass<*>?): CirJsonFormat.Value {
         return myConfigOverrides.findFormatDefaults(baseType)
     }
 
