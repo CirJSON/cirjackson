@@ -43,12 +43,16 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
         TODO("Not yet implemented")
     }
 
+    internal fun bufferedInternal(): PropertyValue? {
+        return buffered()
+    }
+
     open fun assignParameter(property: SettableBeanProperty, value: Any?): Boolean {
         TODO("Not yet implemented")
     }
 
-    internal fun bufferedInternal(): PropertyValue? {
-        return buffered()
+    open fun bufferProperty(property: SettableBeanProperty, value: Any?) {
+        TODO("Not yet implemented")
     }
 
 }
