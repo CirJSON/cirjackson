@@ -23,7 +23,8 @@ open class BuilderBasedDeserializer : BeanDeserializerBase {
             properties: BeanPropertyMap, backReferences: Map<String, SettableBeanProperty>?,
             ignorableProperties: Set<String>?, ignoreAllUnknown: Boolean, includableProperties: Set<String>?,
             hasViews: Boolean) : super(builder, beanDescription, properties, backReferences, ignorableProperties,
-            ignoreAllUnknown, includableProperties, hasViews)
+            ignoreAllUnknown, includableProperties, hasViews) {
+    }
 
     /*
      *******************************************************************************************************************
