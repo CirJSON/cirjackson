@@ -55,4 +55,8 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
         TODO("Not yet implemented")
     }
 
+    open fun bufferAnyProperty(property: SettableAnyProperty, propertyName: String, value: Any?) {
+        TODO("Not yet implemented")
+    }
+
 }
