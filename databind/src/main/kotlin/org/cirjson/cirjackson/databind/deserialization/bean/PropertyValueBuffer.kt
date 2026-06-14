@@ -19,7 +19,7 @@ import java.util.*
  */
 open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected val myContext: DeserializationContext,
         protected var myParametersNeeded: Int, protected val myObjectIdReader: ObjectIdReader?,
-        anyParamSetter: SettableAnyProperty?) {
+        anyParameterSetter: SettableAnyProperty?) {
 
     /*
      *******************************************************************************************************************
@@ -57,7 +57,7 @@ open class PropertyValueBuffer(protected val myParser: CirJsonParser, protected 
     /**
      * "Any setter" property bound to a Creator parameter (via `@CirJsonAnySetter`)
      */
-    protected val myAnyParameterSetter = anyParamSetter?.takeUnless { it.parameterIndex < 0 }
+    protected val myAnyParameterSetter = anyParameterSetter?.takeUnless { it.parameterIndex < 0 }
 
     /**
      * If "Any-setter-via-Creator" exists, we will need to buffer values to feed it, separate from regular, non-creator
