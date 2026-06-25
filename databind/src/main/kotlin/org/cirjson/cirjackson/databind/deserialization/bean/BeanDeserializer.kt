@@ -3,17 +3,19 @@ package org.cirjson.cirjackson.databind.deserialization.bean
 import org.cirjson.cirjackson.core.CirJacksonException
 import org.cirjson.cirjackson.core.CirJsonParser
 import org.cirjson.cirjackson.core.CirJsonToken
+import org.cirjson.cirjackson.core.CirJsonTokenId
 import org.cirjson.cirjackson.core.symbols.PropertyNameMatcher
 import org.cirjson.cirjackson.databind.*
+import org.cirjson.cirjackson.databind.configuration.CoercionAction
 import org.cirjson.cirjackson.databind.deserialization.BeanDeserializerBuilder
 import org.cirjson.cirjackson.databind.deserialization.ReadableObjectId
 import org.cirjson.cirjackson.databind.deserialization.SettableBeanProperty
 import org.cirjson.cirjackson.databind.deserialization.UnresolvedForwardReferenceException
 import org.cirjson.cirjackson.databind.deserialization.implementation.ExternalTypeHandler
+import org.cirjson.cirjackson.databind.deserialization.implementation.MethodProperty
 import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdReader
 import org.cirjson.cirjackson.databind.deserialization.implementation.UnwrappedPropertyHandler
-import org.cirjson.cirjackson.databind.util.NameTransformer
-import org.cirjson.cirjackson.databind.util.nullable
+import org.cirjson.cirjackson.databind.util.*
 import kotlin.reflect.KClass
 
 /**
@@ -145,6 +147,8 @@ open class BeanDeserializer : BeanDeserializerBase {
 
     override fun initializeNameMatcher(context: DeserializationContext) {
         myBeanProperties!!.initMatcher(context.tokenStreamFactory())
+        myPropertyNameMatcher = myBeanProperties.nameMatcher
+        myPropertiesByIndex = myBeanProperties.nameMatcherProperties
     }
 
     /*
@@ -158,12 +162,50 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     override fun deserialize(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        if (!parser.isExpectedStartObjectToken) {
+            return deserializeOther(parser, context, parser.currentToken())
+        } else if (myVanillaProcessing) {
+            return vanillaDeserialize(parser, context)
+        }
+
+        parser.nextToken()
+
+        return if (myObjectIdReader != null) {
+            deserializeWithObjectId(parser, context)
+        } else {
+            deserializeFromObject(parser, context)
+        }
     }
 
     @Throws(CirJacksonException::class)
-    protected fun deserializeOther(parser: CirJsonParser, context: DeserializationContext, token: CirJsonToken): Any? {
-        TODO("Not yet implemented")
+    protected fun deserializeOther(parser: CirJsonParser, context: DeserializationContext, token: CirJsonToken?): Any? {
+        token ?: return context.handleUnexpectedToken(getValueType(context), parser)
+
+        return when (token) {
+            CirJsonToken.VALUE_STRING -> deserializeFromString(parser, context)
+
+            CirJsonToken.VALUE_NUMBER_INT -> deserializeFromNumber(parser, context)
+
+            CirJsonToken.VALUE_NUMBER_FLOAT -> deserializeFromDouble(parser, context)
+
+            CirJsonToken.VALUE_EMBEDDED_OBJECT -> deserializeFromEmbedded(parser, context)
+
+            CirJsonToken.VALUE_TRUE, CirJsonToken.VALUE_FALSE -> deserializeFromBoolean(parser, context)
+
+            CirJsonToken.VALUE_NULL -> deserializeFromNull(parser, context)
+
+            CirJsonToken.START_ARRAY -> deserializeFromArray(parser, context)
+
+            CirJsonToken.PROPERTY_NAME, CirJsonToken.END_OBJECT -> if (myVanillaProcessing) {
+                vanillaDeserialize(parser, context)
+            } else if (myObjectIdReader != null) {
+                deserializeWithObjectId(parser, context)
+            } else {
+                deserializeFromObject(parser, context)
+            }
+
+            else -> context.handleUnexpectedToken(getValueType(context), parser)
+        }
     }
 
     /**
@@ -172,7 +214,55 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     override fun deserialize(parser: CirJsonParser, context: DeserializationContext, intoValue: Any): Any? {
-        TODO("Not yet implemented")
+        parser.assignCurrentValue(intoValue)
+
+        myInjectables?.also { injectValues(context, intoValue) }
+
+        if (myUnwrappedPropertyHandler != null) {
+            return deserializeWithUnwrapped(parser, context, intoValue)
+        } else if (myExternalTypeIdHandler != null) {
+            return deserializeWithExternalTypeId(parser, context, intoValue)
+        }
+
+        val propertyName = if (parser.isExpectedStartObjectToken) {
+            parser.nextName() ?: return intoValue
+        } else if (parser.hasTokenId(CirJsonTokenId.ID_PROPERTY_NAME)) {
+            parser.currentName()!!
+        } else {
+            return intoValue
+        }
+
+        if (myNeedViewProcessing) {
+            val view = context.activeView
+
+            if (view != null) {
+                return deserializeWithView(parser, context, intoValue, view)
+            }
+        }
+
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        var index = propertyNameMatcher.matchName(propertyName)
+
+        while (index >= 0) {
+            parser.nextToken()
+            val property = myPropertiesByIndex!![index]
+
+            try {
+                property.deserializeAndSet(parser, context, intoValue)
+            } catch (e: Exception) {
+                wrapAndThrow(e, intoValue, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
+
+        return if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+            intoValue
+        } else if (index == PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+            vanillaDeserializeWithUnknown(parser, context, intoValue, parser.currentName()!!)
+        } else {
+            handleUnexpectedWithin(parser, context, intoValue)
+        }
     }
 
     /*
@@ -187,7 +277,78 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     private fun vanillaDeserialize(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        val bean = myValueInstantiator.createUsingDefault(context)!!
+        parser.assignCurrentValue(bean)
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+
+        var index = parser.nextNameMatch(propertyNameMatcher)
+
+        while (index >= 0) {
+            parser.nextToken()
+            var property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+
+            if (index < 0) {
+                break
+            }
+
+            parser.nextToken()
+            property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+
+            if (index < 0) {
+                break
+            }
+
+            parser.nextToken()
+            property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+
+            if (index < 0) {
+                break
+            }
+
+            parser.nextToken()
+            property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
+
+        return if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+            bean
+        } else if (index == PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+            vanillaDeserializeWithUnknown(parser, context, bean, parser.currentName()!!)
+        } else {
+            handleUnexpectedWithin(parser, context, bean)
+        }
     }
 
     /**
@@ -195,13 +356,87 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     private fun vanillaDeserialize(parser: CirJsonParser, context: DeserializationContext, token: CirJsonToken): Any? {
-        TODO("Not yet implemented")
+        val bean = myValueInstantiator.createUsingDefault(context)!!
+
+        if (token != CirJsonToken.PROPERTY_NAME) {
+            return bean
+        }
+
+        parser.assignCurrentValue(token)
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+
+        var index = parser.nextNameMatch(propertyNameMatcher)
+
+        while (index >= 0) {
+            parser.nextToken()
+            var property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+
+            if (index < 0) {
+                break
+            }
+
+            parser.nextToken()
+            property = propertiesByIndex[index]
+
+            try {
+                property.deserializeAndSet(parser, context, bean)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, property.name, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
+
+        return if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+            bean
+        } else if (index == PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+            vanillaDeserializeWithUnknown(parser, context, bean, parser.currentName()!!)
+        } else {
+            handleUnexpectedWithin(parser, context, bean)
+        }
     }
 
     @Throws(CirJacksonException::class)
-    private fun vanillaDeserialize(parser: CirJsonParser, context: DeserializationContext, bean: Any,
+    private fun vanillaDeserializeWithUnknown(parser: CirJsonParser, context: DeserializationContext, bean: Any,
             propertyName: String): Any? {
-        TODO("Not yet implemented")
+        parser.nextToken()
+        handleUnknownVanilla(parser, context, bean, propertyName)
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+
+        while (true) {
+            val index = parser.nextNameMatch(propertyNameMatcher)
+
+            if (index >= 0) {
+                parser.nextToken()
+
+                try {
+                    propertiesByIndex[index].deserializeAndSet(parser, context, bean)
+                } catch (e: Exception) {
+                    wrapAndThrow(e, bean, parser.currentName(), context)
+                }
+
+                continue
+            }
+
+            if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+                return bean
+            } else if (index != PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+                return handleUnexpectedWithin(parser, context, bean)
+            }
+
+            parser.nextToken()
+            handleUnknownVanilla(parser, context, bean, parser.currentName()!!)
+        }
     }
 
     /**
@@ -209,7 +444,79 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     override fun deserializeFromObject(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        if (myObjectIdReader?.maySerializeAsObject() ?: false) {
+            if (parser.hasTokenId(CirJsonTokenId.ID_PROPERTY_NAME) &&
+                    myObjectIdReader.isValidReferencePropertyName(parser.currentName()!!, parser)) {
+                return deserializeFromObjectId(parser, context)
+            }
+        }
+
+        if (myNonStandardCreation) {
+            return if (myUnwrappedPropertyHandler != null) {
+                deserializeWithUnwrapped(parser, context)
+            } else if (myExternalTypeIdHandler != null) {
+                deserializeWithExternalTypeId(parser, context)
+            } else {
+                deserializeFromObjectUsingNonDefault(parser, context)
+            }
+        }
+
+        val bean = myValueInstantiator.createUsingDefault(context)!!
+        parser.assignCurrentValue(parser)
+
+        val id = parser.objectId
+
+        if (id != null) {
+            handleTypedObjectId(parser, context, bean, id)
+        }
+
+        if (myObjectIdReader != null && parser.hasTokenId(CirJsonTokenId.ID_END_OBJECT)) {
+            return context.reportUnresolvedObjectId(myObjectIdReader, bean)
+        }
+
+        myInjectables?.also { injectValues(context, bean) }
+
+        if (!parser.hasTokenId(CirJsonTokenId.ID_PROPERTY_NAME)) {
+            return bean
+        }
+
+        if (myNeedViewProcessing) {
+            val activeView = context.activeView
+
+            if (activeView != null) {
+                return deserializeWithView(parser, context, bean, activeView)
+            }
+        }
+
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+
+        var index = parser.currentNameMatch(propertyNameMatcher)
+
+        while (true) {
+            if (index >= 0) {
+                parser.nextToken()
+
+                try {
+                    propertiesByIndex[index].deserializeAndSet(parser, context, bean)
+                } catch (e: Exception) {
+                    wrapAndThrow(e, bean, parser.currentName(), context)
+                }
+
+                index = parser.nextNameMatch(propertyNameMatcher)
+                continue
+            }
+
+            if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+                return bean
+            } else if (index != PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+                return handleUnexpectedWithin(parser, context, bean)
+            }
+
+            parser.nextToken()
+            handleUnknownVanilla(parser, context, bean, parser.currentName()!!)
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
     }
 
     /**
@@ -219,19 +526,149 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     override fun deserializeUsingPropertyBased(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        val creator = myPropertyBasedCreator!!
+        val buffer = myAnySetter?.let { anySetter ->
+            creator.startBuildingWithAnySetter(parser, context, myObjectIdReader, anySetter)
+        } ?: creator.startBuilding(parser, context, myObjectIdReader)
+        var unknown: TokenBuffer? = null
+        val activeView = context.takeIf { myNeedViewProcessing }?.activeView
+
+        var token = parser.currentToken()
+        var referrings: MutableList<BeanReferring>? = null
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+
+        while (token == CirJsonToken.PROPERTY_NAME) {
+            val propertyName = parser.currentName()!!
+            parser.nextToken()
+            val creatorProperty = creator.findCreatorProperty(propertyName)
+
+            if (buffer.readIdProperty(propertyName) && creatorProperty == null) {
+                token = parser.nextToken()
+                continue
+            }
+
+            if (creatorProperty != null) {
+                if (activeView != null && !creatorProperty.visibleInView(activeView)) {
+                    parser.skipChildren()
+                    token = parser.nextToken()
+                    continue
+                }
+
+                val value = deserializeWithErrorWrapping(parser, context, creatorProperty)
+
+                if (!buffer.assignParameter(creatorProperty, value)) {
+                    token = parser.nextToken()
+                    continue
+                }
+
+                parser.nextToken()
+
+                var bean = try {
+                    creator.build(context, buffer)
+                } catch (e: Exception) {
+                    wrapInstantiationProblem(e, context)
+                }
+
+                bean ?: return context.handleInstantiationProblem(handledType(), null, creatorReturnedNullException())
+
+                parser.assignCurrentValue(bean)
+
+                if (bean::class != myBeanType.rawClass) {
+                    return handlePolymorphic(parser, context, bean, unknown!!)
+                }
+
+                if (unknown != null) {
+                    bean = handleUnknownProperties(context, bean, unknown)
+                }
+
+                return deserialize(parser, context, bean)
+            }
+
+            val index = propertyNameMatcher.matchName(propertyName)
+
+            if (index >= 0) {
+                val property = propertiesByIndex[index]
+
+                if (!myBeanType.isRecordType || property is MethodProperty) {
+                    try {
+                        buffer.bufferProperty(property, deserializeWithErrorWrapping(parser, context, property))
+                    } catch (reference: UnresolvedForwardReferenceException) {
+                        val referring = handleUnresolvedReference(context, property, reference)
+                        (referrings ?: ArrayList<BeanReferring>().also { referrings = it }).add(referring)
+                    }
+
+                    token = parser.nextToken()
+                    continue
+                }
+            }
+
+            if (IgnorePropertiesUtil.shouldIgnore(propertyName, myIgnorableProperties, myIncludableProperties)) {
+                handleIgnoredProperty(parser, context, handledType(), propertyName)
+                token = parser.nextToken()
+                continue
+            }
+
+            myAnySetter?.also { anySetter ->
+                try {
+                    buffer.bufferAnyParameterProperty(anySetter, propertyName, anySetter.deserialize(parser, context))
+                } catch (e: Exception) {
+                    wrapAndThrow(e, myBeanType.rawClass, propertyName, context)
+                }
+
+                token = parser.nextToken()
+                continue
+            }
+
+            if (myIgnoreAllUnknown) {
+                parser.skipChildren()
+                token = parser.nextToken()
+                continue
+            }
+
+            if (unknown == null) {
+                unknown = context.bufferForInputBuffering(parser)
+            }
+
+            unknown.writeName(propertyName)
+            unknown.copyCurrentStructure(parser)
+            token = parser.nextToken()
+        }
+
+        val bean = try {
+            creator.build(context, buffer)!!
+        } catch (e: Exception) {
+            return wrapInstantiationProblem(e, context)
+        }
+
+        myInjectables?.also { injectValues(context, bean) }
+        referrings?.forEach { referring -> referring.bean = bean }
+
+        return if (unknown == null) {
+            bean
+        } else if (bean::class != myBeanType.rawClass) {
+            handlePolymorphic(null, context, bean, unknown)
+        } else {
+            handleUnknownProperties(context, bean, unknown)
+        }
     }
 
     @Throws(DatabindException::class)
     private fun handleUnresolvedReference(context: DeserializationContext, property: SettableBeanProperty,
             reference: UnresolvedForwardReferenceException): BeanReferring {
-        TODO("Not yet implemented")
+        val referring = BeanReferring(context, reference, property.type, property)
+        reference.readableObjectId!!.appendReferring(referring)
+        return referring
     }
 
     @Throws(DatabindException::class)
     protected fun deserializeWithErrorWrapping(parser: CirJsonParser, context: DeserializationContext,
             property: SettableBeanProperty): Any? {
-        TODO("Not yet implemented")
+        try {
+            return property.deserialize(parser, context)
+        } catch (e: Exception) {
+            wrapAndThrow(e, myBeanType.rawClass, property.name, context)
+        }
     }
 
     /**
@@ -241,7 +678,50 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     protected open fun deserializeFromNull(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        return context.handleUnexpectedToken(getValueType(context), parser)
+    }
+
+    @Throws(CirJacksonException::class)
+    override fun deserializeFromArray(parser: CirJsonParser, context: DeserializationContext): Any? {
+        val delegateDeserializer = myArrayDelegateDeserializer ?: myDelegateDeserializer
+
+        if (delegateDeserializer != null) {
+            val bean = myValueInstantiator.createUsingArrayDelegate(context,
+                    delegateDeserializer.deserialize(parser, context))!!
+            myInjectables?.also { injectValues(context, bean) }
+            return bean
+        }
+
+        val action = findCoercionFromEmptyArray(context)
+        val unwrap = context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
+
+        if (!unwrap && action == CoercionAction.FAIL) {
+            return context.handleUnexpectedToken(getValueType(context), parser)
+        }
+
+        val unwrappedToken = parser.nextToken()
+
+        return if (unwrappedToken == CirJsonToken.END_ARRAY) {
+            when (action) {
+                CoercionAction.AS_EMPTY -> getEmptyValue(context)
+                CoercionAction.AS_NULL, CoercionAction.TRY_CONVERT -> getNullValue(context)
+                else -> context.handleUnexpectedToken(getValueType(context), CirJsonToken.START_ARRAY, parser, null)
+            }
+        } else if (!unwrap) {
+            context.handleUnexpectedToken(getValueType(context), parser)
+        } else if (unwrappedToken == CirJsonToken.START_ARRAY) {
+            val targetType = getValueType(context)
+            context.handleUnexpectedToken(targetType, CirJsonToken.START_ARRAY, parser,
+                    "Cannot deserialize value of type ${targetType.typeDescription} from deeply-nested Array: only single wrapper allowed with `DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS`")
+        } else {
+            val value = deserialize(parser, context)
+
+            if (parser.nextToken() != CirJsonToken.END_ARRAY) {
+                handleMissingEndArrayForSingle(parser, context)
+            }
+
+            value
+        }
     }
 
     /*
@@ -253,7 +733,46 @@ open class BeanDeserializer : BeanDeserializerBase {
     @Throws(CirJacksonException::class)
     protected fun deserializeWithView(parser: CirJsonParser, context: DeserializationContext, bean: Any,
             activeView: KClass<*>): Any? {
-        TODO("Not yet implemented")
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+        var index = parser.currentNameMatch(propertyNameMatcher)
+
+        while (true) {
+            if (index >= 0) {
+                parser.nextToken()
+                val property = propertiesByIndex[index]
+
+                if (!property.visibleInView(activeView)) {
+                    if (context.isEnabled(DeserializationFeature.FAIL_ON_UNEXPECTED_VIEW_PROPERTIES)) {
+                        return context.reportInputMismatch(handledType(),
+                                "Input mismatch while deserializing ${handledType().name}. Property '${property.name}' is not part of current active view '${activeView.qualifiedName}' (disable 'DeserializationFeature.FAIL_ON_UNEXPECTED_VIEW_PROPERTIES' to allow)")
+                    }
+
+                    parser.skipChildren()
+                    index = parser.nextNameMatch(propertyNameMatcher)
+                    continue
+                }
+
+                try {
+                    property.deserializeAndSet(parser, context, bean)
+                } catch (e: Exception) {
+                    wrapAndThrow(e, bean, parser.currentName(), context)
+                }
+
+                index = parser.nextNameMatch(propertyNameMatcher)
+                continue
+            }
+
+            if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+                return bean
+            } else if (index != PropertyNameMatcher.MATCH_UNKNOWN_NAME) {
+                return handleUnexpectedWithin(parser, context, bean)
+            }
+
+            parser.nextToken()
+            handleUnknownVanilla(parser, context, bean, parser.currentName()!!)
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
     }
 
     /*
@@ -267,7 +786,84 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     protected open fun deserializeWithUnwrapped(parser: CirJsonParser, context: DeserializationContext): Any? {
-        TODO("Not yet implemented")
+        if (myDelegateDeserializer != null) {
+            return myValueInstantiator.createUsingDelegate(context,
+                    myDelegateDeserializer!!.deserialize(parser, context))
+        } else if (myPropertyBasedCreator != null) {
+            return deserializeUsingPropertyBasedWithUnwrapped(parser, context)
+        }
+
+        val tokens = context.bufferForInputBuffering(parser)
+        tokens.writeStartObject()
+        val bean = myValueInstantiator.createUsingDefault(context)!!
+
+        parser.assignCurrentValue(bean)
+
+        myInjectables?.also { injectValues(context, bean) }
+        val activeView = context.takeIf { myNeedViewProcessing }?.activeView
+        val propertyNameMatcher = myPropertyNameMatcher!!
+        val propertiesByIndex = myPropertiesByIndex!!
+        var index = parser.currentNameMatch(propertyNameMatcher)
+
+        while (true) {
+            if (index >= 0) {
+                parser.nextToken()
+                val property = propertiesByIndex[index]
+
+                if (activeView != null && !property.visibleInView(activeView)) {
+                    parser.skipChildren()
+                    index = parser.nextNameMatch(propertyNameMatcher)
+                    continue
+                }
+
+                try {
+                    property.deserializeAndSet(parser, context, bean)
+                } catch (e: Exception) {
+                    wrapAndThrow(e, bean, property.name, context)
+                }
+
+                index = parser.nextNameMatch(propertyNameMatcher)
+                continue
+            }
+
+            if (index == PropertyNameMatcher.MATCH_END_OBJECT) {
+                break
+            } else if (index == PropertyNameMatcher.MATCH_ODD_TOKEN) {
+                return handleUnexpectedWithin(parser, context, bean)
+            }
+
+            val propertyName = parser.currentName()!!
+            parser.nextToken()
+
+            if (IgnorePropertiesUtil.shouldIgnore(propertyName, myIgnorableProperties, myIncludableProperties)) {
+                handleIgnoredProperty(parser, context, bean, propertyName)
+                index = parser.nextNameMatch(propertyNameMatcher)
+                continue
+            }
+
+            val anySetter = myAnySetter ?: let {
+                tokens.writeName(propertyName)
+                tokens.copyCurrentStructure(parser)
+                index = parser.nextNameMatch(propertyNameMatcher)
+                continue
+            }
+
+            val buffer = context.bufferAsCopyOfValue(parser)
+            tokens.writeName(propertyName)
+            tokens.append(buffer)
+
+            try {
+                anySetter.deserializeAndSet(buffer.asParserOnFirstToken(context), context, bean, propertyName)
+            } catch (e: Exception) {
+                wrapAndThrow(e, bean, propertyName, context)
+            }
+
+            index = parser.nextNameMatch(propertyNameMatcher)
+        }
+
+        tokens.writeEndObject()
+        myUnwrappedPropertyHandler!!.processUnwrapped(parser, context, bean, tokens)
+        return bean
     }
 
     @Throws(CirJacksonException::class)
