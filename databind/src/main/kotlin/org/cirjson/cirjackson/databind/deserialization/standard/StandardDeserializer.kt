@@ -1741,7 +1741,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * array), using "content `nulls`" setting. If no provider found (not defined), will return given value deserializer
      * (which is a `null` value provider itself).
      */
-    protected open fun findValueNullProvider(context: DeserializationContext, property: BeanProperty?,
+    protected open fun findContentNullProvider(context: DeserializationContext, property: BeanProperty?,
             valueDeserializer: ValueDeserializer<*>): NullValueProvider {
         return when (val nulls = findContentNullStyle(context, property)!!) {
             Nulls.SKIP -> {
