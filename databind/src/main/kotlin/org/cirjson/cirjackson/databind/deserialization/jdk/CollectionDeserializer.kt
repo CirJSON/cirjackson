@@ -236,7 +236,8 @@ open class CollectionDeserializer : ContainerDeserializerBase<MutableCollection<
 
     @Throws(CirJacksonException::class)
     protected open fun deserializeFromArray(parser: CirJsonParser, context: DeserializationContext,
-            result: MutableCollection<Any?>): MutableCollection<Any?>? {
+            result: MutableCollection<Any?>?): MutableCollection<Any?>? {
+        result!!
         parser.assignCurrentValue(result)
 
         val valueDeserializer = myValueDeserializer!!
