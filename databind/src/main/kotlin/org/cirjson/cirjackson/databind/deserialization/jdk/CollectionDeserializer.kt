@@ -176,17 +176,17 @@ open class CollectionDeserializer : ContainerDeserializerBase<MutableCollection<
             myValueInstantiator!!.createUsingDelegate(context,
                     myDelegateDeserializer.deserialize(parser, context)) as MutableCollection<Any?>?
         } else if (parser.isExpectedStartArrayToken) {
-            deserializeFromArray(parser, context, createDefaultInstance(context))
+            deserializeFromArray(parser, context, createDefaultInstance(context)!!)
         } else if (parser.hasToken(CirJsonToken.VALUE_STRING)) {
             deserializeFromString(parser, context, parser.text!!)
         } else {
-            handleNonArray(parser, context, createDefaultInstance(context))
+            handleNonArray(parser, context, createDefaultInstance(context)!!)
         }
     }
 
     @Throws(CirJacksonException::class)
     @Suppress("UNCHECKED_CAST")
-    protected open fun createDefaultInstance(context: DeserializationContext): MutableCollection<Any?> {
+    protected open fun createDefaultInstance(context: DeserializationContext): MutableCollection<Any?>? {
         return myValueInstantiator!!.createUsingDefault(context)!! as MutableCollection<Any?>
     }
 
@@ -231,7 +231,7 @@ open class CollectionDeserializer : ContainerDeserializerBase<MutableCollection<
             }
         }
 
-        return handleNonArray(parser, context, createDefaultInstance(context))
+        return handleNonArray(parser, context, createDefaultInstance(context)!!)
     }
 
     @Throws(CirJacksonException::class)
