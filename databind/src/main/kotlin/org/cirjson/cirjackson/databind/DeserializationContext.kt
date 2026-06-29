@@ -643,7 +643,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      *******************************************************************************************************************
      */
 
-    fun findKeyDeserializer(keyType: KotlinType, property: BeanProperty): KeyDeserializer {
+    fun findKeyDeserializer(keyType: KotlinType, property: BeanProperty?): KeyDeserializer {
         val keyDeserializer = try {
             myCache.findKeyDeserializer(this, myFactory, keyType)
         } catch (e: IllegalArgumentException) {
