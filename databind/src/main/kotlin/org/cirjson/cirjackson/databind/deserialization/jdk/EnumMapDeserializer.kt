@@ -77,7 +77,8 @@ open class EnumMapDeserializer : ContainerDeserializerBase<EnumMap<*, *>> {
 
     open fun withResolved(keyDeserializer: KeyDeserializer?, valueDeserializer: ValueDeserializer<*>?,
             valueTypeDeserializer: TypeDeserializer?, nullValueProvider: NullValueProvider?): EnumMapDeserializer {
-        if (myKeyDeserializer === keyDeserializer && myValueDeserializer === valueDeserializer && myValueTypeDeserializer === valueTypeDeserializer && myNullProvider === nullValueProvider) {
+        if (myKeyDeserializer === keyDeserializer && myValueDeserializer === valueDeserializer &&
+                myValueTypeDeserializer === valueTypeDeserializer && myNullProvider === nullValueProvider) {
             return this
         }
 
