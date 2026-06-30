@@ -203,7 +203,7 @@ open class CollectionDeserializer : ContainerDeserializerBase<MutableCollection<
     @Throws(CirJacksonException::class)
     override fun deserializeWithType(parser: CirJsonParser, context: DeserializationContext,
             typeDeserializer: TypeDeserializer): Any? {
-        return typeDeserializer.deserializeTypedFromAny(parser, context)
+        return typeDeserializer.deserializeTypedFromArray(parser, context)
     }
 
     /**
