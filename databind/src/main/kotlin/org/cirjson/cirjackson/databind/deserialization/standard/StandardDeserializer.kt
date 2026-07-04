@@ -96,7 +96,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
      * [CirJacksonStandardImplementation][org.cirjson.cirjackson.databind.annotation.CirJacksonStandardImplementation]
      * annotation on deserializer class.
      */
-    protected open fun isDefaultSerializer(deserializer: ValueDeserializer<*>): Boolean {
+    protected open fun isDefaultDeserializer(deserializer: ValueDeserializer<*>): Boolean {
         return deserializer.isCirJacksonStandardImplementation
     }
 
