@@ -36,7 +36,7 @@ abstract class KeyDeserializer {
      * Method called to deserialize a [Map] key from CirJSON property name.
      */
     @Throws(CirJacksonException::class)
-    abstract fun deserializeKey(key: String, context: DeserializationContext): Any?
+    abstract fun deserializeKey(key: String?, context: DeserializationContext): Any?
 
     /**
      * This marker class is only to be used with annotations, to indicate that **no deserializer is configured**.
