@@ -97,6 +97,13 @@ semi-public interfaces. Use of these classes by non-core classes is discouraged,
 necessary. Note that backwards-compatibility of these classes is not guaranteed between minor releases (but is between
 patch releases).
 
+# Package org.cirjson.cirjackson.databind.deserialization.jdk
+
+Package that contains standard value and key deserializer implementations CirJackson uses for core JDK types. Note that
+these implementations are not considered as part of either public API (like `ObjectMapper` or "developer-public" API
+(such as `org.cirjson.cirjackson.databind.deserialization.standard`): implementations and interfaces may change. It is
+not advisable for non-core code to rely on these types.
+
 # Package org.cirjson.cirjackson.databind.deserialization.standard
 
 Package that contains standard value and key deserializer base classes that CirJackson both uses for its own
