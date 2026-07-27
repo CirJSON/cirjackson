@@ -4,7 +4,7 @@ import org.cirjson.cirjackson.databind.deserialization.Deserializers
 import org.cirjson.cirjackson.databind.deserialization.KeyDeserializers
 import org.cirjson.cirjackson.databind.deserialization.ValueDeserializerModifier
 import org.cirjson.cirjackson.databind.deserialization.ValueInstantiators
-import org.cirjson.cirjackson.databind.deserialization.jdk.KotlinKeyDeserializers
+import org.cirjson.cirjackson.databind.deserialization.jdk.JDKKeyDeserializers
 import org.cirjson.cirjackson.databind.util.ArrayBuilders
 import org.cirjson.cirjackson.databind.util.ArrayIterator
 
@@ -151,7 +151,7 @@ open class DeserializerFactoryConfig protected constructor(allAdditionalDeserial
         /**
          * By default, we plug default key deserializers using as "just another" set of key deserializers.
          */
-        val DEFAULT_KEY_DESERIALIZERS = arrayOf<KeyDeserializers>(KotlinKeyDeserializers())
+        val DEFAULT_KEY_DESERIALIZERS = arrayOf<KeyDeserializers>(JDKKeyDeserializers)
 
     }
 

@@ -15,6 +15,8 @@ import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.jvm.javaConstructor
+import kotlin.reflect.jvm.javaMethod
 
 /*
  ***********************************************************************************************************************
@@ -722,6 +724,11 @@ fun Class<*>.primitiveType(): Class<*>? {
  * Access checking/handling methods
  ***********************************************************************************************************************
  */
+
+fun KFunction<*>.checkAndFixAccess(evenIfAlreadyPublic: Boolean) {
+    javaConstructor?.checkAndFixAccess(evenIfAlreadyPublic)
+    javaMethod?.checkAndFixAccess(evenIfAlreadyPublic)
+}
 
 /**
  * Method that is called if a [Constructor] may need forced access, to force a field, method or constructor to be
