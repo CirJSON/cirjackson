@@ -57,11 +57,14 @@ abstract class DeserializerFactory {
     abstract fun createBuilderBasedDeserializer(context: DeserializationContext, type: KotlinType,
             beanDescription: BeanDescription, builderClass: KClass<*>): ValueDeserializer<Any>
 
+    /**
+     * Factory method for constructing deserializers of [Enum] types.
+     */
     abstract fun createEnumDeserializer(context: DeserializationContext, type: KotlinType,
             beanDescription: BeanDescription): ValueDeserializer<*>
 
     abstract fun createReferenceDeserializer(context: DeserializationContext, type: ReferenceType,
-            beanDescription: BeanDescription): ValueDeserializer<*>
+            beanDescription: BeanDescription): ValueDeserializer<*>?
 
     /**
      * Method called to create and return a deserializer that can construct CirJsonNode(s) from CirJSON content.
@@ -82,13 +85,13 @@ abstract class DeserializerFactory {
             beanDescription: BeanDescription): ValueDeserializer<*>
 
     abstract fun createCollectionLikeDeserializer(context: DeserializationContext, type: CollectionLikeType,
-            beanDescription: BeanDescription): ValueDeserializer<*>
+            beanDescription: BeanDescription): ValueDeserializer<*>?
 
     abstract fun createMapDeserializer(context: DeserializationContext, type: MapType,
             beanDescription: BeanDescription): ValueDeserializer<*>
 
     abstract fun createMapLikeDeserializer(context: DeserializationContext, type: MapLikeType,
-            beanDescription: BeanDescription): ValueDeserializer<*>
+            beanDescription: BeanDescription): ValueDeserializer<*>?
 
     /**
      * Method called to find if factory knows how to create a key deserializer for specified type; currently this means

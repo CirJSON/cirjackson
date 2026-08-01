@@ -91,8 +91,34 @@ interface Deserializers {
      * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
      */
     fun findReferenceDeserializer(referenceType: ReferenceType, config: DeserializationConfig,
-            beanDescription: BeanDescription, contentTypeDeserializer: TypeDeserializer,
-            contentDeserializer: ValueDeserializer<*>): ValueDeserializer<*>?
+            beanDescription: BeanDescription, contentTypeDeserializer: TypeDeserializer?,
+            contentDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
+
+    /**
+     * Method called to locate deserializer for specified array type.
+     *
+     * Deserializer for element type may be passed, if configured explicitly at higher level (by annotations,
+     * typically), but usually are not. Type deserializer for element is passed if one is needed based on contextual
+     * information (annotations on declared element class; or on field or method type is associated with).
+     *
+     * @param type Type of array instances to deserialize
+     *
+     * @param config Configuration in effect
+     *
+     * @param beanDescription Definition of the enumeration type that contains class annotations and other information
+     * typically needed for building deserializers
+     *
+     * @param elementTypeDeserializer If element type needs polymorphic type handling, this is the type information
+     * deserializer to use; should usually be used as is when constructing array deserializer.
+     *
+     * @param elementDeserializer Deserializer to use for elements, if explicitly defined (by using annotations, for
+     * example). May be `null`, in which case it will need to be resolved by deserializer at a later point.
+     *
+     * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
+     */
+    fun findArrayDeserializer(type: ArrayType, config: DeserializationConfig, beanDescription: BeanDescription,
+            elementTypeDeserializer: TypeDeserializer?,
+            elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
 
     /**
      * Method called to locate deserializer for specified [Collection] (List, Set, etc.) type.
@@ -117,7 +143,7 @@ interface Deserializers {
      * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
      */
     fun findCollectionDeserializer(type: CollectionType, config: DeserializationConfig,
-            beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer,
+            beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
 
     /**
@@ -144,7 +170,7 @@ interface Deserializers {
      * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
      */
     fun findCollectionLikeDeserializer(type: CollectionLikeType, config: DeserializationConfig,
-            beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer,
+            beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
 
     /**
@@ -177,7 +203,7 @@ interface Deserializers {
      * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
      */
     fun findMapDeserializer(type: MapType, config: DeserializationConfig, beanDescription: BeanDescription,
-            keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer,
+            keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
 
     /**
@@ -211,7 +237,7 @@ interface Deserializers {
      * @return Deserializer to use for the type; or `null` if this provider does not know how to construct it
      */
     fun findMapLikeDeserializer(type: MapLikeType, config: DeserializationConfig, beanDescription: BeanDescription,
-            keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer,
+            keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>?
 
     /**
@@ -248,32 +274,38 @@ interface Deserializers {
         }
 
         override fun findReferenceDeserializer(referenceType: ReferenceType, config: DeserializationConfig,
-                beanDescription: BeanDescription, contentTypeDeserializer: TypeDeserializer,
-                contentDeserializer: ValueDeserializer<*>): ValueDeserializer<*>? {
+                beanDescription: BeanDescription, contentTypeDeserializer: TypeDeserializer?,
+                contentDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
+            return null
+        }
+
+        override fun findArrayDeserializer(type: ArrayType, config: DeserializationConfig,
+                beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
+                elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
             return null
         }
 
         override fun findCollectionDeserializer(type: CollectionType, config: DeserializationConfig,
-                beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer,
+                beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
                 elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
             return null
         }
 
         override fun findCollectionLikeDeserializer(type: CollectionLikeType, config: DeserializationConfig,
-                beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer,
+                beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
                 elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
             return null
         }
 
         override fun findMapDeserializer(type: MapType, config: DeserializationConfig, beanDescription: BeanDescription,
-                keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer,
+                keyDeserializer: KeyDeserializer?, elementTypeDeserializer: TypeDeserializer?,
                 elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
             return null
         }
 
         override fun findMapLikeDeserializer(type: MapLikeType, config: DeserializationConfig,
                 beanDescription: BeanDescription, keyDeserializer: KeyDeserializer?,
-                elementTypeDeserializer: TypeDeserializer,
+                elementTypeDeserializer: TypeDeserializer?,
                 elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
             return null
         }
