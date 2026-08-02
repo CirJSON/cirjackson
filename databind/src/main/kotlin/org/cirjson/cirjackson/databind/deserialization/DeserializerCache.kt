@@ -464,7 +464,7 @@ class DeserializerCache(private val myCachedDeserializers: LookupCache<KotlinTyp
             type: KotlinType): ValueDeserializer<Any> {
         val rawClass = type.rawClass
 
-        return if (!rawClass.isConcrete) {
+        if (!rawClass.isConcrete) {
             context.reportBadDefinition(type, "Cannot find a Value deserializer for abstract type $type")
         } else {
             context.reportBadDefinition(type, "Cannot find a Value deserializer for type $type")
@@ -472,7 +472,7 @@ class DeserializerCache(private val myCachedDeserializers: LookupCache<KotlinTyp
     }
 
     private fun handleUnknownKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer {
-        return context.reportBadDefinition(type, "Cannot find a (Map) Key deserializer for type $type")
+        context.reportBadDefinition(type, "Cannot find a (Map) Key deserializer for type $type")
     }
 
     companion object {

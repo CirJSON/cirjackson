@@ -298,7 +298,7 @@ open class StandardTypeResolverBuilder : TypeResolverBuilder<StandardTypeResolve
 
     protected open fun reportInvalidBaseType(context: DatabindContext, baseType: KotlinType,
             polymorphicTypeValidator: PolymorphicTypeValidator): PolymorphicTypeValidator {
-        return context.reportBadDefinition(baseType,
+        context.reportBadDefinition(baseType,
                 "Configured `PolymorphicTypeValidator` (of type ${polymorphicTypeValidator.className}) denied resolution of all subtypes of base type ${baseType.rawClass.className}")
     }
 

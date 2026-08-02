@@ -24,7 +24,7 @@ open class DefaultBaseTypeLimitingValidator : PolymorphicTypeValidator() {
 
     override fun validateBaseType(context: DatabindContext, baseType: KotlinType): Validity {
         if (isUnsafeBaseType(context, baseType)) {
-            return context.reportBadDefinition(baseType,
+            context.reportBadDefinition(baseType,
                     "Configured `PolymorphicTypeValidator` (of type ${this::class.className}) denies resolution of all subtypes of base type ${baseType.rawClass.className} as using too generic base type can open a security hole without checks on subtype: please configure a custom `PolymorphicTypeValidator` for this use case")
         }
 

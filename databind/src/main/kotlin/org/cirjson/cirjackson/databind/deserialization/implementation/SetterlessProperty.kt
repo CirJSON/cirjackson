@@ -95,7 +95,7 @@ class SetterlessProperty : SettableBeanProperty {
         }
 
         if (myValueTypeDeserializer != null) {
-            return context.reportBadDefinition(type,
+            context.reportBadDefinition(type,
                     "Problem deserializing 'setterless' property (\"$name\"): no way to handle typed deserializer with setterless yet")
         }
 
@@ -103,7 +103,7 @@ class SetterlessProperty : SettableBeanProperty {
             myGetter.javaMethod!!.invoke(instance)
         } catch (e: Exception) {
             throwAsCirJacksonException(parser, e)
-        } ?: return context.reportBadDefinition(type,
+        } ?: context.reportBadDefinition(type,
                 "Problem deserializing 'setterless' property (\"$name\"): get method returned null")
 
         myValueDeserializer.deserialize(parser, context, toModify)

@@ -719,7 +719,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * based on declared type, since `null` in Kotlin have no type and thus runtime type cannot be determined.
      */
     open fun findNullKeySerializer(serializationType: KotlinType, property: BeanProperty?): ValueSerializer<Any> {
-        return mySerializerFactory.defaultNullValueSerializer
+        return mySerializerFactory.defaultNullValueSerializer!!
     }
 
     /*
@@ -786,7 +786,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
         val serializer = try {
             mySerializerFactory.createSerializer(this, fullType, beanDescription, null)
         } catch (e: IllegalArgumentException) {
-            return reportBadTypeDefinition(beanDescription, e.exceptionMessage())
+            reportBadTypeDefinition(beanDescription, e.exceptionMessage())
         }
 
         mySerializerCache.addAndResolveNonTypedSerializer(rawType, fullType, serializer, this)
@@ -799,7 +799,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
         val serializer = try {
             mySerializerFactory.createSerializer(this, type, beanDescription, null)
         } catch (e: IllegalArgumentException) {
-            return reportBadTypeDefinition(beanDescription, e.exceptionMessage())
+            reportBadTypeDefinition(beanDescription, e.exceptionMessage())
         }
 
         mySerializerCache.addAndResolveNonTypedSerializer(type, serializer, this)
@@ -1060,7 +1060,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
      * [InvalidDefinitionException].
      */
     @Throws(DatabindException::class)
-    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T {
+    override fun reportBadTypeDefinition(bean: BeanDescription, message: String?): Nothing {
         val description = bean.beanClass.name
         throw InvalidDefinitionException.from(generator, "Invalid type definition for type $description: $message",
                 bean, null)
@@ -1079,7 +1079,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
     }
 
     @Throws(DatabindException::class)
-    override fun <T> reportBadDefinition(type: KotlinType, message: String?): T {
+    override fun reportBadDefinition(type: KotlinType, message: String?): Nothing {
         throw InvalidDefinitionException.from(generator, message, type)
     }
 
@@ -1131,7 +1131,7 @@ abstract class SerializerProvider : DatabindContext, ObjectWriteContext {
             }
         }
 
-        return reportBadDefinition(rootType, "Incompatible types: declared root type ($rootType) vs ${value.className}")
+        reportBadDefinition(rootType, "Incompatible types: declared root type ($rootType) vs ${value.className}")
     }
 
     /*

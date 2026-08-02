@@ -350,7 +350,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
         get() = myParser
 
     fun findInjectableValue(valueId: Any, forProperty: BeanProperty, beanInstance: Any?): Any? {
-        myInjectableValues ?: return reportBadDefinition(valueId::class,
+        myInjectableValues ?: reportBadDefinition(valueId::class,
                 "No 'injectableValues' configured, cannot inject value with id [$valueId]")
 
         return myInjectableValues.findInjectableValue(valueId, this, forProperty, beanInstance)
@@ -647,7 +647,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
         val keyDeserializer = try {
             myCache.findKeyDeserializer(this, myFactory, keyType)
         } catch (e: IllegalArgumentException) {
-            return reportBadDefinition(keyType, e.exceptionMessage())
+            reportBadDefinition(keyType, e.exceptionMessage())
         }
 
         return (keyDeserializer as? ContextualKeyDeserializer)?.createContextual(this, property) ?: keyDeserializer
@@ -1126,15 +1126,15 @@ abstract class DeserializationContext protected constructor(protected val myStre
                 return instance
             }
 
-            return reportBadDefinition(constructType(instantiatedClass)!!,
+            reportBadDefinition(constructType(instantiatedClass)!!,
                     "DeserializationProblemHandler.handleMissingInstantiator() for type ${instantiatedClass.classDescription} returned value of type ${instance.classDescription}")
         }
 
-        valueInstantiator ?: return reportBadDefinition(instantiatedClass,
+        valueInstantiator ?: reportBadDefinition(instantiatedClass,
                 "Cannot construct instance of ${instantiatedClass.name}: $message")
 
         if (!valueInstantiator.canInstantiate()) {
-            return reportBadDefinition(instantiatedClass,
+            reportBadDefinition(instantiatedClass,
                     "Cannot construct instance of ${instantiatedClass.name} (no Creators, like default constructor, exist): $message")
         }
 
@@ -1172,7 +1172,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
                 return instance
             }
 
-            return reportBadDefinition(constructType(instantiatedClass)!!,
+            reportBadDefinition(constructType(instantiatedClass)!!,
                     "DeserializationProblemHandler.handleInstantiationProblem() for type ${instantiatedClass.classDescription} returned value of type ${instance.className}")
         }
 
@@ -1238,7 +1238,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
                 return instance
             }
 
-            return reportBadDefinition(targetType,
+            reportBadDefinition(targetType,
                     "DeserializationProblemHandler.handleUnexpectedToken() for type ${targetType.typeDescription} returned value of type ${instance.className}")
         }
 
@@ -1506,7 +1506,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * unrelated to actual CirJSON content to map. Default behavior is to construct and throw a [DatabindException].
      */
     @Throws(DatabindException::class)
-    override fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T {
+    override fun reportBadTypeDefinition(bean: BeanDescription, message: String?): Nothing {
         val beanDescription = bean.beanClass.name
         val realMessage = "Invalid type definition for type $beanDescription: $message"
         throw InvalidDefinitionException.from(myParser, realMessage, bean, null)
@@ -1518,14 +1518,15 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * [DatabindException].
      */
     @Throws(DatabindException::class)
-    fun <T> reportBadPropertyDefinition(bean: BeanDescription, property: BeanPropertyDefinition, message: String?): T {
+    fun reportBadPropertyDefinition(bean: BeanDescription, property: BeanPropertyDefinition,
+            message: String?): Nothing {
         val realMessage =
                 "Invalid type definition for property ${property.name} (of type ${bean.beanClass.name}): $message"
         throw InvalidDefinitionException.from(parser, realMessage, bean, property)
     }
 
     @Throws(DatabindException::class)
-    override fun <T> reportBadDefinition(type: KotlinType, message: String?): T {
+    override fun reportBadDefinition(type: KotlinType, message: String?): Nothing {
         throw InvalidDefinitionException.from(myParser, message, type)
     }
 

@@ -23,7 +23,7 @@ open class SubTypeValidator {
         val fullName = raw.java.name
 
         if (fullName in myConfigIllegalClassNames) {
-            return reportIllegalClass(context, beanDescription, fullName)
+            reportIllegalClass(context, beanDescription, fullName)
         }
 
         if (raw.isInterface) {
@@ -37,21 +37,21 @@ open class SubTypeValidator {
                 val name = clazz.simpleName!!
 
                 if ("AbstractPointcutAdvisor" == name || "AbstractApplicationContext" == name) {
-                    return reportIllegalClass(context, beanDescription, fullName)
+                    reportIllegalClass(context, beanDescription, fullName)
                 }
 
                 clazz = clazz.superclass
             }
         } else if (fullName.startsWith(PREFIX_C3P0)) {
             if (fullName.endsWith("DataSource")) {
-                return reportIllegalClass(context, beanDescription, fullName)
+                reportIllegalClass(context, beanDescription, fullName)
             }
         }
     }
 
-    protected fun <T> reportIllegalClass(context: DeserializationContext, beanDescription: BeanDescription,
-            fullName: String): T {
-        return context.reportBadTypeDefinition(beanDescription,
+    protected fun reportIllegalClass(context: DeserializationContext, beanDescription: BeanDescription,
+            fullName: String): Nothing {
+        context.reportBadTypeDefinition(beanDescription,
                 "Illegal type ($fullName) to deserialize: prevented for security reasons")
     }
 

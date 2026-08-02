@@ -22,7 +22,7 @@ class CreatorCandidate private constructor(private val myCreator: AnnotatedWithP
         return myParameters[i].injection
     }
 
-    fun parameter(i: Int): AnnotatedParameter? {
+    fun parameter(i: Int): AnnotatedParameter {
         return myParameters[i].annotated
     }
 
@@ -59,7 +59,7 @@ class CreatorCandidate private constructor(private val myCreator: AnnotatedWithP
     companion object {
 
         fun construct(config: MapperConfig<*>, creator: AnnotatedWithParams,
-                propertyDefinitions: Array<BeanPropertyDefinition>?): CreatorCandidate {
+                propertyDefinitions: Array<BeanPropertyDefinition?>?): CreatorCandidate {
             val introspector = config.annotationIntrospector!!
             val parameterCount = creator.parameterCount
 

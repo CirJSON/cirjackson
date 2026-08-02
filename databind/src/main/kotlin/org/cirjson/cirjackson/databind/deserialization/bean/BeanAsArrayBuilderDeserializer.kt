@@ -267,7 +267,7 @@ open class BeanAsArrayBuilderDeserializer(protected val myDelegate: BeanDeserial
             }
 
             if (builder::class != myBeanType.rawClass) {
-                return context.reportBadDefinition(myBeanType,
+                context.reportBadDefinition(myBeanType,
                         "Cannot support implicit polymorphic deserialization for POJOs-as-Arrays style: nominal type ${myBeanType.typeDescription}, actual type ${builder::class.qualifiedName}")
             }
         }

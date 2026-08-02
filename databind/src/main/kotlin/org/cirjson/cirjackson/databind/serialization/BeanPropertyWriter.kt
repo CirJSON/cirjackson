@@ -689,7 +689,7 @@ open class BeanPropertyWriter : PropertyWriter {
 
         if (context.isEnabled(SerializationFeature.FAIL_ON_SELF_REFERENCES)) {
             if (serializer is BeanSerializerBase) {
-                return context.reportBadDefinition(type, "Direct self-reference leading to cycle")
+                context.reportBadDefinition(type, "Direct self-reference leading to cycle")
             }
 
             return false

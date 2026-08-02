@@ -19,13 +19,13 @@ open class UnsupportedTypeDeserializer(protected val myType: KotlinType, protect
 
     override fun deserialize(parser: CirJsonParser, context: DeserializationContext): Any? {
         if (parser.currentToken() != CirJsonToken.VALUE_EMBEDDED_OBJECT) {
-            return context.reportBadDefinition(myType, myMessage)
+            context.reportBadDefinition(myType, myMessage)
         }
 
         val value = parser.embeddedObject ?: return null
 
         if (!myType.rawClass.isAssignableFrom(value::class)) {
-            return context.reportBadDefinition(myType, myMessage)
+            context.reportBadDefinition(myType, myMessage)
         }
 
         return value

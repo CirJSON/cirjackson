@@ -118,7 +118,7 @@ open class CreatorCollector(protected val myBeanDescription: BeanDescription, co
     }
 
     open fun addDelegatingCreator(creator: AnnotatedWithParams, explicit: Boolean,
-            injectables: Array<SettableBeanProperty?>, delegateeIndex: Int) {
+            injectables: Array<SettableBeanProperty?>?, delegateeIndex: Int) {
         if (creator.getParameterType(delegateeIndex)!!.isCollectionLikeType) {
             if (verifyNonDuplicate(creator, CREATOR_ARRAY_DELEGATE, explicit)) {
                 myArrayDelegateArguments = injectables

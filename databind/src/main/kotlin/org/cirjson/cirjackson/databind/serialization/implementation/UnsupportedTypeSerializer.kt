@@ -14,7 +14,7 @@ open class UnsupportedTypeSerializer(protected val myType: KotlinType, protected
 
     @Throws(CirJacksonException::class)
     override fun serialize(value: Any, generator: CirJsonGenerator, serializers: SerializerProvider) {
-        return serializers.reportBadDefinition(myType, myMessage)
+        serializers.reportBadDefinition(myType, myMessage)
     }
 
 }

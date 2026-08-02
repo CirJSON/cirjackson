@@ -368,7 +368,7 @@ abstract class BeanSerializerBase : StandardSerializer<Any> {
 
                     while (true) {
                         if (i == length) {
-                            return provider.reportBadDefinition(myBeanType,
+                            provider.reportBadDefinition(myBeanType,
                                     "Invalid Object Id definition for ${myBeanType.typeDescription}: cannot find property with name ${propertyName.name()}")
                         }
 

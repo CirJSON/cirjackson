@@ -278,7 +278,7 @@ open class EnumDeserializer : StandardScalarDeserializer<Any> {
          */
         fun deserializerForCreator(config: DeserializationConfig, enumClass: KClass<*>, factory: AnnotatedMethod,
                 valueInstantiator: ValueInstantiator?,
-                creatorProperties: Array<SettableBeanProperty>): ValueDeserializer<*> {
+                creatorProperties: Array<SettableBeanProperty>?): ValueDeserializer<*> {
             if (config.canOverrideAccessModifiers()) {
                 factory.member.checkAndFixAccess(config.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS))
             }

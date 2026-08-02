@@ -116,13 +116,13 @@ open class CollectionDeserializer : ContainerDeserializerBase<MutableCollection<
         val delegateDeserializer = if (myValueInstantiator != null) {
             if (myValueInstantiator.canCreateUsingDelegate()) {
                 val delegateType =
-                        myValueInstantiator.getDelegateType(context.config) ?: return context.reportBadDefinition(
+                        myValueInstantiator.getDelegateType(context.config) ?: context.reportBadDefinition(
                                 myContainerType,
                                 "Invalid delegate-creator definition for $myContainerType: value instantiator (${myValueInstantiator::class.qualifiedName}) returned true for 'canCreateUsingDelegate()', but null for 'getDelegateType()'")
                 findDeserializer(context, delegateType, property)
             } else if (myValueInstantiator.canCreateUsingArrayDelegate()) {
                 val delegateType =
-                        myValueInstantiator.getArrayDelegateType(context.config) ?: return context.reportBadDefinition(
+                        myValueInstantiator.getArrayDelegateType(context.config) ?: context.reportBadDefinition(
                                 myContainerType,
                                 "Invalid delegate-creator definition for $myContainerType: value instantiator (${myValueInstantiator::class.qualifiedName}) returned true for 'canCreateUsingArrayDelegate()', but null for 'getArrayDelegateType()'")
                 findDeserializer(context, delegateType, property)

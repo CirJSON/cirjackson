@@ -35,7 +35,7 @@ open class AnyGetterWriter(protected val myProperty: BeanProperty, protected val
         val value = myAccessor.getValue(bean) ?: return
 
         if (value !is Map<*, *>) {
-            return context.reportBadDefinition(myProperty.type,
+            context.reportBadDefinition(myProperty.type,
                     "Value returned by 'any-getter' ${myAccessor.name}() not Map but ${value::class.qualifiedName}")
         }
 
@@ -52,7 +52,7 @@ open class AnyGetterWriter(protected val myProperty: BeanProperty, protected val
         val value = myAccessor.getValue(bean) ?: return
 
         if (value !is Map<*, *>) {
-            return context.reportBadDefinition(myProperty.type,
+            context.reportBadDefinition(myProperty.type,
                     "Value returned by 'any-getter' ${myAccessor.name}() not Map but ${value::class.qualifiedName}")
         }
 

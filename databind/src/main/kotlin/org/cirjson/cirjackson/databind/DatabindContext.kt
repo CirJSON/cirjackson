@@ -364,15 +364,15 @@ abstract class DatabindContext {
      * [org.cirjson.cirjackson.databind.exception.InvalidDefinitionException].
      */
     @Throws(DatabindException::class)
-    abstract fun <T> reportBadDefinition(type: KotlinType, message: String?): T
+    abstract fun reportBadDefinition(type: KotlinType, message: String?): Nothing
 
     @Throws(DatabindException::class)
-    open fun <T> reportBadDefinition(type: KClass<*>, message: String?): T {
-        return reportBadDefinition(constructType(type)!!, message)
+    open fun reportBadDefinition(type: KClass<*>, message: String?): Nothing {
+        reportBadDefinition(constructType(type)!!, message)
     }
 
     @Throws(DatabindException::class)
-    abstract fun <T> reportBadTypeDefinition(bean: BeanDescription, message: String?): T
+    abstract fun reportBadTypeDefinition(bean: BeanDescription, message: String?): Nothing
 
     /*
      *******************************************************************************************************************

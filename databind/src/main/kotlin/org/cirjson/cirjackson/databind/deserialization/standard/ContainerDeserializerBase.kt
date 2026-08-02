@@ -101,7 +101,7 @@ abstract class ContainerDeserializerBase<T : Any> : StandardDeserializer<T>, Val
 
         if (!(valueInstantiator?.canCreateUsingDefault() ?: false)) {
             val type = valueType
-            return context.reportBadDefinition(type, "Cannot create empty instance of $type, no default Creator")
+            context.reportBadDefinition(type, "Cannot create empty instance of $type, no default Creator")
         }
 
         return valueInstantiator.createUsingDefault(context)

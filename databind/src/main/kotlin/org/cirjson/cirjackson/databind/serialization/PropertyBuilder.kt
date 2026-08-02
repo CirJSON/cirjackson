@@ -70,7 +70,7 @@ open class PropertyBuilder(protected val myConfig: SerializationConfig,
             findSerializationType(annotatedMember, defaultUseStaticTyping, declaredType)
         } catch (e: DatabindException) {
             if (propertyDefinition == null) {
-                return context.reportBadDefinition(declaredType, e.exceptionMessage())
+                context.reportBadDefinition(declaredType, e.exceptionMessage())
             }
 
             return context.reportBadPropertyDefinition(myBeanDescription, propertyDefinition, e.exceptionMessage())

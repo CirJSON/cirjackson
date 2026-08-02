@@ -59,7 +59,7 @@ open class SerializationContextExtended protected constructor(streamFactory: Tok
         }
 
         if (serializerDefinition !is KClass<*>) {
-            return reportBadDefinition(annotated.type,
+            reportBadDefinition(annotated.type,
                     "AnnotationIntrospector returned serializer definition of type ${serializerDefinition::class.qualifiedName}; expected type `ValueSerializer` or `KClass<ValueSerializer>` instead")
         }
 
@@ -68,7 +68,7 @@ open class SerializationContextExtended protected constructor(streamFactory: Tok
         }
 
         if (!ValueSerializer::class.isAssignableFrom(serializerDefinition)) {
-            return reportBadDefinition(annotated.type,
+            reportBadDefinition(annotated.type,
                     "AnnotationIntrospector returned KClass `${serializerDefinition.qualifiedName}`; expected `KClass<ValueSerializer>`")
         }
 

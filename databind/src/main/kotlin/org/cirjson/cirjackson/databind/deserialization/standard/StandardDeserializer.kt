@@ -1793,7 +1793,7 @@ abstract class StandardDeserializer<T : Any> : ValueDeserializer<T>, ValueInstan
 
             if (!valueInstantiator.canCreateUsingDefault()) {
                 val type = property?.type ?: valueDeserializer.valueType!!
-                return context.reportBadDefinition(type, "Cannot create empty instance of $type, no default Creator")
+                context.reportBadDefinition(type, "Cannot create empty instance of $type, no default Creator")
             }
         }
 

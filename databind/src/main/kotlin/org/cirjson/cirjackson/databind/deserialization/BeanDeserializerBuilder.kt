@@ -357,7 +357,7 @@ open class BeanDeserializerBuilder {
 
         if (buildMethod == null) {
             if (!expectedBuildMethodName.isEmpty()) {
-                return myContext.reportBadDefinition(myBeanDescription.type,
+                myContext.reportBadDefinition(myBeanDescription.type,
                         "Builder class ${myBeanDescription.type.typeDescription} does not have build method (name: '$expectedBuildMethodName')")
             }
         } else {
@@ -366,7 +366,7 @@ open class BeanDeserializerBuilder {
 
             if (rawBuildType != rawValueType && !rawBuildType.isAssignableFrom(
                             rawValueType) && !rawValueType.isAssignableFrom(rawBuildType)) {
-                return myContext.reportBadDefinition(myBeanDescription.type,
+                myContext.reportBadDefinition(myBeanDescription.type,
                         "Build method `${buildMethod.fullName}` has wrong return type (${rawBuildType.classDescription}), not compatible with POJO type (${valueType.typeDescription})")
             }
         }
@@ -489,7 +489,7 @@ open class BeanDeserializerBuilder {
      */
     protected open fun handleBadAccess(originalException: IllegalArgumentException): Nothing {
         try {
-            throw myContext.reportBadTypeDefinition<Exception>(myBeanDescription, originalException.message)
+            myContext.reportBadTypeDefinition(myBeanDescription, originalException.message)
         } catch (e: DatabindException) {
             if (e.cause == null) {
                 e.initCause(originalException)

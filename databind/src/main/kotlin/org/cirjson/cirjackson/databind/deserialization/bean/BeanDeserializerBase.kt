@@ -738,7 +738,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
         val isContainer = property.type.isContainerType
 
         if (!backReferenceType.rawClass.isAssignableFrom(referredType.rawClass)) {
-            return context.reportBadDefinition(myBeanType,
+            context.reportBadDefinition(myBeanType,
                     "Cannot handle managed/back reference ${referenceName.name()}: back reference type (${backReferenceType.typeDescription}) not compatible with managed type (${referredType::class.qualifiedName})")
         }
 
@@ -767,7 +767,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
                 context.annotationIntrospector!!.findUnwrappingNameTransformer(context.config, member) ?: return null
 
         if (property is CreatorProperty) {
-            return context.reportBadDefinition(valueType,
+            context.reportBadDefinition(valueType,
                     "Cannot define Creator property \"${property.name}\" as `@CirJsonUnwrapped`: combination not yet supported")
         }
 

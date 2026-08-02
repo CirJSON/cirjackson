@@ -241,7 +241,7 @@ open class BuilderBasedDeserializer : BeanDeserializerBase {
         val builderRawType = handledType()
         val instanceRawType = intoValue::class
 
-        return if (builderRawType.isAssignableFrom(instanceRawType)) {
+        if (builderRawType.isAssignableFrom(instanceRawType)) {
             context.reportBadDefinition(valueType,
                     "Deserialization of $valueType by passing existing Builder (${builderRawType.qualifiedName}) instance not supported")
         } else {
@@ -887,7 +887,7 @@ open class BuilderBasedDeserializer : BeanDeserializerBase {
     protected open fun deserializeUsingPropertyBasedWithExternalTypeId(parser: CirJsonParser,
             context: DeserializationContext): Any? {
         val type = myTargetType
-        return context.reportBadDefinition(type,
+        context.reportBadDefinition(type,
                 "Deserialization (of $type) with Builder, External type id, @CirJsonCreator not yet implemented")
     }
 

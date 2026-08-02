@@ -95,7 +95,7 @@ open class BeanSerializerFactory protected constructor(config: SerializerFactory
         val type = try {
             introspector?.refineSerializationType(config, beanDescription.classInfo, baseType) ?: baseType
         } catch (e: CirJacksonException) {
-            return context.reportBadTypeDefinition(realBeanDescription, e.message)
+            context.reportBadTypeDefinition(realBeanDescription, e.message)
         }
 
         val staticTyping = if (type === baseType) {
@@ -259,7 +259,7 @@ open class BeanSerializerFactory protected constructor(config: SerializerFactory
         try {
             serializer = builder.build()
         } catch (e: RuntimeException) {
-            return context.reportBadTypeDefinition(beanDescription,
+            context.reportBadTypeDefinition(beanDescription,
                     "Failed to construct BeanSerializer for ${beanDescription.type}: (${e::class.qualifiedName}) ${e.message}")
         }
 

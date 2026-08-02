@@ -1,15 +1,24 @@
 package org.cirjson.cirjackson.databind.deserialization
 
 import org.cirjson.cirjackson.annotations.CirJacksonInject
+import org.cirjson.cirjackson.annotations.Nulls
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
 import org.cirjson.cirjackson.databind.configuration.DeserializerFactoryConfig
 import org.cirjson.cirjackson.databind.deserialization.bean.CreatorCandidate
 import org.cirjson.cirjackson.databind.deserialization.bean.CreatorCollector
+import org.cirjson.cirjackson.databind.deserialization.jdk.*
 import org.cirjson.cirjackson.databind.introspection.*
 import org.cirjson.cirjackson.databind.type.*
 import org.cirjson.cirjackson.databind.util.EnumResolver
+import org.cirjson.cirjackson.databind.util.createInstance
+import org.cirjson.cirjackson.databind.util.isAssignableFrom
+import org.cirjson.cirjackson.databind.util.isBogusClass
 import java.io.Serializable
+import java.math.BigDecimal
+import java.math.BigInteger
+import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 import kotlin.reflect.KClass
 
 /**
@@ -76,7 +85,38 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     override fun findValueInstantiator(context: DeserializationContext,
             beanDescription: BeanDescription): ValueInstantiator? {
-        TODO("Not yet implemented")
+        val config = context.config
+        val hasCustom = myFactoryConfig.hasValueInstantiators()
+
+        val annotatedClass = beanDescription.classInfo
+        val instantiatorDefinition = config.annotationIntrospector!!.findValueInstantiator(config, annotatedClass)
+
+        var instantiator = instantiatorDefinition?.let { valueInstantiatorInstance(config, annotatedClass, it) }
+                ?: JDKValueInstantiators.findStandardValueInstantiator(beanDescription.beanClass) ?: let {
+                    var instantiator: ValueInstantiator? = null
+
+                    if (hasCustom) {
+                        for (instantiators in myFactoryConfig.valueInstantiators()) {
+                            instantiator = instantiators.findValueInstantiator(config, beanDescription)
+
+                            if (instantiator != null) {
+                                break
+                            }
+                        }
+                    }
+
+                    instantiator ?: constructDefaultValueInstantiator(context, beanDescription)
+                }
+
+        if (hasCustom) {
+            for (instantiators in myFactoryConfig.valueInstantiators()) {
+                instantiator = instantiators.modifyValueInstantiator(config, beanDescription, instantiator)
+            }
+        }
+
+        instantiator = instantiator.createContextual(context, beanDescription)
+
+        return instantiator
     }
 
     /**
@@ -85,12 +125,68 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun constructDefaultValueInstantiator(context: DeserializationContext,
             beanDescription: BeanDescription): ValueInstantiator {
-        TODO("Not yet implemented")
+        val config = context.config
+        val potentialCreators = beanDescription.potentialCreators
+        val constructorDetector = config.constructorDetector
+        val visibilityChecker = config.getDefaultVisibilityChecker(beanDescription.beanClass, beanDescription.classInfo)
+
+        val creators = CreatorCollector(beanDescription, config)
+
+
+        if (potentialCreators.hasPropertiesBased()) {
+            val primaryPropertiesBased = potentialCreators.propertiesBased!!
+
+            addSelectedPropertiesBasedCreator(context, beanDescription, creators,
+                    CreatorCandidate.construct(config, primaryPropertiesBased.creator(),
+                            primaryPropertiesBased.propertyDefinitions()))
+        }
+
+        val hasExplicitDelegating =
+                addExplicitDelegatingCreators(context, beanDescription, creators, potentialCreators.explicitDelegating)
+
+        if (beanDescription.type.isConcrete) {
+            val isNonStaticInnerClass = beanDescription.isNonStaticInnerClass
+
+            if (!isNonStaticInnerClass) {
+                beanDescription.findDefaultConstructor()?.also { defaultConstructor ->
+                    if (!creators.hasDefaultCreator() || hasCreatorAnnotation(config, defaultConstructor)) {
+                        creators.defaultCreator = defaultConstructor
+                    }
+                }
+
+                val findImplicit = constructorDetector.shouldIntrospectorImplicitConstructors(beanDescription.beanClass)
+
+                if (findImplicit) {
+                    addImplicitDelegatingCreators(context, beanDescription, creators,
+                            potentialCreators.implicitDelegatingConstructors)
+                }
+            }
+        }
+
+        if (!hasExplicitDelegating) {
+            addImplicitDelegatingFactories(visibilityChecker, creators, potentialCreators.implicitDelegatingFactories)
+        }
+
+        return creators.constructValueInstantiator(context)
     }
 
     protected open fun valueInstantiatorInstance(config: DeserializationConfig, annotated: Annotated,
             instanceDefinition: Any?): ValueInstantiator? {
-        TODO("Not yet implemented")
+        instanceDefinition ?: return null
+
+        return instanceDefinition as? ValueInstantiator ?: if (instanceDefinition !is KClass<*>) {
+            throw IllegalStateException(
+                    "AnnotationIntrospector returned value instantiator definition of type ${instanceDefinition::class.qualifiedName}; expected type ValueInstantiator or KClass<ValueInstantiator> instead")
+        } else if (instanceDefinition.isBogusClass) {
+            null
+        } else if (!ValueInstantiator::class.isAssignableFrom(instanceDefinition)) {
+            throw IllegalStateException(
+                    "AnnotationIntrospector returned KClass ${instanceDefinition.qualifiedName}; expected KClass<ValueInstantiator>")
+        } else {
+            val handlerInstantiator = config.handlerInstantiator
+            handlerInstantiator?.valueInstantiatorInstance(config, annotated, instanceDefinition)
+                    ?: instanceDefinition.createInstance(config.canOverrideAccessModifiers()) as ValueInstantiator
+        }
     }
 
     /*
@@ -101,17 +197,67 @@ abstract class BasicDeserializerFactory protected constructor(
 
     private fun addExplicitDelegatingCreators(context: DeserializationContext, beanDescription: BeanDescription,
             creators: CreatorCollector, potentialCreators: List<PotentialCreator>): Boolean {
-        TODO("Not yet implemented")
+        val config = context.config
+        var added = false
+
+        for (potentialCreator in potentialCreators) {
+            added = added || addExplicitDelegatingCreator(context, beanDescription, creators,
+                    CreatorCandidate.construct(config, potentialCreator.creator(), null))
+        }
+
+        return added
     }
 
     private fun addImplicitDelegatingCreators(context: DeserializationContext, beanDescription: BeanDescription,
-            creators: CreatorCollector, potentialCreators: List<PotentialCreator>): Boolean {
-        TODO("Not yet implemented")
+            creators: CreatorCollector, potentialCreators: List<PotentialCreator>) {
+        val config = context.config
+        val introspector = config.annotationIntrospector
+
+        for (candidate in potentialCreators) {
+            val argCount = candidate.parameterCount()
+            val creator = candidate.creator()
+
+            if (argCount == 1) {
+                handleSingleArgumentCreator(creators, creator, isCreator = false, isVisible = true)
+                continue
+            }
+
+            val properties = arrayOfNulls<SettableBeanProperty>(argCount)
+            var injectCount = 0
+
+            for (i in 0..<argCount) {
+                val parameter = creator.getParameter(i)
+                val injectable = introspector!!.findInjectableValue(config, parameter)
+
+                if (injectable != null) {
+                    ++injectCount
+                    properties[i] = constructCreatorProperty(context, beanDescription, null, i, parameter, injectable)
+                    continue
+                }
+
+                val unwrapper = introspector.findUnwrappingNameTransformer(config, parameter)
+
+                if (unwrapper != null) {
+                    reportUnwrappedCreatorProperty(context, beanDescription, parameter)
+                }
+            }
+
+            if (injectCount + 1 == argCount) {
+                creators.addDelegatingCreator(creator, false, properties, 0)
+            }
+        }
     }
 
     private fun addImplicitDelegatingFactories(visibilityChecker: VisibilityChecker, creators: CreatorCollector,
             potentialCreators: List<PotentialCreator>) {
-        TODO("Not yet implemented")
+        for (potentialCreator in potentialCreators) {
+            val argCount = potentialCreator.parameterCount()
+            val creator = potentialCreator.creator()
+
+            if (argCount == 1) {
+                handleSingleArgumentCreator(creators, creator, false, visibilityChecker.isCreatorVisible(creator))
+            }
+        }
     }
 
     /**
@@ -119,7 +265,37 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     private fun addExplicitDelegatingCreator(context: DeserializationContext, beanDescription: BeanDescription,
             creators: CreatorCollector, candidate: CreatorCandidate): Boolean {
-        TODO("Not yet implemented")
+        var index = -1
+        val argCount = candidate.parameterCount()
+        val properties = arrayOfNulls<SettableBeanProperty>(argCount)
+
+        for (i in 0..<argCount) {
+            val parameter = candidate.parameter(i)
+            val injectable = candidate.injection(i)
+
+            if (injectable != null) {
+                properties[i] = constructCreatorProperty(context, beanDescription, null, i, parameter, injectable)
+                continue
+            } else if (index < 0) {
+                index = i
+                continue
+            }
+
+            context.reportBadTypeDefinition(beanDescription,
+                    "More than one argument (#$index and #$i) left as delegating for Creator $candidate: only one allowed")
+        }
+
+        if (index == -1) {
+            context.reportBadTypeDefinition(beanDescription,
+                    "No argument left as delegating for Creator $candidate: exactly one required")
+        }
+
+        if (argCount == 1) {
+            return handleSingleArgumentCreator(creators, candidate.creator(), isCreator = true, isVisible = true)
+        }
+
+        creators.addDelegatingCreator(candidate.creator(), true, properties, index)
+        return true
     }
 
     /**
@@ -127,17 +303,110 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     private fun addSelectedPropertiesBasedCreator(context: DeserializationContext, beanDescription: BeanDescription,
             creators: CreatorCollector, candidate: CreatorCandidate) {
-        TODO("Not yet implemented")
+        val config = context.config
+        val introspector = context.annotationIntrospector
+        val parameterCount = candidate.parameterCount()
+        var anySetterInder = -1
+
+        val properties = Array(parameterCount) { i ->
+            val injectable = candidate.injection(i)
+            val parameter = candidate.parameter(i)
+            val name = candidate.parameterName(i)
+
+            val isAnySetter = introspector!!.hasAnySetter(config, parameter) ?: false
+
+            if (isAnySetter) {
+                if (anySetterInder != -1) {
+                    context.reportBadTypeDefinition(beanDescription,
+                            "More than one 'any-setter' specified (parameter #$anySetterInder vs #$i)")
+                } else {
+                    anySetterInder = i
+                }
+            } else if (name == null) {
+                val unwrapper = introspector.findUnwrappingNameTransformer(config, parameter)
+
+                if (unwrapper != null) {
+                    reportUnwrappedCreatorProperty(context, beanDescription, parameter)
+                } else if (injectable == null) {
+                    context.reportBadTypeDefinition(beanDescription,
+                            "Argument #$i of Creator $candidate has no property name (and is not Injectable): can not use as property-based Creator")
+                }
+            }
+
+            constructCreatorProperty(context, beanDescription, name, i, parameter, injectable)
+        }
+
+        creators.addPropertyCreator(candidate.creator(), true, properties)
     }
 
-    private fun handleSingleArgumentCreator(creators: CreatorCollector, constructor: AnnotatedWithParams,
+    private fun handleSingleArgumentCreator(creators: CreatorCollector, creator: AnnotatedWithParams,
             isCreator: Boolean, isVisible: Boolean): Boolean {
-        TODO("Not yet implemented")
+        val type = creator.getRawParameterType(0)
+
+        return when (type) {
+            CLASS_STRING, CLASS_CHAR_SEQUENCE -> {
+                if (isCreator || isVisible) {
+                    creators.addStringCreator(creator, isCreator)
+                }
+
+                true
+            }
+
+            Int::class -> {
+                if (isCreator || isVisible) {
+                    creators.addIntCreator(creator, isCreator)
+                }
+
+                true
+            }
+
+            Long::class -> {
+                if (isCreator || isVisible) {
+                    creators.addLongCreator(creator, isCreator)
+                }
+
+                true
+            }
+
+            Double::class -> {
+                if (isCreator || isVisible) {
+                    creators.addDoubleCreator(creator, isCreator)
+                }
+
+                true
+            }
+
+            Boolean::class -> {
+                if (isCreator || isVisible) {
+                    creators.addBooleanCreator(creator, isCreator)
+                }
+
+                true
+            }
+
+            else -> {
+                if (type == BigInteger::class && (isCreator || isVisible)) {
+                    creators.addBigIntegerCreator(creator, isCreator)
+                }
+
+                if (type == BigDecimal::class && (isCreator || isVisible)) {
+                    creators.addBigDecimalCreator(creator, isCreator)
+                }
+
+                if (isCreator) {
+                    creators.addDelegatingCreator(creator, true, null, 0)
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     private fun reportUnwrappedCreatorProperty(context: DeserializationContext, beanDescription: BeanDescription,
             parameter: AnnotatedParameter): Nothing {
-        TODO("Not yet implemented")
+        context.reportBadTypeDefinition(beanDescription,
+                "Cannot define Creator parameter ${parameter.index} as `@CirJsonUnwrapped`: combination not yet supported")
     }
 
     /**
@@ -147,7 +416,36 @@ abstract class BasicDeserializerFactory protected constructor(
     protected open fun constructCreatorProperty(context: DeserializationContext, beanDescription: BeanDescription,
             name: PropertyName?, index: Int, parameter: AnnotatedParameter,
             injectable: CirJacksonInject.Value?): SettableBeanProperty {
-        TODO("Not yet implemented")
+        val config = context.config
+        val introspector = context.annotationIntrospector
+
+        var (metadata, wrapperName) = introspector?.let {
+            val required = it.hasRequiredMarker(config, parameter)
+            val description = it.findPropertyDescription(config, parameter)
+            val index = it.findPropertyIndex(config, parameter)
+            val defaultValue = it.findPropertyDefaultValue(config, parameter)
+            PropertyMetadata.construct(required, description, index, defaultValue) to it.findWrapperName(config,
+                    parameter)
+        } ?: (PropertyMetadata.STANDARD_REQUIRED_OR_OPTIONAL to null)
+
+        val type = resolveMemberAndTypeAnnotations(context, parameter, parameter.type)
+        val property = BeanProperty.Standard(name!!, type, wrapperName, parameter, metadata)
+        val typeDeserializer = type.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(type)
+
+        metadata = getSetterInfo(config, property, metadata)
+
+        var beanProperty: SettableBeanProperty =
+                CreatorProperty.construct(name, type, property.wrapperName, typeDeserializer,
+                        beanDescription.classAnnotations, parameter, index, injectable, metadata)
+        var deserializer =
+                findDeserializerFromAnnotation(context, parameter) ?: type.valueHandler as ValueDeserializer<*>?
+
+        if (deserializer != null) {
+            deserializer = context.handlePrimaryContextualization(deserializer, property, type)!!
+            beanProperty = beanProperty.withValueDeserializer(deserializer)
+        }
+
+        return beanProperty
     }
 
     /**
@@ -155,7 +453,52 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     private fun getSetterInfo(config: DeserializationConfig, property: BeanProperty,
             metadata: PropertyMetadata): PropertyMetadata {
-        TODO("Not yet implemented")
+        val introspector = config.annotationIntrospector
+
+        var valueNulls: Nulls? = null
+        var contentNulls: Nulls? = null
+
+        val member = property.member
+
+        if (member != null) {
+            if (introspector != null) {
+                val setterInfo = introspector.findSetterInfo(config, member)
+
+                if (setterInfo != null) {
+                    valueNulls = setterInfo.nonDefaultNulls()
+                    contentNulls = setterInfo.nonDefaultContentNulls()
+                }
+            }
+
+            val configOverride = config.getConfigOverride(property.type.rawClass)
+            val setterInfo = configOverride.nullHandling
+
+            if (setterInfo != null) {
+                if (valueNulls == null) {
+                    valueNulls = setterInfo.nonDefaultNulls()
+                }
+
+                if (contentNulls == null) {
+                    contentNulls = setterInfo.nonDefaultContentNulls()
+                }
+            }
+        }
+
+        val setterInfo = config.defaultNullHandling
+
+        if (valueNulls == null) {
+            valueNulls = setterInfo.nonDefaultNulls()
+        }
+
+        if (contentNulls == null) {
+            contentNulls = setterInfo.nonDefaultContentNulls()
+        }
+
+        return if (valueNulls != null || contentNulls != null) {
+            metadata.withNulls(valueNulls, contentNulls)
+        } else {
+            metadata
+        }
     }
 
     /*
@@ -164,9 +507,37 @@ abstract class BasicDeserializerFactory protected constructor(
      *******************************************************************************************************************
      */
 
+    @Suppress("UNCHECKED_CAST")
     override fun createArrayDeserializer(context: DeserializationContext, type: ArrayType,
             beanDescription: BeanDescription): ValueDeserializer<*> {
-        TODO("Not yet implemented")
+        val config = context.config
+        val elementType = type.contentType
+
+        val elementDeserializer = elementType.valueHandler as ValueDeserializer<Any>?
+        val elementTypeDeserializer =
+                elementType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(elementType)
+
+        var deserializer: ValueDeserializer<*> =
+                findCustomArrayDeserializer(type, config, beanDescription, elementTypeDeserializer, elementDeserializer)
+                        ?: let {
+                            if (elementDeserializer == null) {
+                                if (elementType.isPrimitive) {
+                                    PrimitiveArrayDeserializer.forType(elementType.rawClass)
+                                } else {
+                                    StringArrayDeserializer.INSTANCE
+                                }
+                            } else {
+                                null
+                            }
+                        } ?: ObjectArrayDeserializer(type, elementDeserializer, elementTypeDeserializer)
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyArrayDeserializer(config, type, beanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     /*
@@ -175,18 +546,110 @@ abstract class BasicDeserializerFactory protected constructor(
      *******************************************************************************************************************
      */
 
+    @Suppress("UNCHECKED_CAST")
     override fun createCollectionDeserializer(context: DeserializationContext, type: CollectionType,
             beanDescription: BeanDescription): ValueDeserializer<*> {
-        TODO("Not yet implemented")
+        var realType = type
+        var realBeanDescription = beanDescription
+        val config = context.config
+        val elementType = realType.contentType
+        val elementDeserializer = elementType.valueHandler as ValueDeserializer<Any>?
+        val elementTypeDeserializer =
+                elementType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(elementType)
+        var deserializer =
+                findCustomCollectionDeserializer(realType, config, realBeanDescription, elementTypeDeserializer,
+                        elementDeserializer)
+
+        if (deserializer == null) {
+            var collectionClass = realType.rawClass
+
+            if (elementDeserializer == null) {
+                if (elementType.isEnumType && collectionClass == MutableSet::class) {
+                    collectionClass = EnumSet::class
+                    realType = config.typeFactory.constructSpecializedType(realType, collectionClass) as CollectionType
+                }
+
+                if (EnumSet::class.isAssignableFrom(collectionClass)) {
+                    deserializer = EnumSetDeserializer(elementType, null, elementTypeDeserializer)
+                }
+            }
+        }
+
+        if (deserializer == null) {
+            if (realType.isInterface || realType.isAbstract) {
+                val implementationType = mapAbstractCollectionType(realType, config)
+
+                if (implementationType == null) {
+                    if (realType.typeHandler == null) {
+                        throw IllegalArgumentException(
+                                "Cannot find a deserializer for non-concrete Collection type $realType")
+                    }
+
+                    deserializer = AbstractDeserializer.constructForNonPOJO(realBeanDescription)
+                } else {
+                    realType = implementationType
+                    realBeanDescription = context.introspectBeanDescriptionForCreation(realType)
+                }
+            }
+
+            if (deserializer == null) {
+                val instantiator = findValueInstantiator(context, realBeanDescription)!!
+
+                if (!instantiator.canCreateUsingDefault()) {
+                    if (realType.hasRawClass(ArrayBlockingQueue::class)) {
+                        return ArrayBlockingQueueDeserializer(realType, elementDeserializer, elementTypeDeserializer,
+                                instantiator)
+                    }
+
+                    deserializer = JavaUtilCollectionsDeserializers.findForCollection(realType)
+
+                    if (deserializer != null) {
+                        return deserializer
+                    }
+                }
+
+                deserializer = if (elementType.hasRawClass(String::class)) {
+                    StringCollectionDeserializer(realType, elementDeserializer, instantiator)
+                } else {
+                    CollectionDeserializer(realType, elementDeserializer, elementTypeDeserializer, instantiator)
+                }
+            }
+        }
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer =
+                        modifier.modifyCollectionDeserializer(config, realType, realBeanDescription, deserializer!!)
+            }
+        }
+
+        return deserializer
     }
 
     protected open fun mapAbstractCollectionType(type: KotlinType, config: DeserializationConfig): CollectionType? {
-        TODO("Not yet implemented")
+        val collectionClass = ContainerDefaultMappings.findCollectionFallbacks(type) ?: return null
+        return config.typeFactory.constructSpecializedType(type, collectionClass, true) as CollectionType
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun createCollectionLikeDeserializer(context: DeserializationContext, type: CollectionLikeType,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        val config = context.config
+        val elementType = type.contentType
+        val elementDeserializer = elementType.valueHandler as ValueDeserializer<Any>?
+        val elementTypeDeserializer =
+                elementType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(elementType)
+
+        var deserializer = findCustomCollectionLikeDeserializer(type, config, beanDescription, elementTypeDeserializer,
+                elementDeserializer) ?: return null
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyCollectionLikeDeserializer(config, type, beanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     /*
@@ -195,18 +658,115 @@ abstract class BasicDeserializerFactory protected constructor(
      *******************************************************************************************************************
      */
 
+    @Suppress("UNCHECKED_CAST")
     override fun createMapDeserializer(context: DeserializationContext, type: MapType,
             beanDescription: BeanDescription): ValueDeserializer<*> {
-        TODO("Not yet implemented")
+        var realType = type
+        var realBeanDescription = beanDescription
+        val config = context.config
+        val keyType = realType.keyType
+        val elementType = realType.contentType
+
+        val keyDeserializer = keyType.valueHandler as KeyDeserializer?
+        val elementDeserializer = elementType.valueHandler as ValueDeserializer<Any>?
+        val elementTypeDeserializer =
+                elementType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(elementType)
+
+        var deserializer: ValueDeserializer<*> =
+                findCustomMapDeserializer(realType, config, realBeanDescription, keyDeserializer,
+                        elementTypeDeserializer, elementDeserializer) ?: let {
+                    var mapClass = realType.rawClass
+
+                    if (mapClass == MutableMap::class && keyType.isEnumType) {
+                        mapClass = EnumMap::class
+                        realType = config.typeFactory.constructSpecializedType(realType, mapClass) as MapType
+                    }
+
+                    if (EnumMap::class.isAssignableFrom(mapClass)) {
+                        val instantiator = if (mapClass == EnumMap::class) {
+                            null
+                        } else {
+                            findValueInstantiator(context, realBeanDescription)
+                        }
+
+                        if (!keyType.isEnumImplType) {
+                            throw IllegalArgumentException("Cannot construct EnumMap; generic (key) type not available")
+                        }
+
+                        EnumMapDeserializer(realType, instantiator, null, elementDeserializer, elementTypeDeserializer,
+                                null)
+                    } else {
+                        null
+                    }
+                } ?: let {
+                    if (realType.isInterface || realType.isAbstract) {
+                        val fallback = mapAbstractMapType(realType, config)
+
+                        if (fallback != null) {
+                            realType = fallback
+                            realBeanDescription = context.introspectBeanDescriptionForCreation(realType)
+                            null
+                        } else {
+                            if (realType.typeHandler == null) {
+                                throw IllegalArgumentException(
+                                        "Cannot find a deserializer for non-concrete Map type $realType")
+                            }
+
+                            AbstractDeserializer.constructForNonPOJO(realBeanDescription)
+                        }
+                    } else {
+                        JavaUtilCollectionsDeserializers.findForMap(realType)?.also { return it }
+                    }
+                } ?: let {
+                    val instantiator = findValueInstantiator(context, realBeanDescription)!!
+                    MapDeserializer(realType, instantiator, keyDeserializer, elementDeserializer,
+                            elementTypeDeserializer).apply {
+                        val ignorals = config.getDefaultPropertyIgnorals(Map::class, realBeanDescription.classInfo)
+                        val ignored = ignorals?.findIgnoredForDeserialization()
+                        ignorableProperties = ignored
+                        val inclusions = config.getDefaultPropertyInclusions(Map::class, realBeanDescription.classInfo)
+                        val included = inclusions?.included
+                        includableProperties = included
+                    }
+                }
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyMapDeserializer(config, realType, realBeanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     protected open fun mapAbstractMapType(type: KotlinType, config: DeserializationConfig): MapType? {
-        TODO("Not yet implemented")
+        val mapClass = ContainerDefaultMappings.findMapFallbacks(type) ?: return null
+        return config.typeFactory.constructSpecializedType(type, mapClass, true) as MapType
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun createMapLikeDeserializer(context: DeserializationContext, type: MapLikeType,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        val config = context.config
+        val keyType = type.keyType
+        val elementType = type.contentType
+
+        val keyDeserializer = keyType.valueHandler as KeyDeserializer?
+        val elementDeserializer = elementType.valueHandler as ValueDeserializer<Any>?
+        val elementTypeDeserializer =
+                elementType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(elementType)
+
+        var deserializer =
+                findCustomMapLikeDeserializer(type, config, beanDescription, keyDeserializer, elementTypeDeserializer,
+                        elementDeserializer) ?: return null
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyMapLikeDeserializer(config, type, beanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     /*
@@ -217,7 +777,51 @@ abstract class BasicDeserializerFactory protected constructor(
 
     override fun createEnumDeserializer(context: DeserializationContext, type: KotlinType,
             beanDescription: BeanDescription): ValueDeserializer<*> {
-        TODO("Not yet implemented")
+        val config = context.config
+        val enumClass = type.rawClass
+
+        var deserializer = findCustomEnumDeserializer(enumClass, config, beanDescription) ?: let {
+            if (enumClass == Enum::class) {
+                return AbstractDeserializer.constructForNonPOJO(beanDescription)
+            }
+
+            val valueInstantiator = constructDefaultValueInstantiator(context, beanDescription)
+            val creatorProperties = valueInstantiator.getFromObjectArguments(config)
+
+            var result: ValueDeserializer<*>? = null
+
+            for (factory in beanDescription.factoryMethods) {
+                if (!hasCreatorAnnotation(config, factory)) {
+                    continue
+                } else if (factory.parameterCount == 0) {
+                    result = EnumDeserializer.deserializerForNoArgsCreator(config, enumClass, factory)
+                    break
+                }
+
+                val returnType = factory.rawReturnType
+
+                if (!returnType.isAssignableFrom(enumClass)) {
+                    context.reportBadDefinition(type,
+                            "Invalid `@JsonCreator` annotated Enum factory method [$factory]: needs to return compatible type")
+                }
+
+                result = EnumDeserializer.deserializerForCreator(config, enumClass, factory, valueInstantiator,
+                        creatorProperties)
+            }
+
+            result
+        } ?: EnumDeserializer(constructEnumResolver(context, enumClass, beanDescription),
+                config.isEnabled(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS),
+                constructEnumNamingStrategyResolver(config, beanDescription.classInfo),
+                EnumResolver.constructUsingToString(config, beanDescription.classInfo))
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyEnumDeserializer(config, type, beanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     override fun createTreeDeserializer(config: DeserializationConfig, type: KotlinType,
@@ -404,6 +1008,10 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun constructEnumNamingStrategyResolver(config: DeserializationConfig,
             enumClass: AnnotatedClass): EnumResolver? {
+        TODO("Not yet implemented")
+    }
+
+    protected open fun hasCreatorAnnotation(config: DeserializationConfig, annotated: Annotated): Boolean {
         TODO("Not yet implemented")
     }
 
