@@ -7,7 +7,17 @@ import org.cirjson.cirjackson.databind.ValueDeserializer
 import org.cirjson.cirjackson.databind.configuration.DeserializerFactoryConfig
 import kotlin.reflect.KClass
 
-open class BeanDeserializerFactory constructor(config: DeserializerFactoryConfig) : BasicDeserializerFactory(config) {
+open class BeanDeserializerFactory(config: DeserializerFactoryConfig) : BasicDeserializerFactory(config) {
+
+    /*
+     *******************************************************************************************************************
+     * Lifecycle
+     *******************************************************************************************************************
+     */
+
+    override fun withConfig(factoryConfig: DeserializerFactoryConfig): DeserializerFactory {
+        TODO("Not yet implemented")
+    }
 
     /*
      *******************************************************************************************************************
