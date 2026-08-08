@@ -34,7 +34,7 @@ object NumberDeserializers {
                     BigInteger::class.qualifiedName!!, BigDecimal::class.qualifiedName!!, Unit::class.qualifiedName!!,
                     Nothing::class.qualifiedName!!)
 
-    fun find(rawType: KClass<*>): ValueDeserializer<*> {
+    fun find(rawType: KClass<*>): ValueDeserializer<*>? {
         return if (rawType.isPrimitive) {
             when (rawType) {
                 Integer.TYPE.kotlin -> IntDeserializer.PRIMITIVE_INSTANCE
@@ -68,7 +68,7 @@ object NumberDeserializers {
                         "Internal error: can't find deserializer for ${rawType.qualifiedName}")
             }
         } else {
-            throw IllegalArgumentException("Internal error: can't find deserializer for ${rawType.qualifiedName}")
+            null
         }
     }
 

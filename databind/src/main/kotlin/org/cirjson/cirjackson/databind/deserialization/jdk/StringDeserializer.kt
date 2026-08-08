@@ -44,4 +44,10 @@ open class StringDeserializer : StandardScalarDeserializer<String>(String::class
         return deserialize(parser, context)
     }
 
+    companion object {
+
+        val INSTANCE = StringDeserializer()
+
+    }
+
 }

@@ -1,24 +1,30 @@
 package org.cirjson.cirjackson.databind.deserialization
 
 import org.cirjson.cirjackson.annotations.CirJacksonInject
+import org.cirjson.cirjackson.annotations.CirJsonCreator
 import org.cirjson.cirjackson.annotations.Nulls
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.cirjsontype.TypeDeserializer
 import org.cirjson.cirjackson.databind.configuration.DeserializerFactoryConfig
 import org.cirjson.cirjackson.databind.deserialization.bean.CreatorCandidate
 import org.cirjson.cirjackson.databind.deserialization.bean.CreatorCollector
+import org.cirjson.cirjackson.databind.deserialization.cirjackson.CirJsonNodeDeserializer
+import org.cirjson.cirjackson.databind.deserialization.cirjackson.TokenBufferDeserializer
 import org.cirjson.cirjackson.databind.deserialization.jdk.*
+import org.cirjson.cirjackson.databind.external.OptionalHandlerFactory
+import org.cirjson.cirjackson.databind.external.jdk8.Jdk8OptionalDeserializer
+import org.cirjson.cirjackson.databind.external.jdk8.OptionalDoubleDeserializer
+import org.cirjson.cirjackson.databind.external.jdk8.OptionalIntDeserializer
+import org.cirjson.cirjackson.databind.external.jdk8.OptionalLongDeserializer
 import org.cirjson.cirjackson.databind.introspection.*
 import org.cirjson.cirjackson.databind.type.*
-import org.cirjson.cirjackson.databind.util.EnumResolver
-import org.cirjson.cirjackson.databind.util.createInstance
-import org.cirjson.cirjackson.databind.util.isAssignableFrom
-import org.cirjson.cirjackson.databind.util.isBogusClass
+import org.cirjson.cirjackson.databind.util.*
 import java.io.Serializable
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 /**
@@ -341,9 +347,7 @@ abstract class BasicDeserializerFactory protected constructor(
 
     private fun handleSingleArgumentCreator(creators: CreatorCollector, creator: AnnotatedWithParams,
             isCreator: Boolean, isVisible: Boolean): Boolean {
-        val type = creator.getRawParameterType(0)
-
-        return when (type) {
+        return when (val type = creator.getRawParameterType(0)) {
             CLASS_STRING, CLASS_CHAR_SEQUENCE -> {
                 if (isCreator || isVisible) {
                     creators.addStringCreator(creator, isCreator)
@@ -824,14 +828,51 @@ abstract class BasicDeserializerFactory protected constructor(
         return deserializer
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun createTreeDeserializer(config: DeserializationConfig, type: KotlinType,
             beanDescription: BeanDescription): ValueDeserializer<*> {
-        TODO("Not yet implemented")
+        val nodeType = type.rawClass as KClass<out CirJsonNode>
+        return findCustomTreeNodeDeserializer(nodeType, config, beanDescription)
+                ?: CirJsonNodeDeserializer.getDeserializer(nodeType)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun createReferenceDeserializer(context: DeserializationContext, type: ReferenceType,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        val config = context.config
+        val contentType = type.contentType
+        val contentDeserializer = contentType.valueHandler as ValueDeserializer<Any>?
+        val contentTypeDeserializer =
+                contentType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(contentType)
+
+        var deserializer = findCustomReferenceDeserializer(type, config, beanDescription, contentTypeDeserializer,
+                contentDeserializer) ?: let {
+            return if (type.isTypeOrSubTypeOf(Optional::class)) {
+                val instantiator = type.takeUnless { it.hasRawClass(Optional::class) }
+                        ?.let { findValueInstantiator(context, beanDescription) }
+                Jdk8OptionalDeserializer(type, instantiator, contentTypeDeserializer, contentDeserializer)
+            } else if (type.isTypeOrSubTypeOf(AtomicReference::class)) {
+                val instantiator = type.takeUnless { it.hasRawClass(AtomicReference::class) }
+                        ?.let { findValueInstantiator(context, beanDescription) }
+                AtomicReferenceDeserializer(type, instantiator, contentTypeDeserializer, contentDeserializer)
+            } else if (type.hasRawClass(OptionalInt::class)) {
+                OptionalIntDeserializer()
+            } else if (type.hasRawClass(OptionalLong::class)) {
+                OptionalLongDeserializer()
+            } else if (type.hasRawClass(OptionalDouble::class)) {
+                OptionalDoubleDeserializer()
+            } else {
+                null
+            }
+        }
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyReferenceDeserializer(config, type, beanDescription, deserializer)
+            }
+        }
+
+        return deserializer
     }
 
     /*
@@ -845,7 +886,7 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun findOptionalStdDeserializer(context: DeserializationContext, type: KotlinType,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        return OptionalHandlerFactory.INSTANCE.findDeserializer(context.config, type)
     }
 
     /*
@@ -855,11 +896,99 @@ abstract class BasicDeserializerFactory protected constructor(
      */
 
     override fun createKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer? {
-        TODO("Not yet implemented")
+        val config = context.config
+        var beanDescription: BeanDescription? = null
+        var deserializer: KeyDeserializer? = null
+
+        if (myFactoryConfig.hasKeyDeserializers()) {
+            beanDescription = context.introspectBeanDescription(type)
+
+            for (keyDeserializers in myFactoryConfig.keyDeserializers()) {
+                deserializer = keyDeserializers.findKeyDeserializer(type, config, beanDescription)
+
+                if (deserializer != null) {
+                    break
+                }
+            }
+        }
+
+        if (deserializer == null) {
+            if (beanDescription == null) {
+                beanDescription = context.introspectBeanDescription(type)
+            }
+
+            deserializer = findKeyDeserializerFromAnnotation(context, beanDescription.classInfo) ?: let {
+                if (type.isEnumType) {
+                    createEnumKeyDeserializer(context, type)
+                } else {
+                    JDKKeyDeserializers.findStringBasedKeyDeserializer(context, type)
+                }
+            } ?: return null
+        }
+
+        if (myFactoryConfig.hasDeserializerModifiers()) {
+            for (modifier in myFactoryConfig.deserializerModifiers()) {
+                deserializer = modifier.modifyKeyDeserializer(config, type, deserializer!!)
+            }
+        }
+
+        return deserializer
     }
 
-    private fun createEnumKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer? {
-        TODO("Not yet implemented")
+    private fun createEnumKeyDeserializer(context: DeserializationContext, type: KotlinType): KeyDeserializer {
+        val config = context.config
+        val enumClass = type.rawClass
+
+        val beanDescription = context.introspectBeanDescription(type)
+
+        findKeyDeserializerFromAnnotation(context, beanDescription.classInfo)?.let { return it }
+
+        findCustomEnumDeserializer(enumClass, config, beanDescription)?.let {
+            return JDKKeyDeserializers.constructDelegatingKeyDeserializer(type, it)
+        }
+
+        findDeserializerFromAnnotation(context, beanDescription.classInfo)?.let {
+            return JDKKeyDeserializers.constructDelegatingKeyDeserializer(type, it)
+        }
+
+        val byNameResolver = constructEnumResolver(context, enumClass, beanDescription)
+        val byEnumNamingResolver = constructEnumNamingStrategyResolver(config, beanDescription.classInfo)
+        val byToStringResolver = EnumResolver.constructUsingToString(config, beanDescription.classInfo)
+        val byIndexResolver = EnumResolver.constructUsingIndex(config, beanDescription.classInfo)
+
+        for (factory in beanDescription.factoryMethods) {
+            if (!hasCreatorAnnotation(config, factory)) {
+                continue
+            }
+
+            val argCount = factory.parameterCount
+
+            if (argCount != 1) {
+                throw IllegalArgumentException(
+                        "Unsuitable method ($factory) decorated with @CirJsonCreator (for Enum type ${enumClass.qualifiedName})")
+            }
+
+            val returnType = factory.rawReturnType
+
+            if (!returnType.isAssignableFrom(enumClass)) {
+                throw IllegalArgumentException(
+                        "Unsuitable method ($factory) decorated with @CirJsonCreator (for Enum type ${enumClass.qualifiedName})")
+            }
+
+            if (factory.getRawParameterType(0) != String::class) {
+                continue
+            }
+
+            if (config.canOverrideAccessModifiers()) {
+                factory.member.checkAndFixAccess(context.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS))
+            }
+
+            return JDKKeyDeserializers.constructEnumKeyDeserializer(byNameResolver, factory, byEnumNamingResolver,
+                    byToStringResolver, byIndexResolver)
+        }
+
+        return JDKKeyDeserializers.constructEnumKeyDeserializer(byNameResolver, byEnumNamingResolver,
+                byToStringResolver, byIndexResolver)
     }
 
     /*
@@ -875,7 +1004,43 @@ abstract class BasicDeserializerFactory protected constructor(
      * This matches [Deserializers.hasDeserializerFor] method.
      */
     override fun hasExplicitDeserializerFor(context: DatabindContext, valueType: KClass<*>): Boolean {
-        TODO("Not yet implemented")
+        var realValueType = valueType
+
+        if (realValueType.isArray) {
+            do {
+                realValueType = realValueType.componentType
+            } while (realValueType.isArray)
+
+            if (realValueType == CLASS_ANY) {
+                return true
+            }
+        }
+
+        if (Enum::class.isAssignableFrom(realValueType)) {
+            return true
+        }
+
+        val className = realValueType.qualifiedName!!
+
+        return if (className.startsWith("java.") || className.startsWith("kotlin.")) {
+            if (Collection::class.isAssignableFrom(realValueType)) {
+                true
+            } else if (Map::class.isAssignableFrom(realValueType)) {
+                true
+            } else if (Number::class.isAssignableFrom(realValueType)) {
+                NumberDeserializers.find(realValueType) != null
+            } else if (JDKMiscDeserializers.hasDeserializerFor(realValueType) || realValueType == CLASS_STRING ||
+                    realValueType == Boolean::class || realValueType == EnumMap::class ||
+                    realValueType == AtomicReference::class) {
+                true
+            } else {
+                JDKDateDeserializers.hasDeserializerFor(realValueType)
+            }
+        } else if (className.startsWith("org.cirjson.")) {
+            CirJsonNode::class.isAssignableFrom(realValueType) || realValueType == TokenBuffer::class
+        } else {
+            OptionalHandlerFactory.INSTANCE.hasDeserializerFor(realValueType)
+        }
     }
 
     /*
@@ -888,13 +1053,60 @@ abstract class BasicDeserializerFactory protected constructor(
      * Helper method called to find one of default deserializers for "well-known" platform types: JDK-provided types,
      * and small number of public Jackson API types.
      */
+    @Suppress("UNCHECKED_CAST")
     open fun findDefaultDeserializer(context: DeserializationContext, type: KotlinType,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        val rawType = type.rawClass
+
+        if (rawType == CLASS_ANY || rawType == CLASS_SERIALIZABLE) {
+            val config = context.config
+
+            val (listType, mapType) = if (config.hasAbstractTypeResolvers()) {
+                findRemappedType(config, List::class) to findRemappedType(config, Map::class)
+            } else {
+                null to null
+            }
+
+            return UntypedObjectDeserializer(listType, mapType)
+        } else if (rawType == CLASS_STRING || rawType == CLASS_CHAR_SEQUENCE) {
+            return StringDeserializer.INSTANCE
+        } else if (rawType == CLASS_ITERABLE) {
+            val typeFactory = context.typeFactory
+            val typeParameters = typeFactory.findTypeParameters(type, CLASS_ITERABLE)
+            val elementType = typeParameters.takeIf { it.size == 1 }?.get(0) ?: TypeFactory.unknownType()
+            val collectionType = typeFactory.constructCollectionType(Collection::class, elementType)
+            return createCollectionDeserializer(context, collectionType, beanDescription)
+        } else if (rawType == CLASS_MAP_ENTRY) {
+            val keyType = type.containedTypeOrUnknown(0)
+            val valueType = type.containedTypeOrUnknown(1)
+            val valueTypeDeserializer =
+                    valueType.typeHandler as TypeDeserializer? ?: context.findTypeDeserializer(valueType)
+            val valueDeserializer = valueType.valueHandler as ValueDeserializer<Any>?
+            val keyDeserializer = keyType.valueHandler as KeyDeserializer?
+            return MapEntryDeserializer(type, keyDeserializer, valueDeserializer, valueTypeDeserializer)
+        }
+
+        val className = rawType.qualifiedName!!
+
+        if (rawType.isPrimitive || className.startsWith("java.") || className.startsWith("kotlin.")) {
+            val deserializer = NumberDeserializers.find(rawType) ?: JDKDateDeserializers.find(rawType, className)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return if (rawType == TokenBuffer::class) {
+            TokenBufferDeserializer()
+        } else {
+            findOptionalStdDeserializer(context, type, beanDescription) ?: JDKMiscDeserializers.find(context, rawType,
+                    className)
+        }
     }
 
-    private fun findRemappedType(context: DeserializationContext, rawType: KClass<*>): KotlinType? {
-        TODO("Not yet implemented")
+    private fun findRemappedType(config: DeserializationConfig, rawType: KClass<*>): KotlinType? {
+        val type = config.mapAbstractType(config.constructType(rawType))
+        return type.takeUnless { it.hasRawClass(rawType) }
     }
 
     /*
@@ -905,55 +1117,136 @@ abstract class BasicDeserializerFactory protected constructor(
 
     protected open fun findCustomTreeNodeDeserializer(nodeType: KClass<out CirJsonNode>, config: DeserializationConfig,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findTreeNodeDeserializer(nodeType, config, beanDescription)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomReferenceDeserializer(referenceType: ReferenceType, config: DeserializationConfig,
             beanDescription: BeanDescription, contentTypeDeserializer: TypeDeserializer?,
             contentDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findReferenceDeserializer(referenceType, config, beanDescription,
+                    contentTypeDeserializer, contentDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomBeanDeserializer(type: KotlinType, config: DeserializationConfig,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findBeanDeserializer(type, config, beanDescription)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomArrayDeserializer(type: ArrayType, config: DeserializationConfig,
             beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer =
+                    deserializers.findArrayDeserializer(type, config, beanDescription, elementTypeDeserializer,
+                            elementDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomCollectionDeserializer(type: CollectionType, config: DeserializationConfig,
             beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer =
+                    deserializers.findCollectionDeserializer(type, config, beanDescription, elementTypeDeserializer,
+                            elementDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomCollectionLikeDeserializer(type: CollectionLikeType, config: DeserializationConfig,
             beanDescription: BeanDescription, elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer =
+                    deserializers.findCollectionLikeDeserializer(type, config, beanDescription, elementTypeDeserializer,
+                            elementDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomEnumDeserializer(type: KClass<*>, config: DeserializationConfig,
             beanDescription: BeanDescription): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findEnumDeserializer(type, config, beanDescription)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomMapDeserializer(type: MapType, config: DeserializationConfig,
             beanDescription: BeanDescription, keyDeserializer: KeyDeserializer?,
             elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findMapDeserializer(type, config, beanDescription, keyDeserializer,
+                    elementTypeDeserializer, elementDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     protected open fun findCustomMapLikeDeserializer(type: MapLikeType, config: DeserializationConfig,
             beanDescription: BeanDescription, keyDeserializer: KeyDeserializer?,
             elementTypeDeserializer: TypeDeserializer?,
             elementDeserializer: ValueDeserializer<*>?): ValueDeserializer<*>? {
-        TODO("Not yet implemented")
+        for (deserializers in myFactoryConfig.deserializers()) {
+            val deserializer = deserializers.findMapLikeDeserializer(type, config, beanDescription, keyDeserializer,
+                    elementTypeDeserializer, elementDeserializer)
+
+            if (deserializer != null) {
+                return deserializer
+            }
+        }
+
+        return null
     }
 
     /*
@@ -970,7 +1263,9 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun findDeserializerFromAnnotation(context: DeserializationContext,
             annotated: Annotated): ValueDeserializer<Any>? {
-        TODO("Not yet implemented")
+        val introspector = context.annotationIntrospector ?: return null
+        val deserializerDefinition = introspector.findDeserializer(context.config, annotated) ?: return null
+        return context.deserializerInstance(annotated, deserializerDefinition)
     }
 
     /**
@@ -979,12 +1274,16 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun findKeyDeserializerFromAnnotation(context: DeserializationContext,
             annotated: Annotated): KeyDeserializer? {
-        TODO("Not yet implemented")
+        val introspector = context.annotationIntrospector ?: return null
+        val deserializerDefinition = introspector.findKeyDeserializer(context.config, annotated) ?: return null
+        return context.keyDeserializerInstance(annotated, deserializerDefinition)
     }
 
     protected open fun findContentDeserializerFromAnnotation(context: DeserializationContext,
             annotated: Annotated): ValueDeserializer<Any>? {
-        TODO("Not yet implemented")
+        val introspector = context.annotationIntrospector ?: return null
+        val deserializerDefinition = introspector.findContentDeserializer(context.config, annotated) ?: return null
+        return context.deserializerInstance(annotated, deserializerDefinition)
     }
 
     /**
@@ -994,12 +1293,58 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun resolveMemberAndTypeAnnotations(context: DeserializationContext, member: AnnotatedMember,
             type: KotlinType): KotlinType {
-        TODO("Not yet implemented")
+        var realType = type
+        val introspector = context.annotationIntrospector ?: return realType
+
+        if (type.isMapLikeType) {
+            val keyType = type.keyType
+
+            if (keyType != null) {
+                val keyDeserializerDefinition = introspector.findKeyDeserializer(context.config, member)
+                val keyDeserializer = context.keyDeserializerInstance(member, keyDeserializerDefinition)
+
+                if (keyDeserializer != null) {
+                    realType = (realType as MapType).withKeyValueHandler(keyDeserializer)
+                }
+            }
+        }
+
+        if (realType.hasContentType()) {
+            val contentDeserializerDefinition = introspector.findContentDeserializer(context.config, member)
+            val contentDeserializer = context.deserializerInstance(member, contentDeserializerDefinition)
+
+            if (contentDeserializer != null) {
+                realType = realType.withContentValueHandler(contentDeserializer)
+            }
+
+            val contentTypeDeserializer = context.findPropertyContentTypeDeserializer(realType, member)
+
+            if (contentTypeDeserializer != null) {
+                realType = realType.withContentTypeHandler(contentTypeDeserializer)
+            }
+        }
+
+        val valueTypeDeserializer = context.findPropertyTypeDeserializer(type, member)
+
+        if (valueTypeDeserializer != null) {
+            realType = realType.withTypeHandler(valueTypeDeserializer)
+        }
+
+        return introspector.refineDeserializationType(context.config, member, realType)
     }
 
     protected open fun constructEnumResolver(context: DeserializationContext, enumClass: KClass<*>,
             beanDescription: BeanDescription): EnumResolver {
-        TODO("Not yet implemented")
+        val cirJsonValueAccessor =
+                beanDescription.findCirJsonValueAccessor() ?: return EnumResolver.constructFor(context.config,
+                        beanDescription.classInfo)
+
+        if (context.canOverrideAccessModifiers()) {
+            cirJsonValueAccessor.member!!.checkAndFixAccess(
+                    context.isEnabled(MapperFeature.OVERRIDE_PUBLIC_ACCESS_MODIFIERS))
+        }
+
+        return EnumResolver.constructUsingMethod(context.config, beanDescription.classInfo, cirJsonValueAccessor)
     }
 
     /**
@@ -1008,11 +1353,16 @@ abstract class BasicDeserializerFactory protected constructor(
      */
     protected open fun constructEnumNamingStrategyResolver(config: DeserializationConfig,
             enumClass: AnnotatedClass): EnumResolver? {
-        TODO("Not yet implemented")
+        val namingDefinition = config.annotationIntrospector!!.findEnumNamingStrategy(config, enumClass)
+        val enumNamingStrategy = EnumNamingStrategyFactory.createEnumNamingStrategyInstance(namingDefinition,
+                config.canOverrideAccessModifiers()) ?: return null
+        return EnumResolver.constructUsingEnumNamingStrategy(config, enumClass, enumNamingStrategy)
     }
 
     protected open fun hasCreatorAnnotation(config: DeserializationConfig, annotated: Annotated): Boolean {
-        TODO("Not yet implemented")
+        val introspector = config.annotationIntrospector ?: return false
+        val mode = introspector.findCreatorAnnotation(config, annotated) ?: return false
+        return mode != CirJsonCreator.Mode.DISABLED
     }
 
     /*
@@ -1028,17 +1378,52 @@ abstract class BasicDeserializerFactory protected constructor(
     protected object ContainerDefaultMappings {
 
         val ourCollectionFallbacks = HashMap<String, KClass<out Collection<*>>>().apply {
+            val defaultList = ArrayList::class
+            val defaultSet = HashSet::class
+
+            this[java.util.Collection::class.qualifiedName!!] = defaultList
+            this[MutableCollection::class.qualifiedName!!] = defaultList
+            this[java.util.List::class.qualifiedName!!] = defaultList
+            this[MutableList::class.qualifiedName!!] = defaultList
+            this[java.util.Set::class.qualifiedName!!] = defaultSet
+            this[MutableSet::class.qualifiedName!!] = defaultSet
+            this[SortedSet::class.qualifiedName!!] = TreeSet::class
+            this[Queue::class.qualifiedName!!] = LinkedList::class
+
+            this[java.util.AbstractList::class.qualifiedName!!] = defaultList
+            this[AbstractMutableList::class.qualifiedName!!] = defaultList
+            this[java.util.AbstractSet::class.qualifiedName!!] = defaultSet
+            this[AbstractMutableSet::class.qualifiedName!!] = defaultSet
+
+            this[Deque::class.qualifiedName!!] = LinkedList::class
+            this[NavigableSet::class.qualifiedName!!] = TreeSet::class
+
+            this["java.util.SequencedCollection"] = defaultList
+            this["java.util.SequencedSet"] = LinkedHashSet::class
         }
 
         val ourMapFallbacks = HashMap<String, KClass<out Map<*, *>>>().apply {
+            val defaultMap = LinkedHashMap::class
+
+            this[java.util.Map::class.qualifiedName!!] = defaultMap
+            this[MutableMap::class.qualifiedName!!] = defaultMap
+            this[java.util.AbstractMap::class.qualifiedName!!] = defaultMap
+            this[AbstractMutableMap::class.qualifiedName!!] = defaultMap
+            this[ConcurrentMap::class.qualifiedName!!] = ConcurrentHashMap::class
+            this[SortedMap::class.qualifiedName!!] = TreeMap::class
+
+            this[NavigableMap::class.qualifiedName!!] = TreeMap::class
+            this[ConcurrentNavigableMap::class.qualifiedName!!] = ConcurrentSkipListMap::class
+
+            this["java.util.SequencedMap"] = defaultMap
         }
 
         fun findCollectionFallbacks(type: KotlinType): KClass<*>? {
-            TODO("Not yet implemented")
+            return ourCollectionFallbacks[type.rawClass.qualifiedName]
         }
 
         fun findMapFallbacks(type: KotlinType): KClass<*>? {
-            TODO("Not yet implemented")
+            return ourMapFallbacks[type.rawClass.qualifiedName]
         }
 
     }

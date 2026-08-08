@@ -624,7 +624,7 @@ abstract class DeserializationContext protected constructor(protected val myStre
      * @param accessor Field or method that contains container property
      */
     open fun findPropertyContentTypeDeserializer(containerType: KotlinType,
-            accessor: AnnotatedMethod): TypeDeserializer? {
+            accessor: AnnotatedMember): TypeDeserializer? {
         val exception = try {
             return myConfig.typeResolverProvider.findPropertyContentTypeDeserializer(this, accessor, containerType)
         } catch (e: IllegalArgumentException) {
