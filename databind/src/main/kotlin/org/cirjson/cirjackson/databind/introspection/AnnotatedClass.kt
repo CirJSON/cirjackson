@@ -204,7 +204,7 @@ class AnnotatedClass : Annotated, TypeResolutionContext {
     val memberMethodCount: Int
         get() = methods().size
 
-    fun findMethod(name: String, parameterTypes: Array<KClass<*>>): AnnotatedMethod? {
+    fun findMethod(name: String, parameterTypes: Array<KClass<*>>?): AnnotatedMethod? {
         return methods().find(name, parameterTypes)
     }
 

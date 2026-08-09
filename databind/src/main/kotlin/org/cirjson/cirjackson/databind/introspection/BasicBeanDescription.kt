@@ -286,7 +286,7 @@ open class BasicBeanDescription : BeanDescription {
      *******************************************************************************************************************
      */
 
-    override fun findMethod(name: String, paramTypes: Array<KClass<*>>): AnnotatedMethod? {
+    override fun findMethod(name: String, paramTypes: Array<KClass<*>>?): AnnotatedMethod? {
         return myClassInfo.findMethod(name, paramTypes)
     }
 

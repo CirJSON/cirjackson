@@ -24,7 +24,7 @@ class AnnotatedMethodMap : Iterable<AnnotatedMethod> {
     val size: Int
         get() = myMethods?.size ?: 0
 
-    fun find(name: String, parameterTypes: Array<KClass<*>>): AnnotatedMethod? {
+    fun find(name: String, parameterTypes: Array<KClass<*>>?): AnnotatedMethod? {
         return myMethods?.get(MemberKey(name, parameterTypes))
     }
 

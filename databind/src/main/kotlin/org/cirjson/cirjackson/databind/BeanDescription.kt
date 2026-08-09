@@ -165,7 +165,7 @@ abstract class BeanDescription(protected val myType: KotlinType) {
      */
     abstract fun findAnySetterAccessor(): AnnotatedMember?
 
-    abstract fun findMethod(name: String, paramTypes: Array<KClass<*>>): AnnotatedMethod?
+    abstract fun findMethod(name: String, paramTypes: Array<KClass<*>>?): AnnotatedMethod?
 
     /*
      *******************************************************************************************************************
