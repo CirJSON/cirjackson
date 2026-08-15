@@ -268,7 +268,7 @@ open class BeanDeserializerBuilder {
      * Note that properties are returned in order that properties are ordered (explicitly, or by rule), which is the
      * deserialization order.
      */
-    open val properties: Iterator<SettableBeanProperty>
+    open val properties: MutableIterator<SettableBeanProperty>
         get() = myProperties.values.iterator()
 
     open fun findProperty(propertyName: PropertyName): SettableBeanProperty? {
