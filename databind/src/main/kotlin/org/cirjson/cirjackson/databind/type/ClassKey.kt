@@ -14,9 +14,15 @@ import kotlin.reflect.KClass
  */
 class ClassKey(private var myClass: KClass<*>) : Comparable<ClassKey> {
 
-    private val myClassName: String = myClass.qualifiedName!!
+    private var myClassName: String = myClass.qualifiedName!!
 
-    private val myHashCode = myClassName.hashCode()
+    private var myHashCode = myClassName.hashCode()
+
+    fun reset(clazz: KClass<*>) {
+        myClass = clazz
+        myClassName = clazz.qualifiedName!!
+        myHashCode = myClassName.hashCode()
+    }
 
     /*
      *******************************************************************************************************************

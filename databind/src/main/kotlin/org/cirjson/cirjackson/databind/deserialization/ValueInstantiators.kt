@@ -45,4 +45,18 @@ interface ValueInstantiators {
         return defaultValueInstantiator
     }
 
+    /**
+     * Basic "NOP" implementation that can be used as the base class for custom implementations. Safer to extend
+     * (instead of implementing [ValueInstantiators]) in case later CirJackson versions add new methods in base
+     * interface.
+     */
+    open class Base : ValueInstantiators {
+
+        override fun findValueInstantiator(config: DeserializationConfig,
+                beanDescription: BeanDescription): ValueInstantiator? {
+            return null
+        }
+
+    }
+
 }
