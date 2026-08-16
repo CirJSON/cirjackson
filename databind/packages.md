@@ -151,6 +151,16 @@ Beyond collecting annotations, additional "method annotation inheritance"is also
 not add annotations from overridden methods in any situation. But code in this package does. Similarly,
 class-annotations are inherited properly from interfaces, in addition to abstract and concrete classes.
 
+# Package org.cirjson.cirjackson.databind.module
+
+Package that contains classes and interfaces to help implement custom extension
+[CirJacksonModules][org.cirjson.cirjackson.databind.CirJacksonModule] (which are registered on ObjectMapper via
+builders).
+
+Note that classes in the package only support registering handlers for non-generic types (types without type
+parameterization) -- hence "simple" -- which works for many cases, but not all. So if you will need to register handlers
+for generic types, you will usually need to either subclass handlers, or implement/extend base types directly.
+
 # Package org.cirjson.cirjackson.databind.node
 
 Contains concrete [org.cirjson.cirjackson.databind.CirJsonNode] implementations CirJackson uses for the Tree model.
