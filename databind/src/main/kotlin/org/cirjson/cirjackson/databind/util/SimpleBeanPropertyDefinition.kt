@@ -31,7 +31,7 @@ open class SimpleBeanPropertyDefinition protected constructor(protected val myCo
      *******************************************************************************************************************
      */
 
-    override fun withSimpleName(newSimpleName: String?): BeanPropertyDefinition {
+    override fun withSimpleName(newSimpleName: String): BeanPropertyDefinition {
         if (myFullName.hasSimpleName(newSimpleName) && !myFullName.hasNamespace()) {
             return this
         }

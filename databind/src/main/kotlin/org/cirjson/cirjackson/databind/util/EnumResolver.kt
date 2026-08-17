@@ -192,7 +192,7 @@ open class EnumResolver protected constructor(val enumClass: KClass<Enum<*>>, va
 
             for (i in IntProgression.fromClosedRange(enumConstants.size - 1, 0, -1)) {
                 val enumValue = enumConstants[i]
-                val name = names[i] ?: enumNamingStrategy.convertEnumToExternalName(enumValue.name)
+                val name = names[i] ?: enumNamingStrategy.convertEnumToExternalName(enumValue.name)!!
                 map[name] = enumValue
                 val aliases = allAliases[i] ?: continue
 

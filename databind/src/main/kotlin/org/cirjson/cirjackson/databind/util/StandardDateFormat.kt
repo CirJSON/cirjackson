@@ -489,7 +489,7 @@ open class StandardDateFormat protected constructor(protected var myTimeZone: Ti
 
         val PATTERN_ISO8601 = PATTERN_PLAIN_STRING.let {
             try {
-                Regex(it + "T\\d\\d:\\d\\d(?::\\d\\d(\\.\\d+)?(Z|[+-]\\d\\d(?::?\\d\\d)?")
+                Regex(it + "T\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?(Z|[+-]\\d\\d(?::?\\d\\d)?)")
             } catch (e: Exception) {
                 throw RuntimeException(e)
             }

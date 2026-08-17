@@ -92,7 +92,7 @@ internal class NodeSerialization : Serializable, Externalizable {
 
         @Throws(CirJacksonException::class)
         fun bytesToNode(cirjson: ByteArray): CirJsonNode {
-            return NODE_READER.readValue(cirjson)
+            return NODE_READER.readValue(cirjson)!!
         }
 
     }

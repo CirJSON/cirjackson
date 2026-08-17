@@ -74,9 +74,8 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
     protected val myConfigurationWriteHexUppercase =
             CirJsonWriteFeature.WRITE_HEX_UPPER_CASE.isEnabledIn(formatWriteFeatures)
 
-    override fun streamWriteContext(): CirJsonWriteContext = CirJsonWriteContext.createRootContext(
-            DuplicateDetector.rootDetector(this)
-                    .takeIf { StreamWriteFeature.STRICT_DUPLICATE_DETECTION.isEnabledIn(streamWriteFeatures) })
+    protected var myStreamWriteContext = CirJsonWriteContext.createRootContext(DuplicateDetector.rootDetector(this)
+            .takeIf { StreamWriteFeature.STRICT_DUPLICATE_DETECTION.isEnabledIn(streamWriteFeatures) })
 
     init {
         @Suppress("LeakingThis")
@@ -111,12 +110,16 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
      *******************************************************************************************************************
      */
 
+    override fun streamWriteContext(): TokenStreamContext {
+        return myStreamWriteContext
+    }
+
     override fun currentValue(): Any? {
-        return streamWriteContext().currentValue()
+        return myStreamWriteContext.currentValue()
     }
 
     override fun assignCurrentValue(value: Any?) {
-        streamWriteContext().assignCurrentValue(value)
+        myStreamWriteContext.assignCurrentValue(value)
     }
 
     /*
@@ -171,9 +174,9 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
             }
 
             CirJsonWriteContext.STATUS_OK_AS_IS -> {
-                if (streamWriteContext().isInArray) {
+                if (myStreamWriteContext.isInArray) {
                     myConfigurationPrettyPrinter!!.beforeArrayValues(this)
-                } else if (streamWriteContext().isInObject) {
+                } else if (myStreamWriteContext.isInObject) {
                     myConfigurationPrettyPrinter!!.beforeObjectEntries(this)
                 }
             }
@@ -191,7 +194,7 @@ abstract class CirJsonGeneratorBase protected constructor(objectWriteContext: Ob
     @Throws(CirJacksonException::class)
     protected fun <T> reportCannotWriteValueExpectName(typeMessage: String): T {
         throw constructWriteException(
-                "Cannot $typeMessage, expecting a property name (context: ${streamWriteContext().typeDescription})")
+                "Cannot $typeMessage, expecting a property name (context: ${myStreamWriteContext.typeDescription})")
     }
 
     companion object {

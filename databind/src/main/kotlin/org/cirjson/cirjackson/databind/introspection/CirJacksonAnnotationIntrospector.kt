@@ -539,7 +539,7 @@ open class CirJacksonAnnotationIntrospector : AnnotationIntrospector() {
         }
 
         val clazz = annotated.rawType
-        return RawSerializer<Any?>(clazz)
+        return RawSerializer<Any>(clazz)
     }
 
     override fun findKeySerializer(config: MapperConfig<*>, annotated: Annotated): Any? {

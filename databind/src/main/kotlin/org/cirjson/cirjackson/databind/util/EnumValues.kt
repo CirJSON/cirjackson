@@ -144,7 +144,7 @@ class EnumValues private constructor(val enumClass: KClass<Enum<*>>, private val
             val textual = Array<SerializableString>(enumConstants.size) { SerializedString("") }
 
             for ((i, enumValue) in enumConstants.withIndex()) {
-                var name = names[i] ?: namingStrategy.convertEnumToExternalName(enumValue.name)
+                var name = names[i] ?: namingStrategy.convertEnumToExternalName(enumValue.name)!!
 
                 if (useLowercase) {
                     name = name.lowercase()

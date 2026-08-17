@@ -15,7 +15,7 @@ import java.math.BigDecimal
  * This base class implements part of API that a CirJSON generator exposes to applications, adds shared internal methods
  * that subclasses can use and adds some abstract methods subclasses must implement.
  */
-abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext, val ioContext: IOContext,
+abstract class GeneratorBase(protected val myObjectWriteContext: ObjectWriteContext, val ioContext: IOContext,
         streamWriteFeatures: Int) : CirJsonGenerator() {
 
     override var streamWriteFeatures: Int = streamWriteFeatures
@@ -47,6 +47,16 @@ abstract class GeneratorBase(override val objectWriteContext: ObjectWriteContext
         }
 
         return this
+    }
+
+    /*
+     *******************************************************************************************************************
+     * Public API, accessors
+     *******************************************************************************************************************
+     */
+
+    override fun objectWriteContext(): ObjectWriteContext {
+        return myObjectWriteContext
     }
 
     /*
