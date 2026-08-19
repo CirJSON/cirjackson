@@ -22,10 +22,10 @@ abstract class ObjectIdGenerator<T> {
     abstract fun canUseFor(generator: ObjectIdGenerator<*>): Boolean
 
     /**
-     * Accessor that needs to be overridden to return `true` if the Object ID may be serialized as JSON Object; used by,
-     * for example, JSOG handling. The reason accessor is needed is that handling such Object Ids is more complex and
-     * may incur additional buffering or performance overhead, avoiding of which makes sense for common case of scalar
-     * object ids (or native object ids some formats support).
+     * Accessor that needs to be overridden to return `true` if the Object ID may be serialized as CirJSON Object; used
+     * by, for example, CirJSOG handling. The reason accessor is needed is that handling such Object Ids is more complex
+     * and may incur additional buffering or performance overhead, avoiding of which makes sense for common case of
+     * scalar object ids (or native object ids some formats support).
      *
      * Default implementation returns `false`, so needs to be overridden by Object-producing generators.
      */

@@ -489,7 +489,7 @@ open class ObjectWriter : Versioned {
         return new(this, myConfig.with(locale))
     }
 
-    open fun with(timeZone: TimeZone): ObjectWriter {
+    open fun with(timeZone: TimeZone?): ObjectWriter {
         return new(this, myConfig.with(timeZone))
     }
 

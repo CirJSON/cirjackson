@@ -90,7 +90,7 @@ open class BuilderBasedDeserializer : BeanDeserializerBase {
         myPropertiesByIndex = myBeanProperties.nameMatcherProperties
     }
 
-    protected constructor(source: BuilderBasedDeserializer, objectIdReader: ObjectIdReader?) : super(source,
+    protected constructor(source: BuilderBasedDeserializer, objectIdReader: ObjectIdReader) : super(source,
             objectIdReader) {
         myBuildMethod = source.myBuildMethod
         myTargetType = source.myTargetType
@@ -140,7 +140,7 @@ open class BuilderBasedDeserializer : BeanDeserializerBase {
         }
     }
 
-    override fun withObjectIdReader(objectIdReader: ObjectIdReader?): BeanDeserializerBase {
+    override fun withObjectIdReader(objectIdReader: ObjectIdReader): BeanDeserializerBase {
         return BuilderBasedDeserializer(this, objectIdReader)
     }
 

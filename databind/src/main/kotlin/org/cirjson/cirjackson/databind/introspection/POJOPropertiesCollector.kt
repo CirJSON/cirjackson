@@ -168,7 +168,7 @@ open class POJOPropertiesCollector protected constructor(protected val myConfig:
                 collectAll()
             }
 
-            return myInjectables!!
+            return myInjectables
         }
 
     open val cirJsonKeyAccessor: AnnotatedMember?
@@ -308,7 +308,7 @@ open class POJOPropertiesCollector protected constructor(protected val myConfig:
     /**
      * Internal method that will collect actual property information.
      */
-    open fun collectAll() {
+    protected open fun collectAll() {
         myPotentialCreators = PotentialCreators()
         val properties = LinkedHashMap<String, POJOPropertyBuilder>()
 

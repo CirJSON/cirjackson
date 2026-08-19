@@ -14,6 +14,7 @@ import java.util.*
 import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaMethod
@@ -948,7 +949,7 @@ fun KClass<*>.hasEnclosingMethod(): Boolean {
 val KClass<*>.classMethods: Array<Method>
     get() {
         try {
-            return java.declaredMethods
+            return declaredFunctions.map { it.javaMethod!! }.toTypedArray()
         } catch (ex: NoClassDefFoundError) {
             val loader = Thread.currentThread().contextClassLoader ?: return failGetClassMethods(this, ex)
             val contextClass = try {
@@ -980,8 +981,8 @@ val KClass<*>.ctors: Array<Ctor>
             return NO_CTORS
         }
 
-        val rawConstructors = java.constructors
-        return Array(rawConstructors.size) { Ctor(rawConstructors[it]) }
+        val rawConstructors = constructors.toList()
+        return Array(rawConstructors.size) { Ctor(rawConstructors[it].javaConstructor!!) }
     }
 
 val KClass<*>.declaringClass: KClass<*>?

@@ -587,7 +587,7 @@ open class ObjectReader : Versioned, TreeCodec {
         return withConfig(myConfig.with(locale))
     }
 
-    open fun with(timeZone: TimeZone): ObjectReader {
+    open fun with(timeZone: TimeZone?): ObjectReader {
         return withConfig(myConfig.with(timeZone))
     }
 

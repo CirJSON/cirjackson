@@ -169,7 +169,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
     /**
      * If an Object ID is to be used for value handled by this deserializer, this reader is used for handling.
      */
-    protected val myObjectIdReader: ObjectIdReader?
+    protected val myObjectIdReader: ObjectIdReader
 
     /*
      *******************************************************************************************************************
@@ -196,7 +196,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
                 myValueInstantiator.canCreateFromObjectWith() || !myValueInstantiator.canCreateUsingDefault()
         val injectables = builder.injectables?.takeUnless { it.isEmpty() }?.toTypedArray()
         val objectIdReader = builder.objectIdReader
-        myVanillaProcessing = !myNonStandardCreation && injectables == null && !hasViews && objectIdReader == null
+        myVanillaProcessing = !myNonStandardCreation && injectables == null && !hasViews
 
         myBeanProperties = properties
         myInjectables = injectables
@@ -269,7 +269,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
         myObjectIdReader = source.myObjectIdReader
     }
 
-    protected constructor(source: BeanDeserializerBase, objectIdReader: ObjectIdReader?) : super(source.myBeanType) {
+    protected constructor(source: BeanDeserializerBase, objectIdReader: ObjectIdReader) : super(source.myBeanType) {
         myBeanType = source.myBeanType
         myDeserializationShape = source.myDeserializationShape
 
@@ -291,14 +291,9 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
         myExternalTypeIdHandler = source.myExternalTypeIdHandler
         myObjectIdReader = objectIdReader
 
-        if (objectIdReader == null) {
-            myBeanProperties = source.myBeanProperties
-            myVanillaProcessing = source.myVanillaProcessing
-        } else {
-            val idProperty = ObjectIdValueProperty(objectIdReader, PropertyMetadata.STANDARD_REQUIRED)
-            myBeanProperties = source.myBeanProperties!!.withProperty(idProperty)
-            myVanillaProcessing = false
-        }
+        val idProperty = ObjectIdValueProperty(objectIdReader, PropertyMetadata.STANDARD_REQUIRED)
+        myBeanProperties = source.myBeanProperties!!.withProperty(idProperty)
+        myVanillaProcessing = source.myVanillaProcessing
     }
 
     protected constructor(source: BeanDeserializerBase, ignorableProperties: Set<String>?,
@@ -352,7 +347,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
         myObjectIdReader = source.myObjectIdReader
     }
 
-    abstract fun withObjectIdReader(objectIdReader: ObjectIdReader?): BeanDeserializerBase
+    abstract fun withObjectIdReader(objectIdReader: ObjectIdReader): BeanDeserializerBase
 
     abstract fun withByNameInclusion(ignorableProperties: Set<String>?,
             includableProperties: Set<String>?): BeanDeserializerBase
@@ -484,7 +479,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
 
         if (myValueInstantiator.canCreateUsingDelegate()) {
             val delegateType =
-                    myValueInstantiator.getDelegateType(context.config) ?: return context.reportBadDefinition(
+                    myValueInstantiator.getDelegateType(context.config) ?: context.reportBadDefinition(
                             myBeanType,
                             "Invalid delegate-creator definition for ${myBeanType.typeDescription}: value instantiator (${myValueInstantiator.className}) returned `true` for 'canCreateUsingDelegate()', but `null` for 'getDelegateType()'")
             myDelegateDeserializer =
@@ -493,7 +488,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
 
         if (myValueInstantiator.canCreateUsingArrayDelegate()) {
             val delegateType =
-                    myValueInstantiator.getArrayDelegateType(context.config) ?: return context.reportBadDefinition(
+                    myValueInstantiator.getArrayDelegateType(context.config) ?: context.reportBadDefinition(
                             myBeanType,
                             "Invalid delegate-creator definition for ${myBeanType.typeDescription}: value instantiator (${myValueInstantiator.className}) returned `true` for 'canCreateUsingArrayDelegate()', but `null` for 'getArrayDelegateType()'")
             myArrayDelegateDeserializer =
@@ -643,7 +638,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
 
                 if (implementationClass == ObjectIdGenerators.PropertyGenerator::class) {
                     val propertyName = objectIdInfo.propertyName
-                    idProperty = findProperty(propertyName) ?: return context.reportBadDefinition(myBeanType,
+                    idProperty = findProperty(propertyName) ?: context.reportBadDefinition(myBeanType,
                             "Invalid Object Id definition for ${handledType().name}: cannot find property with name ${propertyName.name()}")
                     idType = idProperty.type
                     idGenerator = PropertyBasedObjectIdGenerator(objectIdInfo.scope!!)
@@ -662,7 +657,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
 
         var contextual = this
 
-        if (objectIdReader != null && objectIdReader !== myObjectIdReader) {
+        if (objectIdReader !== myObjectIdReader) {
             contextual = contextual.withObjectIdReader(objectIdReader)
         }
 
@@ -731,7 +726,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
         val referenceName = property.managedReferenceName ?: return property
         val valueDeserializer = property.valueDeserializer!!
         val backProperty =
-                valueDeserializer.findBackReference(referenceName) ?: return context.reportBadDefinition(myBeanType,
+                valueDeserializer.findBackReference(referenceName) ?: context.reportBadDefinition(myBeanType,
                         "Cannot handle managed/back reference ${referenceName.name()}: no back reference property found from type ${property.type.typeDescription}")
         val referredType = myBeanType
         val backReferenceType = backProperty.type
@@ -982,8 +977,6 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
     @Throws(CirJacksonException::class)
     override fun deserializeWithType(parser: CirJsonParser, context: DeserializationContext,
             typeDeserializer: TypeDeserializer): Any? {
-        myObjectIdReader ?: return typeDeserializer.deserializeTypedFromObject(parser, context)
-
         val id = parser.objectId
 
         if (id != null) {
@@ -1016,7 +1009,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
     @Throws(CirJacksonException::class)
     protected open fun handleTypedObjectId(parser: CirJsonParser, context: DeserializationContext, pojo: Any,
             rawId: Any): Any {
-        val idDeserializer = myObjectIdReader!!.deserializer
+        val idDeserializer = myObjectIdReader.deserializer
 
         val id = if (idDeserializer.handledType() == rawId::class) {
             rawId
@@ -1063,7 +1056,7 @@ abstract class BeanDeserializerBase : StandardDeserializer<Any>, ValueInstantiat
 
     @Throws(CirJacksonException::class)
     protected open fun deserializeFromObjectId(parser: CirJsonParser, context: DeserializationContext): Any? {
-        val id = myObjectIdReader!!.readObjectReference(parser, context)!!
+        val id = myObjectIdReader.readObjectReference(parser, context)!!
         val readableObjectId = context.findObjectId(id, myObjectIdReader.generator, myObjectIdReader.resolver)
         return readableObjectId.resolve() ?: throw UnresolvedForwardReferenceException(parser,
                 "Could not resolve Object ID [$id] (for $myBeanType).", parser.currentLocation(), readableObjectId)

@@ -8,6 +8,7 @@ import org.cirjson.cirjackson.databind.deserialization.ValueInstantiator
 import org.cirjson.cirjackson.databind.serialization.ValueSerializerModifier
 import org.cirjson.cirjackson.databind.util.UniqueId
 import kotlin.reflect.KClass
+import kotlin.reflect.jvm.jvmName
 
 /**
  * Vanilla [CirJacksonModule] implementation that allows registration of serializers and deserializers, bean serializer
@@ -127,7 +128,7 @@ open class SimpleModule(name: String?, protected val myVersion: Version, registr
 
                 realName = "SimpleModule-$realRegistrationId"
             } else {
-                realName = this::class.qualifiedName!!
+                realName = this::class.jvmName
             }
         }
 

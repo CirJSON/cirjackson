@@ -1,6 +1,7 @@
 package org.cirjson.cirjackson.databind.deserialization
 
 import org.cirjson.cirjackson.annotations.CirJsonFormat
+import org.cirjson.cirjackson.annotations.ObjectIdGenerators
 import org.cirjson.cirjackson.databind.*
 import org.cirjson.cirjackson.databind.annotation.CirJsonPOJOBuilder
 import org.cirjson.cirjackson.databind.deserialization.bean.BeanDeserializer
@@ -9,6 +10,7 @@ import org.cirjson.cirjackson.databind.deserialization.bean.BuilderBasedDeserial
 import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdReader
 import org.cirjson.cirjackson.databind.deserialization.implementation.ObjectIdValueProperty
 import org.cirjson.cirjackson.databind.deserialization.implementation.ValueInjector
+import org.cirjson.cirjackson.databind.deserialization.standard.StandardObjectIdReader
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMember
 import org.cirjson.cirjackson.databind.introspection.AnnotatedMethod
 import org.cirjson.cirjackson.databind.util.*
@@ -86,7 +88,7 @@ open class BeanDeserializerBuilder {
     /**
      * Handler for Object ID values, if Object Ids are enabled for the bean type.
      */
-    protected var myObjectIdReader: ObjectIdReader? = null
+    protected var myObjectIdReader: ObjectIdReader
 
     /**
      * Fallback setter used for handling any properties that are not mapped to regular setters. If setter is not `null`,
@@ -120,6 +122,8 @@ open class BeanDeserializerBuilder {
         myBeanDescription = beanDescription
         myContext = context
         myConfig = context.config
+        myObjectIdReader =
+                StandardObjectIdReader(context.constructType(String::class)!!, ObjectIdGenerators.UUIDGenerator(), null)
     }
 
     /**
@@ -303,7 +307,7 @@ open class BeanDeserializerBuilder {
     open val injectables: List<ValueInjector>?
         get() = myInjectables
 
-    open var objectIdReader: ObjectIdReader?
+    open var objectIdReader: ObjectIdReader
         get() = myObjectIdReader
         set(value) {
             myObjectIdReader = value
@@ -332,9 +336,8 @@ open class BeanDeserializerBuilder {
         var properties: Collection<SettableBeanProperty> = myProperties.values
         fixAccess(properties)
 
-        myObjectIdReader?.also {
-            properties = addIdProperty(myProperties, ObjectIdValueProperty(it, PropertyMetadata.STANDARD_REQUIRED))
-        }
+        properties =
+                addIdProperty(myProperties, ObjectIdValueProperty(myObjectIdReader, PropertyMetadata.STANDARD_REQUIRED))
 
         return BeanDeserializer(this, myBeanDescription, constructPropertyMap(properties), myBackReferenceProperties,
                 myIgnorableProperties, myIgnoreAllUnknown, myIncludableProperties, anyViews(properties))
@@ -373,9 +376,8 @@ open class BeanDeserializerBuilder {
 
         fixAccess(myProperties.values)
 
-        val properties = myObjectIdReader?.let {
-            addIdProperty(myProperties, ObjectIdValueProperty(it, PropertyMetadata.STANDARD_REQUIRED))
-        } ?: myProperties.values
+        val properties =
+                addIdProperty(myProperties, ObjectIdValueProperty(myObjectIdReader, PropertyMetadata.STANDARD_REQUIRED))
         return createBuilderBasedDeserializer(valueType, constructPropertyMap(properties), anyViews(properties))
     }
 

@@ -30,7 +30,7 @@ open class PotentialCreator(private val myCreator: AnnotatedWithParams,
     }
 
     open fun introspectParameterNames(config: MapperConfig<*>): PotentialCreator {
-        if (myImplicitParameterNames == null) {
+        if (myImplicitParameterNames != null) {
             return this
         }
 

@@ -171,7 +171,7 @@ class DeserializationConfig : MapperConfigBase<DeserializationFeature, Deseriali
      */
 
     override fun withBase(newBase: BaseSettings): DeserializationConfig {
-        return this.takeUnless { myBase == newBase } ?: DeserializationConfig(this, newBase)
+        return this.takeIf { myBase === newBase } ?: DeserializationConfig(this, newBase)
     }
 
     override fun with(datatypeFeatures: DatatypeFeatures): DeserializationConfig {

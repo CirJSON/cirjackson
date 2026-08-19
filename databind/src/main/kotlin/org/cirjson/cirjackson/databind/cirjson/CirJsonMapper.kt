@@ -5,7 +5,6 @@ import org.cirjson.cirjackson.core.cirjson.CirJsonFactory
 import org.cirjson.cirjackson.core.cirjson.CirJsonReadFeature
 import org.cirjson.cirjackson.core.cirjson.CirJsonWriteFeature
 import org.cirjson.cirjackson.databind.ObjectMapper
-import org.cirjson.cirjackson.databind.cirjson.CirJsonMapper.Companion.shared
 import org.cirjson.cirjackson.databind.configuration.MapperBuilder
 import org.cirjson.cirjackson.databind.configuration.MapperBuilderState
 import org.cirjson.cirjackson.databind.configuration.PackageVersion

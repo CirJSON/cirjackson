@@ -78,7 +78,7 @@ open class BeanDeserializer : BeanDeserializerBase {
         myPropertiesByIndex = myBeanProperties.nameMatcherProperties
     }
 
-    protected constructor(source: BeanDeserializer, objectIdReader: ObjectIdReader?) : super(source, objectIdReader) {
+    protected constructor(source: BeanDeserializer, objectIdReader: ObjectIdReader) : super(source, objectIdReader) {
         myPropertyNameMatcher = source.myPropertyNameMatcher
         myPropertiesByIndex = source.myPropertiesByIndex
     }
@@ -118,7 +118,7 @@ open class BeanDeserializer : BeanDeserializerBase {
         }
     }
 
-    override fun withObjectIdReader(objectIdReader: ObjectIdReader?): BeanDeserializer {
+    override fun withObjectIdReader(objectIdReader: ObjectIdReader): BeanDeserializer {
         return BeanDeserializer(this, objectIdReader)
     }
 
@@ -444,7 +444,7 @@ open class BeanDeserializer : BeanDeserializerBase {
      */
     @Throws(CirJacksonException::class)
     override fun deserializeFromObject(parser: CirJsonParser, context: DeserializationContext): Any? {
-        if (myObjectIdReader?.maySerializeAsObject() ?: false) {
+        if (myObjectIdReader.maySerializeAsObject()) {
             if (parser.hasTokenId(CirJsonTokenId.ID_PROPERTY_NAME) &&
                     myObjectIdReader.isValidReferencePropertyName(parser.currentName()!!, parser)) {
                 return deserializeFromObjectId(parser, context)

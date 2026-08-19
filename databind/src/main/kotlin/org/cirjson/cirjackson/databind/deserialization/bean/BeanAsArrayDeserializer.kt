@@ -30,7 +30,7 @@ open class BeanAsArrayDeserializer(protected val myDelegate: BeanDeserializerBas
         return myDelegate.unwrappingDeserializer(context, unwrapper)
     }
 
-    override fun withObjectIdReader(objectIdReader: ObjectIdReader?): BeanDeserializerBase {
+    override fun withObjectIdReader(objectIdReader: ObjectIdReader): BeanDeserializerBase {
         return BeanAsArrayDeserializer(myDelegate.withObjectIdReader(objectIdReader), myOrderedProperties)
     }
 
