@@ -183,6 +183,10 @@ abstract class ContextAttributes : Snapshottable<ContextAttributes> {
 
             val NULL_SURROGATE = Any()
 
+            internal fun construct(shared: Map<*, *>): Implementation {
+                return Implementation(shared)
+            }
+
         }
 
     }
