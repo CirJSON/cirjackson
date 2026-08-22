@@ -512,7 +512,7 @@ class SerializationConfig : MapperConfigBase<SerializationFeature, Serialization
      * "Bulk" access method for checking that all features specified by mask are enabled.
      */
     fun hasSerializationFeatures(featureMask: Int): Boolean {
-        return myFormatWriteFeatures and featureMask == featureMask
+        return mySerializationFeatures and featureMask == featureMask
     }
 
     internal val serializationFeatures: Int
